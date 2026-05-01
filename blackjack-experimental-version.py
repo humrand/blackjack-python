@@ -5,11 +5,12 @@ import os
 import math
 import threading
 import urllib.request
+import shutil
 
 pygame.init()
 
-VERSION = "0.2.0"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
+VERSION = "0.1.0"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack_V0.1.py"
 
 ANCHO, ALTO = 1000, 700
 VENTANA = pygame.display.set_mode((ANCHO, ALTO))
@@ -352,9 +353,10 @@ player_chip_stack = []
 
 overlay_flash = {'active': False, 'color': (0, 0, 0), 'alpha': 0, 'start': 0, 'duration': 400}
 
-update_status = None  
+update_status = None   
 update_msg = ""
 update_notif_time = 0
+update_restart_time = 0
 DOTS_BTN = pygame.Rect(ANCHO - 46, 8, 38, 28)
 
 def _sha256(path):
@@ -366,8 +368,8 @@ def _sha256(path):
         return None
 
 def _check_for_updates():
-    global update_status, update_msg, update_notif_time
-    import tempfile, os, time
+    global update_status, update_msg, update_notif_time, update_restart_time
+    import tempfile, time
     tmp_path = None
     try:
         url = GITHUB_RAW_URL + f"?nocache={int(time.time())}"
@@ -391,10 +393,16 @@ def _check_for_updates():
             update_msg = "No se pudo calcular hash remoto"
         elif sha_local == sha_remote:
             update_status = "up_to_date"
-            update_msg = f"Ya tienes la ultima version"
+            update_msg = "Ya tienes la ultima version"
         else:
-            update_status = "available"
-            update_msg = "Nueva version disponible en GitHub"
+            try:
+                shutil.copy2(tmp_path, local_path)
+                update_status = "restarting"
+                update_msg = "Actualizado! Reiniciando..."
+                update_restart_time = pygame.time.get_ticks()
+            except Exception as e:
+                update_status = "error"
+                update_msg = f"No se pudo escribir el archivo: {str(e)[:40]}"
     except Exception as e:
         update_status = "error"
         update_msg = f"Error: {str(e)[:55]}"
@@ -494,6 +502,11 @@ nueva_ronda()
 while True:
     RELOJ.tick(60)
     now = pygame.time.get_ticks()
+
+    if update_status == 'restarting' and update_restart_time != 0:
+        if now >= update_restart_time + 2000:
+            pygame.quit()
+            os.execv(sys.executable, [sys.executable] + sys.argv)
 
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
@@ -1216,15 +1229,22 @@ while True:
 
     if update_status is not None:
         elapsed_notif = now - update_notif_time
-        show_notif = (update_status == 'checking') or (elapsed_notif < 5000)
+        is_permanent = update_status in ('checking', 'restarting')
+        show_notif = is_permanent or (elapsed_notif < 5000)
         if show_notif:
             alpha_notif = 230
-            if update_status != 'checking' and elapsed_notif > 3500:
+            if not is_permanent and elapsed_notif > 3500:
                 alpha_notif = max(0, int(230 * (1 - (elapsed_notif - 3500) / 1500)))
-            notif_color = (30, 120, 50) if update_status == 'up_to_date' else \
-                          (180, 120, 0) if update_status == 'available' else \
-                          (40, 40, 40) if update_status == 'checking' else (150, 30, 30)
-            notif_surf = FUENTE_PEQUENA.render(update_msg, True, BLANCO)
+            if update_status == 'restarting':
+                notif_color = (20, 100, 200)
+                secs_left = max(0, 2 - (now - update_restart_time) // 1000)
+                display_msg = f"Actualizado! Reiniciando en {secs_left}s..."
+            else:
+                display_msg = update_msg
+                notif_color = (30, 120, 50) if update_status == 'up_to_date' else \
+                              (40, 40, 40) if update_status == 'checking' else \
+                              (150, 30, 30)
+            notif_surf = FUENTE_PEQUENA.render(display_msg, True, BLANCO)
             nw = notif_surf.get_width() + 24
             nh = notif_surf.get_height() + 14
             nx = ANCHO - nw - 10
