@@ -8,8 +8,8 @@ import urllib.request
 
 pygame.init()
 
-VERSION = "0.2.0"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
+VERSION = "0.1.0"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack_V0.1.py"
 
 ANCHO, ALTO = 1000, 700
 VENTANA = pygame.display.set_mode((ANCHO, ALTO))
@@ -352,7 +352,7 @@ player_chip_stack = []
 
 overlay_flash = {'active': False, 'color': (0, 0, 0), 'alpha': 0, 'start': 0, 'duration': 400}
 
-update_status = None  
+update_status = None   
 update_msg = ""
 update_notif_time = 0
 DOTS_BTN = pygame.Rect(ANCHO - 46, 8, 38, 28)
@@ -360,14 +360,18 @@ DOTS_BTN = pygame.Rect(ANCHO - 46, 8, 38, 28)
 def _check_for_updates():
     global update_status, update_msg, update_notif_time
     try:
-        req = urllib.request.urlopen(GITHUB_RAW_URL, timeout=6)
-        content = req.read().decode('utf-8', errors='ignore')
+        import time
+        url = GITHUB_RAW_URL + f"?nocache={int(time.time())}"
+        req = urllib.request.Request(url, headers={"Cache-Control": "no-cache", "Pragma": "no-cache"})
+        res = urllib.request.urlopen(req, timeout=10)
+        raw = res.read().decode('utf-8', errors='ignore')
         remote_version = None
-        for line in content.splitlines():
-            if line.startswith('VERSION'):
-                parts = line.split('=')
+        for line in raw.splitlines():
+            stripped = line.strip()
+            if stripped.startswith('VERSION'):
+                parts = stripped.split('=')
                 if len(parts) == 2:
-                    remote_version = parts[1].strip().strip('"').strip("'")
+                    remote_version = parts[1].strip().strip('"').strip("'").strip()
                     break
         if remote_version is None:
             update_status = 'error'
@@ -380,7 +384,7 @@ def _check_for_updates():
             update_msg = f"Nueva version disponible: {remote_version}  (actual: {VERSION})"
     except Exception as e:
         update_status = 'error'
-        update_msg = "Sin conexion o repo no alcanzable"
+        update_msg = f"Error: {str(e)[:50]}"
     update_notif_time = pygame.time.get_ticks()
 
 nueva_ronda_pending = False
