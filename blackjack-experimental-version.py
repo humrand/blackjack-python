@@ -9,7 +9,7 @@ import shutil
 
 pygame.init()
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 
 ANCHO, ALTO = 1000, 700
