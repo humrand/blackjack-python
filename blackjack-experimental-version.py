@@ -3,8 +3,13 @@ import random as random_module
 import sys
 import os
 import math
+import threading
+import urllib.request
 
 pygame.init()
+
+VERSION = "0.1.0"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack_V0.1.py"
 
 ANCHO, ALTO = 1000, 700
 VENTANA = pygame.display.set_mode((ANCHO, ALTO))
@@ -347,6 +352,37 @@ player_chip_stack = []
 
 overlay_flash = {'active': False, 'color': (0, 0, 0), 'alpha': 0, 'start': 0, 'duration': 400}
 
+update_status = None  
+update_msg = ""
+update_notif_time = 0
+DOTS_BTN = pygame.Rect(ANCHO - 46, 8, 38, 28)
+
+def _check_for_updates():
+    global update_status, update_msg, update_notif_time
+    try:
+        req = urllib.request.urlopen(GITHUB_RAW_URL, timeout=6)
+        content = req.read().decode('utf-8', errors='ignore')
+        remote_version = None
+        for line in content.splitlines():
+            if line.startswith('VERSION'):
+                parts = line.split('=')
+                if len(parts) == 2:
+                    remote_version = parts[1].strip().strip('"').strip("'")
+                    break
+        if remote_version is None:
+            update_status = 'error'
+            update_msg = "No se pudo leer la version remota"
+        elif remote_version == VERSION:
+            update_status = 'up_to_date'
+            update_msg = f"Ya tienes la ultima version ({VERSION})"
+        else:
+            update_status = 'available'
+            update_msg = f"Nueva version disponible: {remote_version}  (actual: {VERSION})"
+    except Exception as e:
+        update_status = 'error'
+        update_msg = "Sin conexion o repo no alcanzable"
+    update_notif_time = pygame.time.get_ticks()
+
 nueva_ronda_pending = False
 mensaje = ""
 
@@ -395,6 +431,15 @@ def spawn_particles(x, y, color, count=30):
         life = random_module.random() * 800 + 400
         particles.append([x, y, vx, vy, life, color])
 
+def reiniciar_partida():
+    global player_money, stats, current_bet_input, current_bet, last_bet
+    player_money = 1000
+    stats = {'played': 0, 'won': 0, 'lost': 0, 'blackjacks': 0}
+    current_bet_input = ""
+    current_bet = 10
+    last_bet = None
+    nueva_ronda()
+
 def nueva_ronda():
     global baraja, jugador, banca, state, dealing_step, next_deal, mensaje, dealer_thinking, next_action
     global last_pedir_time, round_end_time, current_bet, bet_locked, player_money, stats, placed_chip, chips_anim
@@ -430,7 +475,19 @@ while True:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             pygame.quit(); sys.exit()
+
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            if DOTS_BTN.collidepoint(evento.pos):
+                if update_status != 'checking':
+                    update_status = 'checking'
+                    update_msg = "Comprobando..."
+                    update_notif_time = pygame.time.get_ticks()
+                    threading.Thread(target=_check_for_updates, daemon=True).start()
+
         if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_r:
+                reiniciar_partida()
+                continue
             if state == 'game_over':
                 if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     player_money = 1000
@@ -615,13 +672,13 @@ while True:
                             clearing = True
                             clear_phase = 'flipping'
 
-    if player_money <= 0 and state != 'game_over':
+    if player_money <= 0 and state == 'betting' and state != 'game_over':
         state = 'game_over'
 
     if state == 'game_over':
         VENTANA.fill((0,0,0))
         txt1 = FUENTE_GRANDE.render("Te has quedado sin fichas", True, BLANCO)
-        txt2 = FUENTE.render("Pulsa ENTER para volver a empezar (1000 fichas)", True, BLANCO)
+        txt2 = FUENTE.render("ENTER o R: volver a empezar (1000 fichas)", True, BLANCO)
         VENTANA.blit(txt1, ((ANCHO - txt1.get_width())//2, ALTO//2 - 60))
         VENTANA.blit(txt2, ((ANCHO - txt2.get_width())//2, ALTO//2 + 20))
         pygame.display.update()
@@ -1124,5 +1181,47 @@ while True:
             ov = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
             ov.fill((*overlay_flash['color'], a))
             VENTANA.blit(ov, (0, 0))
+
+    mouse_pos = pygame.mouse.get_pos()
+    btn_hovered = DOTS_BTN.collidepoint(mouse_pos)
+    btn_color = (80, 80, 80) if not btn_hovered else (120, 120, 120)
+    pygame.draw.rect(VENTANA, btn_color, DOTS_BTN, border_radius=6)
+    pygame.draw.rect(VENTANA, NEGRO, DOTS_BTN, 1, border_radius=6)
+    dots_surf = FUENTE_PEQUENA.render("...", True, BLANCO)
+    VENTANA.blit(dots_surf, (DOTS_BTN.centerx - dots_surf.get_width()//2,
+                              DOTS_BTN.centery - dots_surf.get_height()//2))
+
+    if update_status is not None:
+        elapsed_notif = now - update_notif_time
+        show_notif = (update_status == 'checking') or (elapsed_notif < 5000)
+        if show_notif:
+            alpha_notif = 230
+            if update_status != 'checking' and elapsed_notif > 3500:
+                alpha_notif = max(0, int(230 * (1 - (elapsed_notif - 3500) / 1500)))
+            notif_color = (30, 120, 50) if update_status == 'up_to_date' else \
+                          (180, 120, 0) if update_status == 'available' else \
+                          (40, 40, 40) if update_status == 'checking' else (150, 30, 30)
+            notif_surf = FUENTE_PEQUENA.render(update_msg, True, BLANCO)
+            nw = notif_surf.get_width() + 24
+            nh = notif_surf.get_height() + 14
+            nx = ANCHO - nw - 10
+            ny = DOTS_BTN.bottom + 6
+            bg = pygame.Surface((nw, nh), pygame.SRCALPHA)
+            bg.fill((*notif_color, alpha_notif))
+            VENTANA.blit(bg, (nx, ny))
+            pygame.draw.rect(VENTANA, NEGRO, (nx, ny, nw, nh), 1, border_radius=6)
+            VENTANA.blit(notif_surf, (nx + 12, ny + 7))
+
+    reiniciar_rect = pygame.Rect(ANCHO - 140, ALTO - 44, 130, 34)
+    r_hovered = reiniciar_rect.collidepoint(mouse_pos)
+    r_color = (140, 30, 30) if not r_hovered else (180, 50, 50)
+    pygame.draw.rect(VENTANA, r_color, reiniciar_rect, border_radius=7)
+    pygame.draw.rect(VENTANA, NEGRO, reiniciar_rect, 1, border_radius=7)
+    r_txt = FUENTE_PEQUENA.render("R: Reiniciar", True, BLANCO)
+    VENTANA.blit(r_txt, (reiniciar_rect.centerx - r_txt.get_width()//2,
+                          reiniciar_rect.centery - r_txt.get_height()//2))
+
+    if pygame.mouse.get_pressed()[0] and reiniciar_rect.collidepoint(mouse_pos):
+        reiniciar_partida()
 
     pygame.display.update()
