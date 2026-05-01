@@ -1,3 +1,6 @@
+# this is a testing version only, do not use this, use the blackjack_V0.2.py
+# esto es solo para testing, no uses esto para jugar, usa el blackjack_V0.2.py
+
 import pygame
 import random as random_module
 import sys
