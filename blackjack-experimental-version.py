@@ -8,7 +8,7 @@ import urllib.request
 
 pygame.init()
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack_V0.1.py"
 
 ANCHO, ALTO = 1000, 700
