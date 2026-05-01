@@ -8,7 +8,7 @@ import urllib.request
 
 pygame.init()
 
-VERSION = "0.2.0"
+VERSION = "0.1.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 
 ANCHO, ALTO = 1000, 700
@@ -352,39 +352,58 @@ player_chip_stack = []
 
 overlay_flash = {'active': False, 'color': (0, 0, 0), 'alpha': 0, 'start': 0, 'duration': 400}
 
-update_status = None   
+update_status = None  
 update_msg = ""
 update_notif_time = 0
 DOTS_BTN = pygame.Rect(ANCHO - 46, 8, 38, 28)
 
+def _sha256(path):
+    import hashlib
+    try:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+    except Exception:
+        return None
+
 def _check_for_updates():
     global update_status, update_msg, update_notif_time
+    import tempfile, os, time
+    tmp_path = None
     try:
-        import time
         url = GITHUB_RAW_URL + f"?nocache={int(time.time())}"
-        req = urllib.request.Request(url, headers={"Cache-Control": "no-cache", "Pragma": "no-cache"})
-        res = urllib.request.urlopen(req, timeout=10)
-        raw = res.read().decode('utf-8', errors='ignore')
-        remote_version = None
-        for line in raw.splitlines():
-            stripped = line.strip()
-            if stripped.startswith('VERSION'):
-                parts = stripped.split('=')
-                if len(parts) == 2:
-                    remote_version = parts[1].strip().strip('"').strip("'").strip()
-                    break
-        if remote_version is None:
-            update_status = 'error'
-            update_msg = "No se pudo leer la version remota"
-        elif remote_version == VERSION:
-            update_status = 'up_to_date'
-            update_msg = f"Ya tienes la ultima version ({VERSION})"
+        req = urllib.request.Request(url, headers={
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache"
+        })
+        res = urllib.request.urlopen(req, timeout=15)
+        remote_data = res.read()
+
+        fd, tmp_path = tempfile.mkstemp(suffix=".py")
+        with os.fdopen(fd, "wb") as f:
+            f.write(remote_data)
+
+        local_path = os.path.abspath(__file__)
+        sha_local  = _sha256(local_path)
+        sha_remote = _sha256(tmp_path)
+
+        if sha_remote is None:
+            update_status = "error"
+            update_msg = "No se pudo calcular hash remoto"
+        elif sha_local == sha_remote:
+            update_status = "up_to_date"
+            update_msg = f"Ya tienes la ultima version"
         else:
-            update_status = 'available'
-            update_msg = f"Nueva version disponible: {remote_version}  (actual: {VERSION})"
+            update_status = "available"
+            update_msg = "Nueva version disponible en GitHub"
     except Exception as e:
-        update_status = 'error'
-        update_msg = f"Error: {str(e)[:50]}"
+        update_status = "error"
+        update_msg = f"Error: {str(e)[:55]}"
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
     update_notif_time = pygame.time.get_ticks()
 
 nueva_ronda_pending = False
