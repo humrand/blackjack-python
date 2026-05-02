@@ -149,6 +149,9 @@ BANK_POS      = (ANCHO // 2, 40)
 EPIC_WIN_THRESHOLD = 10000
 DEALER_SETTLE_DELAY = 900
 
+difficulty_level   = 0
+rosa_secret_done   = False
+
 def get_symbol_font(size):
     candidates = ["Symbola","DejaVuSans","DejaVu Sans","FreeSerif",
                   "Segoe UI Symbol","Arial Unicode MS","Noto Sans Symbols2","Noto Sans Symbols"]
@@ -844,12 +847,20 @@ INTRO_SCENES = [
                     'effect': {}
                 },
                 {
-                    'label': '"Gracias por el aviso. Me lo guardo."',
-                    'tu_text': 'Gracias por el aviso. Me lo guardo.',
+                    'label': '"¿Puedo pedirte algo... más personal?"',
+                    'tu_text': '¿Puedo pedirte algo más personal, Rosa?',
                     'reactions': [
-                        ('Rosa', '(Asiente en silencio y vuelve a limpiar la barra.)'),
+                        ('Rosa', '(Te mira un instante demasiado largo. Después apoya los codos en la barra y baja la voz.)'),
+                        ('Rosa', 'La puerta azul al fondo. Cinco minutos. Nadie mira hacia allí a esta hora.'),
+                        ('narrador', 'Lo que ocurrió al fondo del pasillo, entre cajas de Laphroaig y la penumbra azul, queda ahí.'),
+                        ('narrador', 'Cinco minutos que se notaron más que cinco horas.'),
+                        ('narrador', 'De vuelta en la barra, Rosa sirve una copa sin mirarte. Pero sonríe.'),
+                        ('Rosa', '(En voz muy baja, arreglándose el cabello.) Gana esta noche, ¿de acuerdo?'),
+                        ('Tú', 'Ahora tengo más motivos para hacerlo.'),
+                        ('Rosa', '(Una sonrisa que intenta esconder, sin éxito.) Anda ya...'),
+                        ('narrador', 'Su perfume te acompañará el resto de la noche. +150 fichas — Rosa tiene fe en ti.'),
                     ],
-                    'effect': {}
+                    'effect': {'money': 150, 'msg': '+150 fichas — Rosa tiene fe en ti', 'rosa_secret': True}
                 },
             ]),
         ]
@@ -873,8 +884,9 @@ INTRO_SCENES = [
                         ('Tú', 'Si llego a diez mil fichas... me dices cómo lo haces. Cómo haces trampa.'),
                         ('Víctor', '(Pausa larga. Te mira fijamente. Luego sonríe.) ...Trato hecho, forastero. Suerte.'),
                         ('Víctor', 'La vas a necesitar.'),
+                        ('narrador', '[ MODO NORMAL — Meta: 10.000 fichas. La banca no se rinde fácil, pero tampoco es invencible. ]'),
                     ],
-                    'effect': {}
+                    'effect': {'difficulty': 0}
                 },
                 {
                     'label': '"Si llego a 10.000… que toda la sala lo sepa."',
@@ -883,8 +895,9 @@ INTRO_SCENES = [
                         ('Víctor', '(Una sonrisa fría, casi apreciativa.) Ambicioso. Me gustan los ambiciosos.'),
                         ('Víctor', 'Suelen quedarse sin nada antes del amanecer. Pero... de acuerdo. Trato hecho.'),
                         ('Víctor', 'Veamos de qué pasta estás hecho, forastero.'),
+                        ('narrador', '[ MODO DIFÍCIL — Meta: 30.000 fichas. Víctor ordena a sus crupiers que jueguen más agresivo. ]'),
                     ],
-                    'effect': {}
+                    'effect': {'difficulty': 1}
                 },
                 {
                     'label': '"Sin condiciones. Solo voy a ganar."',
@@ -892,9 +905,10 @@ INTRO_SCENES = [
                     'reactions': [
                         ('Víctor', '(Se recuesta en la silla.) Simple. Directo. Curioso.'),
                         ('Víctor', 'Hace mucho que nadie se sienta aquí sin pretensiones. Casi resulta... refrescante.'),
-                        ('Víctor', 'Muy bien. Sin condiciones. Que empiece el juego.'),
+                        ('Víctor', '(La sonrisa se congela.) Muy bien. Sin condiciones. Pero a este nivel... la banca no se detiene.'),
+                        ('narrador', '[ MODO EXTREMO — Meta: 100.000 fichas. La banca juega sin compasión. Buena suerte. ]'),
                     ],
-                    'effect': {}
+                    'effect': {'difficulty': 2}
                 },
             ]),
             ('narrador', '¡Que empiece el juego!'),
@@ -902,56 +916,66 @@ INTRO_SCENES = [
     },
 ]
 
-WIN_ENDING_SCENES = [
-    {
-        'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
-        'scene_image': 'victor3',
-        'line_images': [None, None, None, None, None, None, None, 'victor4'],
-        'lines': [
-            ('narrador', 'Diez mil fichas. El número imposible.'),
-            ('narrador', 'El aire en la sala cambió. Fue como si alguien hubiera apagado la música sin tocar nada.'),
-            ('Víctor', '...'),
-            ('Víctor', '¿Cómo?'),
-            ('Tú', 'Diez mil, Víctor. Creo que ya sabes lo que eso significa.'),
-            ('Víctor', '¡No! ¡Trampa! ¡Este hombre está haciendo trampa de alguna manera!'),
-            ('Tú', 'Las cartas no mienten, Víctor. Tú sí.'),
-            ('Víctor', '(Se pone de pie, volcando la silla.) ¡Garduño! ¡Enrique! ¡Sacad a este hombre de aquí ahora mismo!'),
+def build_win_ending_scenes():
+    rosa_lines = []
+    if rosa_secret_done:
+        rosa_lines = [
+            ('narrador', 'Alguien te espera en el Café del Born cuando abra. Con el mismo perfume de anoche.'),
+            ('narrador', 'Ya le has mandado un mensaje. Solo dos palabras: "Lo conseguí."'),
+            ('narrador', 'Su respuesta llegó antes de doblar la primera esquina: "Ya lo sabía. ;)"'),
         ]
-    },
-    {
-        'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
-        'scene_image': 'rosita-caos',
-        'line_images': [None, None, None, None, None, None, None, None, 'rosita-guino'],
-        'lines': [
-            ('narrador', 'Dos hombres muy grandes se levantan de las sombras. El ambiente se congela.'),
-            ('narrador', 'Y entonces Rosa actúa.'),
-            ('Rosa', '¡Ay, Dios mío, qué torpe soy!'),
-            ('narrador', 'Rosa vuelca toda la barra de un golpe. Una cascada de botellas, vasos y whisky de treinta años inunda el suelo.'),
-            ('narrador', 'El caos es inmediato y total. Gritos, cristales rotos, gente empujando.'),
-            ('narrador', 'En medio de la confusión, tú te guardas los billetes y caminas tranquilamente hacia la puerta.'),
-            ('Portero', '¡Eh! ¡Para ahí!'),
-            ('narrador', 'Pero el portero tiene los pies empapados de Macallan del 62 y otras prioridades.'),
-            ('Rosa', '(Te guiña un ojo desde el otro lado del caos.)'),
-        ]
-    },
-    {
-        'bg': 'street_dawn', 'chars': [], 'counter': False,
-        'scene_image': 'barcelona',
-        'lines': [
-            ('narrador', 'El aire de la madrugada huele a lluvia limpia. A libertad.'),
-            ('narrador', 'Caminas despacio por los adoquines mojados. No hay prisa. Ya no.'),
-            ('narrador', 'Detrás de ti, el neón de "El Farol Rojo" parpadea dos veces y se apaga.'),
-            ('narrador', 'Como si hubiera perdido las ganas de seguir encendido.'),
-            ('narrador', 'Víctor Carvalho nunca cumplió su parte del trato. No te dijo nada.'),
-            ('narrador', 'Pero esa noche descubriste algo más valioso: que la trampa tenía un límite.'),
-            ('narrador', 'Y tú lo habías encontrado.'),
-            ('narrador', 'La ciudad empieza a despertar. Huele a café y a pan recién hecho.'),
-            ('narrador', 'Hay una barra que aún no has visitado, una camarera que te debe una copa...'),
-            ('narrador', '...y el día más largo de tu vida acaba de terminar.'),
-            ('narrador', '─────────  FIN  ─────────'),
-        ]
-    },
-]
+    diff_narrador = {
+        0: 'Lo lograste en modo Normal. Víctor nunca imaginó que alguien llegaría tan lejos.',
+        1: 'Lo lograste en modo Difícil. La banca jugó sin piedad y aun así no fue suficiente.',
+        2: 'Lo lograste en modo EXTREMO. Cien mil fichas. Ni Víctor mismo se lo creerá jamás.',
+    }
+    return [
+        {
+            'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
+            'scene_image': 'victor3',
+            'line_images': [None, None, None, None, None, None, None, 'victor4'],
+            'lines': [
+                ('narrador', 'El número imposible.'),
+                ('narrador', 'El aire en la sala cambió. Fue como si alguien hubiera apagado la música sin tocar nada.'),
+                ('Víctor', '...'),
+                ('Víctor', '¿Cómo?'),
+                ('Tú', 'Ya sabes lo que eso significa, Víctor.'),
+                ('Víctor', '¡No! ¡Trampa! ¡Este hombre está haciendo trampa de alguna manera!'),
+                ('Tú', 'Las cartas no mienten, Víctor. Tú sí.'),
+                ('Víctor', '(Se pone de pie, volcando la silla.) ¡Garduño! ¡Enrique! ¡Sacad a este hombre de aquí ahora mismo!'),
+            ]
+        },
+        {
+            'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+            'scene_image': 'rosita-caos',
+            'line_images': [None, None, None, None, None, None, None, None, 'rosita-guino'],
+            'lines': [
+                ('narrador', 'Dos hombres muy grandes se levantan de las sombras. El ambiente se congela.'),
+                ('narrador', 'Y entonces Rosa actúa.'),
+                ('Rosa', '¡Ay, Dios mío, qué torpe soy!'),
+                ('narrador', 'Rosa vuelca toda la barra de un golpe. Una cascada de botellas, vasos y whisky de treinta años inunda el suelo.'),
+                ('narrador', 'El caos es inmediato y total. Gritos, cristales rotos, gente empujando.'),
+                ('narrador', 'En medio de la confusión, tú te guardas los billetes y caminas tranquilamente hacia la puerta.'),
+                ('Portero', '¡Eh! ¡Para ahí!'),
+                ('narrador', 'Pero el portero tiene los pies empapados de Macallan del 62 y otras prioridades.'),
+                ('Rosa', '(Te guiña un ojo desde el otro lado del caos.)'),
+            ]
+        },
+        {
+            'bg': 'street_dawn', 'chars': [], 'counter': False,
+            'scene_image': 'barcelona',
+            'lines': [
+                ('narrador', 'El aire de la madrugada huele a lluvia limpia. A libertad.'),
+                ('narrador', 'Caminas despacio por los adoquines mojados. No hay prisa. Ya no.'),
+                ('narrador', 'Detrás de ti, el neón de "El Farol Rojo" parpadea dos veces y se apaga.'),
+                ('narrador', diff_narrador.get(difficulty_level, diff_narrador[0])),
+                ('narrador', 'Y tú lo habías encontrado.'),
+                ('narrador', 'La ciudad empieza a despertar. Huele a café y a pan recién hecho.'),
+            ] + rosa_lines + [
+                ('narrador', '─────────  FIN  ─────────'),
+            ]
+        },
+    ]
 
 LOSE_ENDING_SCENES = [
     {
@@ -987,12 +1011,12 @@ story_scene_idx   = 0
 story_line_idx    = 0
 epic_win_triggered = False
 
-story_choice_active  = False        
-story_choice_options = []           
+story_choice_active  = False      
+story_choice_options = []          
 story_choice_rects   = []          
-story_injected_lines = []           
-story_injected_idx   = 0            
-story_in_injection   = False        
+story_injected_lines = []         
+story_injected_idx   = 0          
+story_in_injection   = False       
 
 preload_images('farol-rojo', 'rosita', 'rosita-seria', 'victor2', 'victor3', 'victor4', 'victor5', 'rosita-caos', 'rosita-guino', 'barcelona', 'segurata-pierdes')
 
@@ -1009,11 +1033,18 @@ def _apply_choice(idx):
     """Aplica la elección del jugador: inyecta las reacciones y avanza la historia."""
     global story_choice_active, story_choice_options, story_choice_rects
     global story_injected_lines, story_injected_idx, story_in_injection, player_money
+    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done
 
     opt    = story_choice_options[idx]
     effect = opt.get('effect', {})
     if 'money' in effect:
         player_money = max(0, player_money + effect['money'])
+    if 'difficulty' in effect:
+        difficulty_level = effect['difficulty']
+        thresholds = {0: 10000, 1: 30000, 2: 100000}
+        EPIC_WIN_THRESHOLD = thresholds[difficulty_level]
+    if effect.get('rosa_secret'):
+        rosa_secret_done = True
 
     injected = []
     tu_text = opt.get('tu_text', '')
@@ -1054,6 +1085,7 @@ def _story_advance_scene():
                 app_state = 'game'
                 epic_win_triggered = False
                 player_money = 1000
+                difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
                 stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
                 current_bet = 10; current_bet_input = ""; last_bet = None
                 nueva_ronda()
@@ -1254,7 +1286,13 @@ def revelar_banca(now):
         if c[4].oculta: c[4].start_flip(now)
 
 def schedule_dealer_target():
-    return 18 if random_module.random() < 0.15 else 17
+    global difficulty_level
+    if difficulty_level == 0:
+        return 18 if random_module.random() < 0.15 else 17
+    elif difficulty_level == 1:
+        return 19 if random_module.random() < 0.20 else 18
+    else:  
+        return 19 if random_module.random() < 0.35 else 18
 
 def spawn_particles(x, y, color, count=30):
     for _ in range(count):
@@ -1266,9 +1304,11 @@ def spawn_particles(x, y, color, count=30):
 
 def reiniciar_partida():
     global player_money, stats, current_bet_input, current_bet, last_bet, epic_win_triggered
+    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done
     player_money = 1000; stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
     current_bet_input = ""; current_bet = 10; last_bet = None
     epic_win_triggered = False
+    difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
     nueva_ronda()
 
 def nueva_ronda():
@@ -1489,7 +1529,7 @@ while True:
     if app_state == 'game':
         if player_money >= EPIC_WIN_THRESHOLD and not epic_win_triggered and state == 'betting':
             epic_win_triggered = True
-            _start_story(WIN_ENDING_SCENES, 'win_ending')
+            _start_story(build_win_ending_scenes(), 'win_ending')
         elif player_money <= 0 and state == 'betting' and not epic_win_triggered:
             _start_story(LOSE_ENDING_SCENES, 'lose_ending')
 
@@ -1760,7 +1800,13 @@ while True:
     VENTANA.blit(lbl_ap, (input_box_x - lbl_ap.get_width() - 12, input_box_y + (input_box_h - lbl_ap.get_height()) // 2))
 
     y_off += line_h
-    surf_chips = FUENTE_PEQUENA.render(f"Máx apuesta: {BET_MAX}  |  Meta: {EPIC_WIN_THRESHOLD} fichas para el final épico", True, BLANCO)
+    diff_labels = {0: 'Normal', 1: 'Difícil', 2: 'EXTREMO'}
+    diff_colors = {0: BLANCO, 1: (255, 200, 80), 2: (255, 80, 80)}
+    diff_label  = diff_labels.get(difficulty_level, 'Normal')
+    diff_color  = diff_colors.get(difficulty_level, BLANCO)
+    surf_chips = FUENTE_PEQUENA.render(
+        f"Máx apuesta: {BET_MAX}  |  Meta: {EPIC_WIN_THRESHOLD} fichas  |  Dificultad: {diff_label}",
+        True, diff_color)
     VENTANA.blit(surf_chips, (reglas_x + padding, y_off))
     y_off += line_h
 
