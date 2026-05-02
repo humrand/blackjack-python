@@ -9,200 +9,165 @@ import shutil
 
 pygame.init()
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 
+
 ANCHO, ALTO = 1920, 960
-VENTANA = pygame.display.set_mode((ANCHO, ALTO))
-pygame.display.set_caption("Blackjack 2D - FIXED - Hand Anim v4")
 
-FUENTE = pygame.font.SysFont("arial", 32, bold=True)
-FUENTE_PEQUENA = pygame.font.SysFont("arial", 24, bold=True)
-FUENTE_GRANDE = pygame.font.SysFont("arial", 70, bold=True)
-FUENTE_MSG = pygame.font.SysFont("arial", 40, bold=True)
-FUENTE_INSTR = pygame.font.SysFont("arial", 20, bold=True)
-RELOJ = pygame.time.Clock()
+_dinfo = pygame.display.Info()
+SCREEN_W = _dinfo.current_w
+SCREEN_H = _dinfo.current_h
+VENTANA_REAL = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.FULLSCREEN)
+pygame.display.set_caption("Blackjack – El Farol Rojo")
 
-VERDE = (20, 120, 20)
-VERDE_OSCURO = (12, 80, 12)
-BLANCO = (255, 255, 255)
-NEGRO = (0, 0, 0)
-ROJO = (200, 0, 0)
-DORADO = (230, 190, 60)
-STRONG_GREEN = (0, 150, 0)
+VENTANA = pygame.Surface((ANCHO, ALTO))
 
-CARD_W = 96
-CARD_H = 144
-CARD_SPACING = 125
 
-HAND_SEP = 300
+def to_logical(pos):
+    sx, sy = pos
+    return (int(sx * ANCHO / SCREEN_W), int(sy * ALTO / SCREEN_H))
 
-PEDIR_DELAY = 500
-ROUND_DELAY = 2000
 
-BET_MAX = 50000
+def flip_display():
+    scaled = pygame.transform.scale(VENTANA, (SCREEN_W, SCREEN_H))
+    VENTANA_REAL.blit(scaled, (0, 0))
+    pygame.display.flip()
 
-SUIT_CHAR = {'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣'}
 
-DECK_POS = (ANCHO // 2, 20)
-DEALER_POS = (ANCHO // 2, 60)
+FUENTE         = pygame.font.SysFont("arial",    32, bold=True)
+FUENTE_PEQUENA = pygame.font.SysFont("arial",    24, bold=True)
+FUENTE_GRANDE  = pygame.font.SysFont("arial",    70, bold=True)
+FUENTE_MSG     = pygame.font.SysFont("arial",    40, bold=True)
+FUENTE_INSTR   = pygame.font.SysFont("arial",    20, bold=True)
+FUENTE_STORY   = pygame.font.SysFont("georgia",  28)
+FUENTE_NAME    = pygame.font.SysFont("georgia",  34, bold=True)
+FUENTE_TITLE_B = pygame.font.SysFont("georgia", 115, bold=True)
+FUENTE_SUBTITLE= pygame.font.SysFont("georgia",  52)
+RELOJ          = pygame.time.Clock()
+
+VERDE        = (20, 120, 20)
+VERDE_OSCURO = (12,  80, 12)
+BLANCO       = (255, 255, 255)
+NEGRO        = (0,   0,   0)
+ROJO         = (200, 0,   0)
+DORADO       = (230, 190, 60)
+STRONG_GREEN = (0,  150,  0)
+
+CARD_W        = 96
+CARD_H        = 144
+CARD_SPACING  = 125
+HAND_SEP      = 300
+PEDIR_DELAY   = 500
+ROUND_DELAY   = 2000
+BET_MAX       = 50000
+SUIT_CHAR     = {'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣'}
+DECK_POS      = (ANCHO // 2, 20)
+DEALER_POS    = (ANCHO // 2, 60)
 PLAYER_STACK_POS = (120, ALTO - 70)
-BANK_POS = (ANCHO // 2, 40)
+BANK_POS      = (ANCHO // 2, 40)
+EPIC_WIN_THRESHOLD = 10000
+DEALER_SETTLE_DELAY = 900
 
 def get_symbol_font(size):
-    candidates = [
-        "Symbola",
-        "DejaVuSans",
-        "DejaVu Sans",
-        "FreeSerif",
-        "Segoe UI Symbol",
-        "Arial Unicode MS",
-        "Noto Sans Symbols2",
-        "Noto Sans Symbols"
-    ]
-    local_paths = [
-        os.path.join("fonts", "Symbola.ttf"),
-        os.path.join("fonts", "DejaVuSans.ttf"),
-        os.path.join("fonts", "DejaVuSans-Oblique.ttf")
-    ]
+    candidates = ["Symbola","DejaVuSans","DejaVu Sans","FreeSerif",
+                  "Segoe UI Symbol","Arial Unicode MS","Noto Sans Symbols2","Noto Sans Symbols"]
+    local_paths = [os.path.join("fonts","Symbola.ttf"),
+                   os.path.join("fonts","DejaVuSans.ttf"),
+                   os.path.join("fonts","DejaVuSans-Oblique.ttf")]
     for p in local_paths:
         if os.path.exists(p):
-            try:
-                return pygame.font.Font(p, size)
-            except Exception:
-                pass
+            try:    return pygame.font.Font(p, size)
+            except: pass
     for name in candidates:
         try:
             path = pygame.font.match_font(name)
             if path:
-                try:
-                    return pygame.font.Font(path, size)
-                except Exception:
-                    pass
-        except Exception:
-            pass
+                try:    return pygame.font.Font(path, size)
+                except: pass
+        except: pass
     return pygame.font.SysFont("arial", size, bold=True)
 
-SYMBOL_FONT = get_symbol_font(56)
+SYMBOL_FONT    = get_symbol_font(56)
 FACE_SYMBOL_MAP = {"J": '♚', "K": '♚', "Q": '♛'}
 
-def crear_baraja():
-    palos = [("S", NEGRO), ("H", ROJO), ("D", ROJO), ("C", NEGRO)]
-    valores = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]
-    baraja = []
-    for palo, color in palos:
-        for v in valores:
-            if v == "A":
-                valor_num = 11
-            elif v in ["J", "Q", "K"]:
-                valor_num = 10
-            else:
-                valor_num = int(v)
-            baraja.append((v, palo, valor_num, color))
-    random_module.shuffle(baraja)
-    return baraja
+_RRNG = random_module.Random(7331)
+_RAIN = [(_RRNG.randint(0, ANCHO), _RRNG.randint(0, ALTO),
+          _RRNG.uniform(200, 460), _RRNG.randint(12, 34))
+         for _ in range(140)]
 
-def calcular(mano):
-    total = sum(c[2] for c in mano)
-    ases = sum(1 for c in mano if c[0] == "A")
-    while total > 21 and ases:
-        total -= 10
-        ases -= 1
-    return total
 
-def calcular_visible(mano):
-    visibles = [c for c in mano if (not c[4].oculta) and (not c[4].flipping) and (abs(c[4].x - c[4].dest_x) < 1)]
-    if not visibles:
-        return 0
-    total = sum(c[2] for c in visibles)
-    ases = sum(1 for c in visibles if c[0] == "A")
-    while total > 21 and ases:
-        total -= 10
-        ases -= 1
-    return total
+def draw_rain(surf, now, alpha=100):
+    t = now / 1000.0
+    for bx, by, sp, ln in _RAIN:
+        y = (by + t * sp) % (ALTO + 60)
+        x = int(bx + y * 0.17) % ANCHO
+        s = pygame.Surface((2, ln), pygame.SRCALPHA)
+        s.fill((160, 195, 235, alpha))
+        surf.blit(s, (x, int(y)))
+
 
 class Carta:
     def __init__(self, valor, palo, valor_num, color, dest_x, dest_y, start_pos=None):
-        self.valor = valor
-        self.palo = palo
-        self.valor_num = valor_num
-        self.color = color
+        self.valor = valor; self.palo = palo
+        self.valor_num = valor_num; self.color = color
         if start_pos:
             self.x, self.y = float(start_pos[0]), float(start_pos[1])
         else:
             self.x, self.y = float(DECK_POS[0]), float(DECK_POS[1])
-        self.dest_x = float(dest_x)
-        self.dest_y = float(dest_y)
-        self.w = CARD_W
-        self.h = CARD_H
-        self.oculta = False
-        self.flipping = False
-        self.flip_start = 0
-        self.flip_duration = 300
-        self.front = None
-        self.back = None
-        self.flip_target_back = False
-        self.scale = 1.0
-        self.target_scale = 1.0
-        self.scale_speed = 0.12
+        self.dest_x = float(dest_x); self.dest_y = float(dest_y)
+        self.w = CARD_W; self.h = CARD_H
+        self.oculta = False; self.flipping = False
+        self.flip_start = 0; self.flip_duration = 300
+        self.front = None; self.back = None; self.flip_target_back = False
+        self.scale = 1.0; self.target_scale = 1.0; self.scale_speed = 0.12
         self._create_faces()
 
     def _create_faces(self):
         self.front = self.crear_front()
-        self.back = self.crear_back()
+        self.back  = self.crear_back()
 
     def crear_front(self):
         surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
-        pygame.draw.rect(surf, BLANCO, (0, 0, self.w, self.h), border_radius=12)
-        pygame.draw.rect(surf, NEGRO, (0, 0, self.w, self.h), 2, border_radius=12)
+        pygame.draw.rect(surf, BLANCO, (0,0,self.w,self.h), border_radius=12)
+        pygame.draw.rect(surf, NEGRO,  (0,0,self.w,self.h), 2, border_radius=12)
         idx = FUENTE_PEQUENA.render(self.valor, True, self.color)
         surf.blit(idx, (8, 6))
         idx_rot = pygame.transform.rotate(idx, 180)
-        surf.blit(idx_rot, (self.w - idx_rot.get_width() - 8, self.h - idx_rot.get_height() - 6))
+        surf.blit(idx_rot, (self.w - idx_rot.get_width()-8, self.h - idx_rot.get_height()-6))
         try:
             if self.valor in FACE_SYMBOL_MAP:
-                face_char = FACE_SYMBOL_MAP[self.valor]
-                sym_surf = SYMBOL_FONT.render(face_char, True, self.color)
-                surf.blit(sym_surf, ((self.w - sym_surf.get_width()) // 2, (self.h - sym_surf.get_height()) // 2 - 6))
+                sym_surf = SYMBOL_FONT.render(FACE_SYMBOL_MAP[self.valor], True, self.color)
             else:
-                symbol_char = SUIT_CHAR.get(self.palo, '?')
-                sym_surf = SYMBOL_FONT.render(symbol_char, True, self.color)
-                surf.blit(sym_surf, ((self.w - sym_surf.get_width()) // 2, (self.h - sym_surf.get_height()) // 2 - 6))
+                sym_surf = SYMBOL_FONT.render(SUIT_CHAR.get(self.palo,'?'), True, self.color)
+            surf.blit(sym_surf, ((self.w-sym_surf.get_width())//2, (self.h-sym_surf.get_height())//2-6))
         except Exception:
-            if self.valor in FACE_SYMBOL_MAP:
-                simple = FUENTE_GRANDE.render(self.valor, True, self.color)
-            else:
-                simple = FUENTE_PEQUENA.render(self.palo, True, self.color)
-            surf.blit(simple, ((self.w - simple.get_width()) // 2, (self.h - simple.get_height()) // 2))
+            simple = FUENTE_GRANDE.render(self.valor, True, self.color) if self.valor in FACE_SYMBOL_MAP \
+                     else FUENTE_PEQUENA.render(self.palo, True, self.color)
+            surf.blit(simple, ((self.w-simple.get_width())//2, (self.h-simple.get_height())//2))
         return surf
 
     def crear_back(self):
         surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
-        pygame.draw.rect(surf, (150, 0, 0), (0, 0, self.w, self.h), border_radius=12)
-        pygame.draw.rect(surf, NEGRO, (0, 0, self.w, self.h), 2, border_radius=12)
-        step_x = 20
-        step_y = 24
-        for i in range(12, self.w - 12, step_x):
-            for j in range(12, self.h - 12, step_y):
-                pygame.draw.circle(surf, (220, 70, 70), (i, j), 5)
+        pygame.draw.rect(surf, (150,0,0), (0,0,self.w,self.h), border_radius=12)
+        pygame.draw.rect(surf, NEGRO,     (0,0,self.w,self.h), 2, border_radius=12)
+        for i in range(12, self.w-12, 20):
+            for j in range(12, self.h-12, 24):
+                pygame.draw.circle(surf, (220,70,70), (i,j), 5)
         return surf
 
     def start_flip(self, now, to_back=False):
         if not self.flipping:
-            self.flipping = True
-            self.flip_start = now
+            self.flipping = True; self.flip_start = now
             self.flip_target_back = bool(to_back)
 
     def actualizar(self, now):
         speed = 0.15
-        dx = self.dest_x - self.x
-        dy = self.dest_y - self.y
+        dx = self.dest_x - self.x; dy = self.dest_y - self.y
         if abs(dx) > 0.5 or abs(dy) > 0.5:
-            self.x += dx * speed
-            self.y += dy * speed
+            self.x += dx * speed; self.y += dy * speed
         else:
-            self.x = self.dest_x
-            self.y = self.dest_y
+            self.x = self.dest_x; self.y = self.dest_y
         if abs(self.scale - self.target_scale) > 0.001:
             self.scale += (self.target_scale - self.scale) * self.scale_speed
         else:
@@ -210,162 +175,657 @@ class Carta:
 
     def dibujar(self, now):
         rx, ry = int(self.x), int(self.y)
-        surf_to_blit = None
         if not self.flipping:
             surf_to_blit = self.back if self.oculta else self.front
-            new_w = max(1, int(self.w * self.scale))
-            new_h = max(1, int(self.h * self.scale))
-            scaled = pygame.transform.smoothscale(surf_to_blit, (new_w, new_h))
-            VENTANA.blit(scaled, (rx - (new_w - self.w)//2, ry - (new_h - self.h)//2))
+            nw = max(1, int(self.w * self.scale)); nh = max(1, int(self.h * self.scale))
+            scaled = pygame.transform.smoothscale(surf_to_blit, (nw, nh))
+            VENTANA.blit(scaled, (rx-(nw-self.w)//2, ry-(nh-self.h)//2))
             return
         progreso = (now - self.flip_start) / self.flip_duration
         if progreso >= 1:
-            self.flipping = False
-            self.oculta = bool(self.flip_target_back)
+            self.flipping = False; self.oculta = bool(self.flip_target_back)
             surf_to_blit = self.back if self.oculta else self.front
-            new_w = max(1, int(self.w * self.scale))
-            new_h = max(1, int(self.h * self.scale))
-            scaled = pygame.transform.smoothscale(surf_to_blit, (new_w, new_h))
-            VENTANA.blit(scaled, (rx - (new_w - self.w)//2, ry - (new_h - self.h)//2))
-            return
+            nw = max(1, int(self.w*self.scale)); nh = max(1, int(self.h*self.scale))
+            scaled = pygame.transform.smoothscale(surf_to_blit, (nw, nh))
+            VENTANA.blit(scaled, (rx-(nw-self.w)//2, ry-(nh-self.h)//2)); return
         if self.flip_target_back:
-            if progreso < 0.5:
-                escala = 1 - progreso * 2
-                surf = self.front
-            else:
-                escala = (progreso - 0.5) * 2
-                surf = self.back
+            escala = (1-progreso*2) if progreso < 0.5 else ((progreso-0.5)*2)
+            surf = self.front if progreso < 0.5 else self.back
         else:
-            if progreso < 0.5:
-                escala = 1 - progreso * 2
-                surf = self.back
-            else:
-                escala = (progreso - 0.5) * 2
-                surf = self.front
-        ancho = max(1, int(self.w * escala))
-        h_final = max(1, int(self.h * self.scale))
+            escala = (1-progreso*2) if progreso < 0.5 else ((progreso-0.5)*2)
+            surf = self.back if progreso < 0.5 else self.front
+        ancho = max(1, int(self.w*escala)); h_final = max(1, int(self.h*self.scale))
         scaled = pygame.transform.smoothscale(surf, (ancho, h_final))
-        x_blit = rx + (self.w - ancho)//2 - ( (int(self.w*self.scale) - self.w)//2 )
-        y_blit = ry - (h_final - self.h)//2
-        VENTANA.blit(scaled, (x_blit, y_blit))
+        x_blit = rx + (self.w-ancho)//2 - ((int(self.w*self.scale)-self.w)//2)
+        VENTANA.blit(scaled, (x_blit, ry-(h_final-self.h)//2))
+
 
 def get_chip_style(value):
     v = int(value)
-    if 1 <= v <= 10:
-        return {'shape': 'circle', 'r': 14, 'color': (180, 30, 30)}
-    if 11 <= v <= 34:
-        return {'shape': 'circle', 'r': 18, 'color': (220, 120, 20)}
-    if 35 <= v <= 64:
-        return {'shape': 'circle', 'r': 22, 'color': (20, 160, 80)}
-    if 65 <= v <= 99:
-        return {'shape': 'circle', 'r': 26, 'color': (30, 120, 220)}
-    if 100 <= v <= 199:
-        return {'shape': 'rect', 'w': 48, 'h': 28, 'color': (20, 150, 80)}
-    if 200 <= v <= 250:
-        return {'shape': 'rect', 'w': 56, 'h': 32, 'color': (220, 100, 160)}
-    return {'shape': 'circle', 'r': 20, 'color': (200, 150, 60)}
+    if   1 <= v <= 10:  return {'shape':'circle','r':14,'color':(180,30,30)}
+    if  11 <= v <= 34:  return {'shape':'circle','r':18,'color':(220,120,20)}
+    if  35 <= v <= 64:  return {'shape':'circle','r':22,'color':(20,160,80)}
+    if  65 <= v <= 99:  return {'shape':'circle','r':26,'color':(30,120,220)}
+    if 100 <= v <= 199: return {'shape':'rect','w':48,'h':28,'color':(20,150,80)}
+    if 200 <= v <= 250: return {'shape':'rect','w':56,'h':32,'color':(220,100,160)}
+    return {'shape':'circle','r':20,'color':(200,150,60)}
 
 def create_placed_chip(value, x, y):
     style = get_chip_style(value)
-    base = {'x': float(x), 'y': float(y), 'value': int(value),
-            'moving': False, 'vx': 0.0, 'vy': 0.0, 'target_x': x, 'target_y': y}
-    base.update(style)
-    return base
+    base = {'x':float(x),'y':float(y),'value':int(value),
+            'moving':False,'vx':0.0,'vy':0.0,'target_x':x,'target_y':y}
+    base.update(style); return base
 
 def make_chip_move_dict(value, sx, sy, tx, ty, speed=6.0):
-    dx = tx - sx; dy = ty - sy
-    dist = math.hypot(dx, dy)
-    if dist == 0:
-        vx = vy = 0.0
-    else:
-        vx = dx / dist * speed
-        vy = dy / dist * speed
+    dx=tx-sx; dy=ty-sy; dist=math.hypot(dx,dy)
+    vx = (dx/dist*speed) if dist else 0.0
+    vy = (dy/dist*speed) if dist else 0.0
     style = get_chip_style(value)
-    d = {'x': float(sx), 'y': float(sy), 'vx': vx, 'vy': vy,
-         'target_x': tx, 'target_y': ty, 'value': int(value), 'moving': True}
-    d.update(style)
-    return d
+    d = {'x':float(sx),'y':float(sy),'vx':vx,'vy':vy,'target_x':tx,'target_y':ty,'value':int(value),'moving':True}
+    d.update(style); return d
 
 def _chip_font_for_circle(r):
-    size = max(10, int(r * 0.7))
-    return pygame.font.SysFont("arial", size, bold=True)
+    return pygame.font.SysFont("arial", max(10,int(r*0.7)), bold=True)
 
 def _chip_font_for_rect(h):
-    size = max(12, int(h * 0.6))
-    return pygame.font.SysFont("arial", size, bold=True)
+    return pygame.font.SysFont("arial", max(12,int(h*0.6)), bold=True)
+
 
 TABLE_STYLES = [
-    {'name': 'verde clásico', 'color': VERDE},
-    {'name': 'rojo casino', 'color': (100, 20, 20)},
-    {'name': 'negro lujo', 'color': (20, 20, 20)}
+    {'name':'verde clásico','color':VERDE},
+    {'name':'rojo casino',  'color':(100,20,20)},
+    {'name':'negro lujo',   'color':(20,20,20)},
 ]
 TABLE_STYLE_IDX = 0
 
 DEALER_AVATAR = None
-if os.path.exists(os.path.join("images", "dealer.png")):
+if os.path.exists(os.path.join("images","dealer.png")):
     try:
-        img = pygame.image.load(os.path.join("images", "dealer.png")).convert_alpha()
-        DEALER_AVATAR = pygame.transform.smoothscale(img, (120, 120))
-    except Exception:
-        DEALER_AVATAR = None
+        img = pygame.image.load(os.path.join("images","dealer.png")).convert_alpha()
+        DEALER_AVATAR = pygame.transform.smoothscale(img,(120,120))
+    except: pass
+
+
+def draw_portero(surf, cx, fy):
+    """Bruno el Portero – traje oscuro, corpulento, amenazante."""
+    SC  = (28, 32, 48); SK  = (175, 125, 80)
+    SH  = (12,  12, 18); TIE = (170, 20,  25)
+    pygame.draw.ellipse(surf, SH, (cx-56, fy-18, 46, 20))
+    pygame.draw.ellipse(surf, SH, (cx+10, fy-18, 46, 20))
+    pygame.draw.rect(surf, SC, (cx-54, fy-158, 40, 143), border_radius=6)
+    pygame.draw.rect(surf, SC, (cx+14, fy-158, 40, 143), border_radius=6)
+    pygame.draw.rect(surf, SC, (cx-72, fy-305, 144, 152), border_radius=10)
+    pygame.draw.polygon(surf, (225,225,225), [(cx-9,fy-305),(cx+9,fy-305),(cx+4,fy-245),(cx-4,fy-245)])
+    pygame.draw.polygon(surf, TIE, [(cx-7,fy-298),(cx+7,fy-298),(cx+3,fy-255),(cx-3,fy-255)])
+    pygame.draw.rect(surf, SC, (cx-108, fy-288, 40, 115), border_radius=8)
+    pygame.draw.circle(surf, SK, (cx-88, fy-170), 18)
+    pygame.draw.rect(surf, SC, (cx+68,  fy-288, 40, 115), border_radius=8)
+    pygame.draw.circle(surf, SK, (cx+88, fy-170), 18)
+    pygame.draw.rect(surf, SK, (cx-15, fy-338, 30, 36))
+    pygame.draw.circle(surf, SK, (cx, fy-360), 44)
+    pygame.draw.ellipse(surf, (30,20,15), (cx-44, fy-407, 88, 50))
+    pygame.draw.rect(surf, (40,30,20), (cx-27, fy-373, 20, 10), border_radius=3)
+    pygame.draw.rect(surf, (40,30,20), (cx+7,  fy-373, 20, 10), border_radius=3)
+    pygame.draw.line(surf, (20,15,10), (cx-30,fy-388),(cx-8,fy-380), 4)
+    pygame.draw.line(surf, (20,15,10), (cx+8, fy-388),(cx+30,fy-380), 4)
+    pygame.draw.line(surf, (120,70,50),(cx-14,fy-340),(cx+14,fy-340), 3)
+    pygame.draw.line(surf, (140,80,60),(cx+18,fy-360),(cx+22,fy-345), 2)
+
+
+def draw_camarera(surf, cx, fy):
+    """Rosa la Camarera – parte superior visible sobre la barra."""
+    DC = (145, 48, 72); SK = (215, 175, 130)
+    AP = (238, 232, 215); HR = (75,  38, 18)
+    pygame.draw.rect(surf, DC, (cx-44, fy-285, 88, 140), border_radius=8)
+    pygame.draw.rect(surf, AP, (cx-30, fy-275, 60, 115), border_radius=5)
+    pygame.draw.rect(surf, DC, (cx-86, fy-272, 44, 90), border_radius=7)
+    pygame.draw.circle(surf, SK, (cx-64, fy-178), 15)
+    pygame.draw.rect(surf, (130,190,220), (cx-76, fy-240, 24, 48), border_radius=4)
+    pygame.draw.rect(surf, (80,130,160),  (cx-76, fy-240, 24, 48), 2, border_radius=4)
+    pygame.draw.rect(surf, (180,220,240,120), (cx-74, fy-238, 12, 10))
+    pygame.draw.rect(surf, DC, (cx+42,  fy-272, 44, 100), border_radius=7)
+    pygame.draw.circle(surf, SK, (cx+64, fy-168), 15)
+    pygame.draw.rect(surf, SK, (cx-13, fy-318, 26, 36))
+    pygame.draw.circle(surf, SK, (cx, fy-340), 38)
+    pygame.draw.circle(surf, HR, (cx, fy-340), 38)
+    pygame.draw.ellipse(surf, SK, (cx-32, fy-360, 64, 50))
+    pygame.draw.circle(surf, HR, (cx, fy-378), 22)
+    pygame.draw.circle(surf, HR, (cx-16,fy-372), 14)
+    pygame.draw.circle(surf, HR, (cx+16,fy-372), 14)
+    pygame.draw.circle(surf, (60,38,25), (cx-14, fy-350), 6)
+    pygame.draw.circle(surf, (60,38,25), (cx+14, fy-350), 6)
+    pygame.draw.circle(surf, BLANCO, (cx-16, fy-352), 3)
+    pygame.draw.circle(surf, BLANCO, (cx+12, fy-352), 3)
+    pygame.draw.arc(surf, (165,80,80), (cx-16, fy-337, 32, 16), math.pi, 2*math.pi, 3)
+    pygame.draw.circle(surf, DORADO, (cx-38, fy-342), 5)
+    pygame.draw.circle(surf, DORADO, (cx+38, fy-342), 5)
+
+
+def draw_victor(surf, cx, fy, nervous=False):
+    """Víctor Carvalho – el antagonista elegante y calculador."""
+    SC = (18,  14, 28); WC = (235, 235, 235)
+    GC = (185, 155, 42); SK = (215, 185, 145); HC = (12, 8, 22)
+    pygame.draw.ellipse(surf, (8,6,14), (cx-43, fy-22, 38, 20))
+    pygame.draw.ellipse(surf, (8,6,14), (cx+5,  fy-22, 43, 20))
+    pygame.draw.rect(surf, SC, (cx-42, fy-175, 30, 156), border_radius=5)
+    pygame.draw.rect(surf, SC, (cx+12, fy-175, 30, 156), border_radius=5)
+    pygame.draw.rect(surf, SC, (cx-52, fy-325, 104, 156), border_radius=7)
+    pygame.draw.rect(surf, GC, (cx-34, fy-322, 68, 140), border_radius=5)
+    pygame.draw.polygon(surf, WC, [(cx-11,fy-325),(cx+11,fy-325),(cx+5,fy-282),(cx-5,fy-282)])
+    pygame.draw.polygon(surf, (175,15,15),
+                        [(cx-16,fy-318),(cx,fy-308),(cx+16,fy-318),
+                         (cx+16,fy-302),(cx,fy-312),(cx-16,fy-302)])
+    pygame.draw.line(surf, DORADO, (cx+30,fy-300),(cx+22,fy-265), 2)
+    pygame.draw.circle(surf, DORADO, (cx+22,fy-260), 6)
+    pygame.draw.rect(surf, SC, (cx-82, fy-318, 30, 130), border_radius=6)
+    pygame.draw.circle(surf, SK, (cx-67, fy-184), 14)
+    pygame.draw.rect(surf, SC, (cx+52, fy-318, 30, 130), border_radius=6)
+    pygame.draw.circle(surf, SK, (cx+67, fy-184), 14)
+    pygame.draw.rect(surf, SK, (cx-12, fy-358, 24, 36))
+    pygame.draw.ellipse(surf, SK, (cx-36, fy-415, 72, 62))
+    pygame.draw.ellipse(surf, HC, (cx-36, fy-415, 72, 36))
+    ey = fy - 394
+    pygame.draw.rect(surf, (28,22,38), (cx-26, ey, 20, 9), border_radius=2)
+    pygame.draw.rect(surf, (28,22,38), (cx+6,  ey, 20, 9), border_radius=2)
+    pygame.draw.line(surf, HC, (cx-28,ey-13),(cx-8,ey-6),  3)
+    pygame.draw.line(surf, HC, (cx+8, ey-11),(cx+28,ey-6), 3)
+    pygame.draw.arc(surf, (145,75,65), (cx-4, fy-377, 30, 18), math.pi+0.4, 2*math.pi-0.1, 3)
+    bw = 96; tw = 54; hh = 48; hy = fy - 416
+    pygame.draw.rect(surf, HC, (cx-tw//2, hy-hh, tw, hh), border_radius=5)
+    pygame.draw.rect(surf, HC, (cx-bw//2, hy-6,  bw,  8))
+    pygame.draw.rect(surf, GC, (cx-tw//2, hy-10, tw,  8))
+    if nervous:
+        for sx2, sy2 in [(cx+34,fy-410),(cx+44,fy-395)]:
+            pygame.draw.polygon(surf, (120,185,225),
+                                [(sx2,sy2-14),(sx2+6,sy2),(sx2-6,sy2)])
+
+
+def draw_bg_title(surf, now):
+    surf.fill((4, 2, 8))
+    t = now / 1000.0
+    flicker = 0.82 + 0.18 * math.sin(t * 3.1) * math.sin(t * 7.3)
+    cx, cy = ANCHO // 2, ALTO // 2 - 90
+    for r in range(260, 0, -18):
+        a = max(0, int(22 * (1 - r/260) * flicker))
+        gs = pygame.Surface((r*2, r*2), pygame.SRCALPHA)
+        pygame.draw.circle(gs, (210, 55, 25, a), (r, r), r)
+        surf.blit(gs, (cx-r, cy-r))
+    title_col = (int(235*flicker), int(70*flicker), int(22*flicker))
+    title_surf = FUENTE_TITLE_B.render("EL FAROL ROJO", True, title_col)
+    surf.blit(title_surf, (cx - title_surf.get_width()//2, cy - title_surf.get_height()//2))
+    sub = FUENTE_SUBTITLE.render("Barcelona  ·  1987", True, (180, 148, 90))
+    surf.blit(sub, (cx - sub.get_width()//2, cy + title_surf.get_height()//2 + 28))
+    lw = title_surf.get_width() + 60
+    pygame.draw.line(surf,
+        (int(DORADO[0]*flicker), int(DORADO[1]*flicker), int(DORADO[2]*flicker)),
+        (cx-lw//2, cy + title_surf.get_height()//2 + 20),
+        (cx+lw//2, cy + title_surf.get_height()//2 + 20), 2)
+    draw_rain(surf, now, alpha=80)
+    grad = pygame.Surface((ANCHO, 220), pygame.SRCALPHA)
+    for i in range(220):
+        grad.fill((0,0,0, int(200*(i/220))), (0,i,ANCHO,1))
+    surf.blit(grad, (0, ALTO-220))
+
+
+def draw_bg_street(surf, now):
+    surf.fill((6, 9, 20))
+    t = now / 1000.0
+    pygame.draw.rect(surf, (18, 20, 30), (0, 0, 580, ALTO))
+    _WIN_ON  = (200, 178, 95); _WIN_OFF = (22, 24, 36)
+    for wx, wy in [(70,110),(190,110),(310,110),(70,250),(190,250),(310,250),(70,390),(190,390)]:
+        wc = _WIN_ON if (wx+wy) % 5 != 0 else _WIN_OFF
+        pygame.draw.rect(surf, wc, (wx, wy, 50, 65), border_radius=4)
+        pygame.draw.rect(surf, (28,30,42), (wx, wy, 50, 65), 2, border_radius=4)
+    pygame.draw.rect(surf, (15, 17, 26), (1340, 0, ANCHO-1340, ALTO))
+    for wx, wy in [(1380,90),(1520,90),(1660,90),(1800,90),(1380,225),(1520,225),(1660,225),(1800,270)]:
+        wc = _WIN_ON if (wx+wy) % 5 != 1 else _WIN_OFF
+        pygame.draw.rect(surf, wc, (wx, wy, 50, 65), border_radius=4)
+        pygame.draw.rect(surf, (28,30,42), (wx, wy, 50, 65), 2, border_radius=4)
+    pygame.draw.rect(surf, (20, 23, 34), (0, 680, ANCHO, ALTO-680))
+    for i in range(0, ANCHO, 88):
+        pygame.draw.line(surf, (26, 29, 42), (i,680),(i,ALTO), 1)
+    for j in range(680, ALTO, 44):
+        pygame.draw.line(surf, (24, 27, 38), (0,j),(ANCHO,j), 1)
+    ref = pygame.Surface((340, 180), pygame.SRCALPHA)
+    for ry in range(180):
+        a = max(0, int(38*(1-ry/180)*abs(math.sin(t+ry*0.08))))
+        ref.fill((220,155,55,a),(0,ry,340,1))
+    surf.blit(ref, (740, 680))
+    dx, dy, dw, dh = 740, 310, 340, 395
+    glow = pygame.Surface((500, 600), pygame.SRCALPHA)
+    for r in range(240, 0, -14):
+        a = max(0, int(35*(1-r/240)))
+        pygame.draw.ellipse(glow, (225,155,55,a),(240-r,280-r,r*2,r*2))
+    surf.blit(glow, (dx+dw//2-250, dy+dh//2-280))
+    pygame.draw.rect(surf, (175, 115, 38), (dx, dy, dw, dh))
+    pygame.draw.rect(surf, (60, 38, 16), (dx-18, dy-12, dw+36, dh+12), 18, border_radius=6)
+    pygame.draw.rect(surf, (88, 55, 22), (dx-8, dy-5, dw+16, dh+5), 4, border_radius=4)
+    lx2, ly2 = dx+dw//2, dy-48
+    pygame.draw.rect(surf, (38,28,12), (lx2-9, ly2-55, 18, 56))
+    pygame.draw.rect(surf, (58,48,18), (lx2-22, ly2-78, 44, 50), border_radius=7)
+    pygame.draw.rect(surf, (88,68,28), (lx2-22, ly2-78, 44, 50), 3, border_radius=7)
+    fa = int(100 + 28*math.sin(t*2.5))
+    fg = pygame.Surface((90, 90), pygame.SRCALPHA)
+    pygame.draw.circle(fg, (255,205,85,fa),(45,45),45)
+    surf.blit(fg, (lx2-45, ly2-100))
+    sf = 0.75 + 0.25*math.sin(t*2.8)
+    sc2 = (int(228*sf), int(48*sf), int(18*sf))
+    sign_s = FUENTE_PEQUENA.render("★  EL FAROL ROJO  ★", True, sc2)
+    surf.blit(sign_s, (dx+dw//2-sign_s.get_width()//2, dy-115))
+    draw_rain(surf, now, alpha=95)
+
+
+def draw_bg_bar_base(surf, now):
+    surf.fill((32, 19, 10))
+    t = now / 1000.0
+    pygame.draw.rect(surf, (48, 28, 13), (0, 780, ANCHO, 180))
+    for i in range(0, ANCHO, 110):
+        pygame.draw.line(surf, (38,22,10),(i,780),(i,ALTO),1)
+    for j in range(780,ALTO,55):
+        pygame.draw.line(surf,(36,21,9),(0,j),(ANCHO,j),1)
+    pygame.draw.rect(surf, (42, 26, 13), (0, 0, ANCHO, 790))
+    bcols = [(38,80,38),(85,40,18),(155,125,40),(28,58,92),
+             (118,28,28),(62,82,58),(205,165,60),(28,52,80),(165,80,145)]
+    for sy in [155, 290, 440]:
+        pygame.draw.rect(surf, (78, 48, 22), (180, sy, 1250, 16), border_radius=3)
+        for i, bx in enumerate(range(200, 1415, 75)):
+            bc = bcols[i % len(bcols)]
+            bh = 55 + (i % 4)*14
+            pygame.draw.rect(surf, bc, (bx, sy-bh, 20, bh-8), border_radius=4)
+            pygame.draw.rect(surf, bc, (bx+5, sy-bh-16, 10, 18), border_radius=2)
+            hi_c = tuple(min(255,c+70) for c in bc)
+            pygame.draw.line(surf, hi_c, (bx+4, sy-bh+4),(bx+4, sy-12), 2)
+    for lx2 in [480, 960, 1440]:
+        lamp = pygame.Surface((280, 380), pygame.SRCALPHA)
+        for r in range(140, 0, -8):
+            a = max(0, int(22*(1-r/140)))
+            pygame.draw.ellipse(lamp, (230,182,78,a),(140-r,140-r,r*2,r*2))
+        surf.blit(lamp, (lx2-140, -40))
+        pygame.draw.ellipse(surf,(55,45,24),(lx2-18,  2, 36, 14))
+        pygame.draw.ellipse(surf,(195,168,74),(lx2-13, 12, 26, 18))
+    for i in range(5):
+        sx2 = 300 + i*300; sy2 = 380+i*22
+        for j in range(9):
+            a2 = max(0, 38-j*4)
+            sx3 = sx2 + int(14*math.sin(t+i+j*0.45))
+            sy3 = int(sy2 - j*28 + 18*math.sin(t*0.65+i))
+            sm = pygame.Surface((28,28), pygame.SRCALPHA)
+            pygame.draw.circle(sm,(82,64,48,a2),(14,14),14)
+            surf.blit(sm,(sx3,sy3))
+    for sx2 in [310, 530, 750, 970, 1190]:
+        pygame.draw.ellipse(surf,(72,42,20),(sx2-26, 582, 52, 18))
+        pygame.draw.line(surf,(60,36,18),(sx2,600),(sx2,780), 6)
+        pygame.draw.ellipse(surf,(50,30,14),(sx2-22, 775, 44, 12))
+
+
+def draw_bar_counter_overlay(surf, now):
+    pygame.draw.rect(surf, (105, 65, 30), (0, 597, ANCHO, 16))
+    pygame.draw.rect(surf,  (82, 50, 24), (0, 613, ANCHO, 170))
+    pygame.draw.rect(surf,  (60, 36, 16), (0, 779, ANCHO,   6))
+    ref = pygame.Surface((ANCHO, 8), pygame.SRCALPHA)
+    ref.fill((255,255,255,18))
+    surf.blit(ref, (0, 598))
+
+
+def draw_bg_table_scene(surf, now):
+    surf.fill((7, 5, 12))
+    t = now/1000.0
+    cx2 = ANCHO//2
+    for y in range(0, ALTO):
+        sp2 = int(y * 0.52)
+        a2 = max(0, int(32 * (1-y/ALTO)))
+        if sp2 > 0:
+            sl = pygame.Surface((sp2*2, 1), pygame.SRCALPHA)
+            sl.fill((228,198,118,a2))
+            surf.blit(sl, (cx2-sp2, y))
+    tr = pygame.Rect(cx2-540, 380, 1080, 330)
+    pygame.draw.ellipse(surf, (17, 88, 17), tr)
+    pygame.draw.ellipse(surf, (11, 62, 11), tr, 4)
+    pygame.draw.ellipse(surf, (8,  42,  8), tr.inflate(-38,-18), 2)
+    pygame.draw.ellipse(surf, (58, 34, 14), tr.inflate(24, 12), 18)
+    for lpx in [cx2-440, cx2, cx2+440]:
+        pygame.draw.rect(surf, (38, 23, 11), (lpx-9, 695, 18, 130))
+    sh = pygame.Surface((1200, 80), pygame.SRCALPHA)
+    for sy2 in range(80):
+        sh.fill((0,0,0,int(60*(1-sy2/80))),(0,sy2,1200,1))
+    surf.blit(sh, (cx2-600, 700))
+    for i in range(12):
+        px = int(200 + i*130 + 40*math.sin(t*0.3+i))
+        py = int(250 + 80*math.sin(t*0.5+i*0.7))
+        pa = pygame.Surface((4,4), pygame.SRCALPHA)
+        pygame.draw.circle(pa,(200,180,120,int(25+15*math.sin(t+i))),(2,2),2)
+        surf.blit(pa,(px,py))
+
+
+def draw_bg_street_dawn(surf, now):
+    for y in range(ALTO):
+        r2 = y/ALTO
+        r = int(28+128*r2); g = int(12+52*r2); b = int(58-38*r2)
+        pygame.draw.line(surf,(r,g,b),(0,y),(ANCHO,y))
+    for bx2,by2,bw2 in [(0,185,420),(390,295,310),(660,148,260),(920,260,200),
+                        (1080,230,300),(1350,175,370),(1680,290,ANCHO-1680)]:
+        pygame.draw.rect(surf,(14,9,20),(bx2,by2,bw2,ALTO-by2))
+    pygame.draw.rect(surf,(22,15,28),(0,688,ANCHO,ALTO-688))
+    ref = pygame.Surface((ANCHO,180), pygame.SRCALPHA)
+    t2  = now/1000.0
+    for i in range(0,ANCHO,9):
+        a2 = max(0, int(28+18*math.sin(t2+i*0.018)))
+        ref.fill((192,112,56,a2),(i,0,9,180))
+    surf.blit(ref,(0,688))
+    for i,(sx2,sy2) in enumerate([(155,65),(410,32),(680,110),(1180,52),(1460,82),(1740,42),(290,98)]):
+        a2 = max(0, int(165 - now/28 + i*22)) % 165
+        st = pygame.Surface((4,4), pygame.SRCALPHA)
+        pygame.draw.circle(st,(252,248,195,min(a2,165)),(2,2),2)
+        surf.blit(st,(sx2,sy2))
+    off_col = (55, 18, 8)
+    ns = pygame.font.SysFont("arial",18,bold=True).render("EL FAROL ROJO", True, off_col)
+    surf.blit(ns,(48, 68))
+
+
+_SPEAKER_COLORS = {
+    'Portero': (185,185,225), 'Bruno': (185,185,225),
+    'Rosa':    (235,162,162), 'Camarera': (235,162,162),
+    'Víctor':  (185,125,232),
+    'Tú':      (125,225,162),
+    'narrador':DORADO,
+}
+
+
+def wrap_story(text, font, max_w):
+    words = text.split()
+    lines2 = []; cur = ""
+    for w in words:
+        test = (cur+" "+w).strip()
+        if font.size(test)[0] <= max_w: cur = test
+        else:
+            if cur: lines2.append(cur)
+            cur = w
+    if cur: lines2.append(cur)
+    return lines2
+
+
+def draw_dialogue_box(surf, speaker, text, now):
+    BOX_H = 215; BOX_Y = ALTO - BOX_H; PAD = 65
+    bg = pygame.Surface((ANCHO, BOX_H), pygame.SRCALPHA)
+    bg.fill((3, 2, 8, 218))
+    surf.blit(bg, (0, BOX_Y))
+    pygame.draw.line(surf, DORADO, (0, BOX_Y), (ANCHO, BOX_Y), 2)
+    pygame.draw.line(surf, (80,65,30), (PAD, BOX_Y+8), (ANCHO-PAD, BOX_Y+8), 1)
+    narrador_mode = (speaker in ('narrador', ''))
+    if narrador_mode:
+        text_y = BOX_Y + 32
+    else:
+        sc2 = _SPEAKER_COLORS.get(speaker, DORADO)
+        name_s = FUENTE_NAME.render(speaker, True, sc2)
+        surf.blit(name_s, (PAD, BOX_Y + 18))
+        text_y = BOX_Y + 18 + name_s.get_height() + 6
+    max_w2 = ANCHO - PAD * 2
+    lines2 = wrap_story(text, FUENTE_STORY, max_w2)
+    txt_col = (195,195,195) if narrador_mode else BLANCO
+    for i, line in enumerate(lines2[:4]):
+        ls = FUENTE_STORY.render(line, True, txt_col)
+        surf.blit(ls, (PAD, text_y + i*34))
+    if (now // 550) % 2 == 0:
+        cont = FUENTE_INSTR.render("[ ESPACIO  o  clic  para continuar ]", True, (125,112,88))
+        surf.blit(cont, (ANCHO - cont.get_width() - PAD, ALTO - 26))
+
+INTRO_SCENES = [
+    {
+        'bg': 'title', 'chars': [], 'counter': False,
+        'lines': [
+            ('narrador', 'Barcelona. 1987.'),
+            ('narrador', 'El Barrio Gótico lleva siglos guardando secretos. Esta noche guardará uno más.'),
+            ('narrador', 'Al final del Carrer del Bisbe, en un portal sin número, existe un lugar que no aparece en ningún mapa.'),
+            ('narrador', '"El Farol Rojo". Un casino clandestino que opera desde hace años con total impunidad.'),
+            ('narrador', 'Su propietario, Víctor Carvalho, no ha perdido una partida de blackjack en tres años. Nadie sabe cómo lo hace.'),
+            ('narrador', 'Tú llegas con mil fichas, una teoría y una promesa que te hiciste a ti mismo.'),
+            ('narrador', 'Esta noche, alguien va a perder.'),
+        ]
+    },
+    {
+        'bg': 'street', 'chars': [('portero', ANCHO//2+300, 760)], 'counter': False,
+        'lines': [
+            ('Portero', '¿A dónde crees que vas, amigo?'),
+            ('Tú', 'Vengo a jugar.'),
+            ('Portero', 'Aquí no entra cualquiera. Este no es un sitio para turistas.'),
+            ('Tú', 'Tengo mil fichas y no tengo prisa. ¿Suficiente?'),
+            ('Portero', '(Te mira de arriba abajo durante un momento largo.)'),
+            ('Portero', '...Pasa. Pero sabe que nadie ha salido de aquí ganando. Nadie.'),
+            ('Tú', 'Hay una primera vez para todo.'),
+        ]
+    },
+    {
+        'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+        'lines': [
+            ('Rosa', 'Primera vez que te veo por aquí.'),
+            ('Tú', 'Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.'),
+            ('Rosa', '(Sonríe) Y el peor whisky. Te lo advierto. ¿Qué te pongo?'),
+            ('Tú', 'Nada por ahora. Estoy aquí por Víctor.'),
+            ('Rosa', '(La sonrisa desaparece.) Cuidado con él. Lleva tres años sin perder. Dicen que ve las cartas antes de que salgan.'),
+            ('Tú', '¿Y si pierde? ¿Qué pasa?'),
+            ('Rosa', 'Eso... nadie lo sabe. Nunca ha pasado. Nadie ha llegado tan lejos.'),
+            ('Tú', 'Pues esta noche vamos a descubrirlo.'),
+            ('Rosa', '(En voz baja) Ten cuidado. En serio.'),
+        ]
+    },
+    {
+        'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
+        'lines': [
+            ('Víctor', 'Vaya, vaya... carne fresca. Hacía tiempo que no veía una cara nueva.'),
+            ('Víctor', 'Siéntate. ¿Cuánto dinero traes?'),
+            ('Tú', 'Mil fichas.'),
+            ('Víctor', '(Ríe suavemente.) Suficiente para entretenernos unas horas. Quizás.'),
+            ('Víctor', 'Las reglas son simples: gana el que llega a 21 sin pasarse. Yo soy la banca.'),
+            ('Víctor', 'Y en este establecimiento... la banca siempre gana. Siempre.'),
+            ('Tú', 'De acuerdo. Pero tengo una condición.'),
+            ('Víctor', '(Arquea una ceja.) ¿Condición? Eso es... inusual.'),
+            ('Tú', 'Si llego a diez mil fichas... me dices cómo lo haces. Cómo haces trampa.'),
+            ('Víctor', '(Pausa larga. Te mira fijamente. Luego sonríe.) ...Trato hecho, forastero. Suerte.'),
+            ('Víctor', 'La vas a necesitar.'),
+            ('narrador', '¡Que empiece el juego!'),
+        ]
+    },
+]
+
+WIN_ENDING_SCENES = [
+    {
+        'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
+        'lines': [
+            ('narrador', 'Diez mil fichas. El número imposible.'),
+            ('narrador', 'El aire en la sala cambió. Fue como si alguien hubiera apagado la música sin tocar nada.'),
+            ('Víctor', '...'),
+            ('Víctor', '¿Cómo?'),
+            ('Tú', 'Diez mil, Víctor. Creo que ya sabes lo que eso significa.'),
+            ('Víctor', '¡No! ¡Trampa! ¡Este hombre está haciendo trampa de alguna manera!'),
+            ('Tú', 'Las cartas no mienten, Víctor. Tú sí.'),
+            ('Víctor', '(Se pone de pie, volcando la silla.) ¡Garduño! ¡Enrique! ¡Sacad a este hombre de aquí ahora mismo!'),
+        ]
+    },
+    {
+        'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+        'lines': [
+            ('narrador', 'Dos hombres muy grandes se levantan de las sombras. El ambiente se congela.'),
+            ('narrador', 'Y entonces Rosa actúa.'),
+            ('Rosa', '¡Ay, Dios mío, qué torpe soy!'),
+            ('narrador', 'Rosa vuelca toda la barra de un golpe. Una cascada de botellas, vasos y whisky de treinta años inunda el suelo.'),
+            ('narrador', 'El caos es inmediato y total. Gritos, cristales rotos, gente empujando.'),
+            ('narrador', 'En medio de la confusión, tú te guardas los billetes y caminas tranquilamente hacia la puerta.'),
+            ('Portero', '¡Eh! ¡Para ahí!'),
+            ('narrador', 'Pero el portero tiene los pies empapados de Macallan del 62 y otras prioridades.'),
+            ('Rosa', '(Te guiña un ojo desde el otro lado del caos.)'),
+        ]
+    },
+    {
+        'bg': 'street_dawn', 'chars': [], 'counter': False,
+        'lines': [
+            ('narrador', 'El aire de la madrugada huele a lluvia limpia. A libertad.'),
+            ('narrador', 'Caminas despacio por los adoquines mojados. No hay prisa. Ya no.'),
+            ('narrador', 'Detrás de ti, el neón de "El Farol Rojo" parpadea dos veces y se apaga.'),
+            ('narrador', 'Como si hubiera perdido las ganas de seguir encendido.'),
+            ('narrador', 'Víctor Carvalho nunca cumplió su parte del trato. No te dijo nada.'),
+            ('narrador', 'Pero esa noche descubriste algo más valioso: que la trampa tenía un límite.'),
+            ('narrador', 'Y tú lo habías encontrado.'),
+            ('narrador', 'La ciudad empieza a despertar. Huele a café y a pan recién hecho.'),
+            ('narrador', 'Hay una barra que aún no has visitado, una camarera que te debe una copa...'),
+            ('narrador', '...y el día más largo de tu vida acaba de terminar.'),
+            ('narrador', '─────────  FIN  ─────────'),
+        ]
+    },
+]
+
+LOSE_ENDING_SCENES = [
+    {
+        'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
+        'lines': [
+            ('narrador', 'Y así terminó.'),
+            ('Víctor', 'Ya está. Eso es todo lo que tenías.'),
+            ('Víctor', 'Ha sido... entretenido. Para mí.'),
+            ('Tú', '...'),
+            ('Víctor', '(Sin levantar la vista de las fichas.) La puerta está donde la dejaste. Buenas noches.'),
+            ('narrador', 'No había nada más que decir.'),
+        ]
+    },
+    {
+        'bg': 'street', 'chars': [], 'counter': False,
+        'lines': [
+            ('narrador', 'Volviste a la calle con los bolsillos vacíos y la cabeza llena de preguntas.'),
+            ('narrador', 'La lluvia seguía ahí. Indiferente. Como siempre.'),
+            ('narrador', 'Víctor seguía dentro, invicto. De momento.'),
+            ('narrador', 'Pero el juego no había terminado. Solo esta ronda.'),
+            ('narrador', 'Mañana es otro día. Y tú sabes dónde está la puerta.'),
+            ('narrador', '¿Lo intentas de nuevo?'),
+        ]
+    },
+]
+
+
+app_state         = 'intro'
+story_scenes_data = INTRO_SCENES
+story_scene_idx   = 0
+story_line_idx    = 0
+epic_win_triggered = False
+
+
+def _start_story(scenes, new_state):
+    global story_scenes_data, story_scene_idx, story_line_idx, app_state
+    story_scenes_data = scenes
+    story_scene_idx   = 0
+    story_line_idx    = 0
+    app_state         = new_state
+
+
+def _story_advance():
+    global story_scenes_data, story_scene_idx, story_line_idx, app_state
+    global player_money, stats, current_bet, current_bet_input, last_bet, epic_win_triggered
+
+    story_line_idx += 1
+    scene = story_scenes_data[story_scene_idx]
+    if story_line_idx >= len(scene['lines']):
+        story_scene_idx += 1
+        story_line_idx = 0
+        if story_scene_idx >= len(story_scenes_data):
+            if app_state == 'intro':
+                app_state = 'game'
+                nueva_ronda()
+            elif app_state == 'win_ending':
+                pygame.quit(); sys.exit()
+            elif app_state == 'lose_ending':
+                app_state = 'game'
+                epic_win_triggered = False
+                player_money = 1000
+                stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
+                current_bet = 10; current_bet_input = ""; last_bet = None
+                nueva_ronda()
+
+
+def _render_story(now):
+    global story_scenes_data, story_scene_idx, story_line_idx
+    if story_scene_idx >= len(story_scenes_data):
+        return
+    scene = story_scenes_data[story_scene_idx]
+    bg    = scene['bg']
+    has_counter = scene.get('counter', False)
+    if bg == 'title':        draw_bg_title(VENTANA, now)
+    elif bg == 'street':     draw_bg_street(VENTANA, now)
+    elif bg == 'bar':        draw_bg_bar_base(VENTANA, now)
+    elif bg == 'table':      draw_bg_table_scene(VENTANA, now)
+    elif bg == 'street_dawn':draw_bg_street_dawn(VENTANA, now)
+    else:                    VENTANA.fill(NEGRO)
+    for (ct, cx2, fy2) in scene.get('chars', []):
+        if   ct == 'portero':         draw_portero(VENTANA, cx2, fy2)
+        elif ct == 'camarera':        draw_camarera(VENTANA, cx2, fy2)
+        elif ct == 'victor':          draw_victor(VENTANA, cx2, fy2, nervous=False)
+        elif ct == 'victor_nervioso': draw_victor(VENTANA, cx2, fy2, nervous=True)
+    if has_counter:
+        draw_bar_counter_overlay(VENTANA, now)
+    if story_line_idx < len(scene['lines']):
+        speaker2, text2 = scene['lines'][story_line_idx]
+        draw_dialogue_box(VENTANA, speaker2, text2, now)
+
+
+def crear_baraja():
+    palos = [("S",NEGRO),("H",ROJO),("D",ROJO),("C",NEGRO)]
+    valores = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]
+    baraja2 = []
+    for palo,color in palos:
+        for v in valores:
+            if v=="A": vn=11
+            elif v in ["J","Q","K"]: vn=10
+            else: vn=int(v)
+            baraja2.append((v,palo,vn,color))
+    random_module.shuffle(baraja2)
+    return baraja2
+
+def calcular(mano):
+    total = sum(c[2] for c in mano)
+    ases  = sum(1 for c in mano if c[0]=="A")
+    while total > 21 and ases:
+        total -= 10; ases -= 1
+    return total
+
+def calcular_visible(mano):
+    vis = [c for c in mano if (not c[4].oculta) and (not c[4].flipping) and (abs(c[4].x-c[4].dest_x)<1)]
+    if not vis: return 0
+    total = sum(c[2] for c in vis)
+    ases  = sum(1 for c in vis if c[0]=="A")
+    while total > 21 and ases:
+        total -= 10; ases -= 1
+    return total
+
 
 baraja = []
-jugador = []
-jugador_hands = None
-current_hand_index = 0
-split_active = False
+jugador = []; jugador_hands = None; current_hand_index = 0
+split_active = False; banca = []
 
-banca = []
+player_money = 1000; current_bet = 10; bet_locked = False
+current_bet_input = ""; last_bet = None
 
-player_money = 1000
-current_bet = 10
-bet_locked = False
-current_bet_input = ""
-last_bet = None
+insurance_offered = False; insurance_bet = 0; insurance_taken = False
+doubledown_flags = []; per_hand_bets = None
 
-insurance_offered = False
-insurance_bet = 0
-insurance_taken = False
+stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
 
-doubledown_flags = []
-per_hand_bets = None
+state = 'betting'; dealing_step = 0; next_deal = 0
+dealer_thinking = False; next_action = 0; last_pedir_time = 0; round_end_time = 0
+dealer_target = 17
 
-stats = {'played': 0, 'won': 0, 'lost': 0, 'blackjacks': 0}
+clearing = False; clear_phase = None; clearing_cards = []
+particles = []; chips_anim = []; placed_chip = None; player_chip_stack = []
 
-state = 'betting'
-dealing_step = 0
-next_deal = 0
-dealer_thinking = False
-next_action = 0
-last_pedir_time = 0
-round_end_time = 0
+overlay_flash = {'active':False,'color':(0,0,0),'alpha':0,'start':0,'duration':400}
 
-DEALER_SETTLE_DELAY = 900
+update_status = None; update_msg = ""; update_notif_time = 0; update_restart_time = 0
+DOTS_BTN = pygame.Rect(ANCHO-46, 8, 38, 28)
 
-clearing = False
-clear_phase = None
-clearing_cards = []
+nueva_ronda_pending = False
+mensaje = ""
 
-particles = []
-chips_anim = []
-placed_chip = None
-player_chip_stack = []
-
-overlay_flash = {'active': False, 'color': (0, 0, 0), 'alpha': 0, 'start': 0, 'duration': 400}
-
-update_status = None   
-update_msg = ""
-update_notif_time = 0
-update_restart_time = 0
-DOTS_BTN = pygame.Rect(ANCHO - 46, 8, 38, 28)
 
 def _sha256(path):
     import hashlib
     try:
-        with open(path, "rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()
-    except Exception:
-        return None
+        with open(path,"rb") as f: return hashlib.sha256(f.read()).hexdigest()
+    except: return None
 
 def _check_for_updates():
     global update_status, update_msg, update_notif_time, update_restart_time
@@ -373,67 +833,47 @@ def _check_for_updates():
     tmp_path = None
     try:
         url = GITHUB_RAW_URL + f"?nocache={int(time.time())}"
-        req = urllib.request.Request(url, headers={
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache"
-        })
+        req = urllib.request.Request(url, headers={"Cache-Control":"no-cache","Pragma":"no-cache"})
         res = urllib.request.urlopen(req, timeout=15)
         remote_data = res.read()
-
         fd, tmp_path = tempfile.mkstemp(suffix=".py")
-        with os.fdopen(fd, "wb") as f:
-            f.write(remote_data)
-
+        with os.fdopen(fd,"wb") as f: f.write(remote_data)
         local_path = os.path.abspath(__file__)
         sha_local  = _sha256(local_path)
         sha_remote = _sha256(tmp_path)
-
         if sha_remote is None:
-            update_status = "error"
-            update_msg = "No se pudo calcular hash remoto"
+            update_status = "error"; update_msg = "No se pudo calcular hash remoto"
         elif sha_local == sha_remote:
-            update_status = "up_to_date"
-            update_msg = "Ya tienes la ultima version"
+            update_status = "up_to_date"; update_msg = "Ya tienes la ultima version"
         else:
             try:
                 shutil.copy2(tmp_path, local_path)
-                update_status = "restarting"
-                update_msg = "Actualizado! Reiniciando..."
+                update_status = "restarting"; update_msg = "Actualizado! Reiniciando..."
                 update_restart_time = pygame.time.get_ticks()
             except Exception as e:
-                update_status = "error"
-                update_msg = f"No se pudo escribir el archivo: {str(e)[:40]}"
+                update_status = "error"; update_msg = f"No se pudo escribir: {str(e)[:40]}"
     except Exception as e:
-        update_status = "error"
-        update_msg = f"Error: {str(e)[:55]}"
+        update_status = "error"; update_msg = f"Error: {str(e)[:55]}"
     finally:
         if tmp_path and os.path.exists(tmp_path):
-            try:
-                os.unlink(tmp_path)
-            except Exception:
-                pass
+            try: os.unlink(tmp_path)
+            except: pass
     update_notif_time = pygame.time.get_ticks()
 
-nueva_ronda_pending = False
-mensaje = ""
 
 def get_current_hand():
     global split_active, jugador, jugador_hands, current_hand_index
-    if split_active and jugador_hands:
-        return jugador_hands[current_hand_index]
+    if split_active and jugador_hands: return jugador_hands[current_hand_index]
     return jugador
 
 def iter_player_hands():
     if split_active and jugador_hands:
-        for h in jugador_hands:
-            yield h
-    else:
-        yield jugador
+        for h in jugador_hands: yield h
+    else: yield jugador
 
 def repartir(mano, y, oculta=False, start_pos=None):
     global baraja, split_active, jugador_hands
-    if not baraja:
-        baraja = crear_baraja()
+    if not baraja: baraja = crear_baraja()
     v, p, val, color = baraja.pop()
     if split_active and jugador_hands and mano in jugador_hands:
         hand_idx = jugador_hands.index(mano)
@@ -447,93 +887,120 @@ def repartir(mano, y, oculta=False, start_pos=None):
 
 def revelar_banca(now):
     for c in banca:
-        if c[4].oculta:
-            c[4].start_flip(now)
+        if c[4].oculta: c[4].start_flip(now)
 
 def schedule_dealer_target():
     return 18 if random_module.random() < 0.15 else 17
 
 def spawn_particles(x, y, color, count=30):
     for _ in range(count):
-        angle = random_module.random() * 2 * math.pi
-        speed = random_module.random() * random_module.random() * 8 + 2
-        vx = math.cos(angle) * speed
-        vy = math.sin(angle) * speed
-        life = random_module.random() * 800 + 400
-        particles.append([x, y, vx, vy, life, color])
+        angle = random_module.random()*2*math.pi
+        speed = random_module.random()*random_module.random()*8+2
+        vx2 = math.cos(angle)*speed; vy2 = math.sin(angle)*speed
+        life = random_module.random()*800+400
+        particles.append([x,y,vx2,vy2,life,color])
 
 def reiniciar_partida():
-    global player_money, stats, current_bet_input, current_bet, last_bet
-    player_money = 1000
-    stats = {'played': 0, 'won': 0, 'lost': 0, 'blackjacks': 0}
-    current_bet_input = ""
-    current_bet = 10
-    last_bet = None
+    global player_money, stats, current_bet_input, current_bet, last_bet, epic_win_triggered
+    player_money = 1000; stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
+    current_bet_input = ""; current_bet = 10; last_bet = None
+    epic_win_triggered = False
     nueva_ronda()
 
 def nueva_ronda():
     global baraja, jugador, banca, state, dealing_step, next_deal, mensaje, dealer_thinking, next_action
     global last_pedir_time, round_end_time, current_bet, bet_locked, player_money, stats, placed_chip, chips_anim
-    global split_active, jugador_hands, current_hand_index, doubledown_flags, player_chip_stack, clearing_cards, per_hand_bets
-    baraja = crear_baraja()
-    jugador = []
-    banca = []
-    jugador_hands = None
-    split_active = False
-    current_hand_index = 0
-    doubledown_flags = []
-    mensaje = ""
-    dealing_step = 0
-    next_deal = pygame.time.get_ticks() + 300
-    dealer_thinking = False
-    next_action = 0
-    last_pedir_time = 0
-    round_end_time = 0
-    state = 'betting'
-    bet_locked = False
-    placed_chip = None
-    chips_anim = []
+    global split_active, jugador_hands, current_hand_index, doubledown_flags, player_chip_stack, clearing_cards
+    global per_hand_bets, clearing, clear_phase, insurance_offered, insurance_taken, insurance_bet, dealer_target
+    baraja = crear_baraja(); jugador = []; banca = []
+    jugador_hands = None; split_active = False; current_hand_index = 0; doubledown_flags = []
+    mensaje = ""; dealing_step = 0; next_deal = pygame.time.get_ticks()+300
+    dealer_thinking = False; next_action = 0; last_pedir_time = 0; round_end_time = 0
+    dealer_target = 17
+    state = 'betting'; bet_locked = False; placed_chip = None; chips_anim = []
+    player_chip_stack = []; clearing_cards = []; per_hand_bets = None
+    clearing = False; clear_phase = None
+    insurance_offered = False; insurance_taken = False; insurance_bet = 0
+
+
+def _apply_chip_result(results):
+    global placed_chip, player_chip_stack, overlay_flash
+    if placed_chip:
+        if any(r in ('win','blackjack') for r in results):
+            sx, sy = placed_chip['x'], placed_chip['y']
+            tx, ty = ANCHO+120, -120; speed = 10.0
+            dx = tx-sx; dy = ty-sy; dist = math.hypot(dx,dy) or 1.0
+            placed_chip.update({'moving':True,'vx':dx/dist*speed,'vy':dy/dist*speed,
+                                 'target_x':tx,'target_y':ty,'expire_on_arrival':True})
+        elif all(r=='tie' for r in results):
+            sx, sy = placed_chip['x'], placed_chip['y']
+            tx, ty = ANCHO//2, ALTO-120; speed = 10.0
+            dx = tx-sx; dy = ty-sy; dist = math.hypot(dx,dy) or 1.0
+            placed_chip.update({'moving':True,'vx':dx/dist*speed,'vy':dy/dist*speed,
+                                 'target_x':tx,'target_y':ty,'expire_on_arrival':True})
+        else:
+            sx, sy = placed_chip['x'], placed_chip['y']
+            tx, ty = BANK_POS; speed = 10.0
+            dx = tx-sx; dy = ty-sy; dist = math.hypot(dx,dy) or 1.0
+            placed_chip.update({'moving':True,'vx':dx/dist*speed,'vy':dy/dist*speed,
+                                 'target_x':tx,'target_y':ty,'expire_on_arrival':True})
     player_chip_stack = []
-    clearing_cards = []
-    per_hand_bets = None
+    now2 = pygame.time.get_ticks()
+    if any(r in ('win','blackjack') for r in results):
+        spawn_particles(ANCHO//2, ALTO//2+40, DORADO, count=20)
+        overlay_flash.update({'active':True,'color':(255,255,255),'alpha':180,'start':now2,'duration':300})
+    elif all(r=='tie' for r in results):
+        overlay_flash.update({'active':True,'color':(200,200,200),'alpha':120,'start':now2,'duration':220})
+    else:
+        spawn_particles(ANCHO//2, ALTO//2, ROJO, count=25)
+        overlay_flash.update({'active':True,'color':(150,0,0),'alpha':180,'start':now2,'duration':350})
+
 
 nueva_ronda()
+
 
 while True:
     RELOJ.tick(60)
     now = pygame.time.get_ticks()
 
-    if update_status == 'restarting' and update_restart_time != 0:
+    if app_state == 'game' and update_status == 'restarting' and update_restart_time != 0:
         if now >= update_restart_time + 2000:
-            pygame.quit()
-            os.execv(sys.executable, [sys.executable] + sys.argv)
+            pygame.quit(); os.execv(sys.executable, [sys.executable]+sys.argv)
 
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             pygame.quit(); sys.exit()
 
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+            pygame.quit(); sys.exit()
+
+        if app_state in ('intro','win_ending','lose_ending'):
+            advance = False
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE: advance = True
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:   advance = True
+            if advance: _story_advance()
+            continue
+
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-            if DOTS_BTN.collidepoint(evento.pos):
+            lpos = to_logical(evento.pos)
+            if DOTS_BTN.collidepoint(lpos):
                 if update_status != 'checking':
-                    update_status = 'checking'
-                    update_msg = "Comprobando..."
+                    update_status = 'checking'; update_msg = "Comprobando..."
                     update_notif_time = pygame.time.get_ticks()
                     threading.Thread(target=_check_for_updates, daemon=True).start()
 
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_r:
-                reiniciar_partida()
-                continue
+                reiniciar_partida(); continue
+
             if state == 'game_over':
                 if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                    player_money = 1000
-                    stats = {'played': 0, 'won': 0, 'lost': 0, 'blackjacks': 0}
-                    current_bet_input = ""
-                    current_bet = 10
-                    nueva_ronda()
+                    reiniciar_partida()
                 continue
+
             if evento.key == pygame.K_m:
-                TABLE_STYLE_IDX = (TABLE_STYLE_IDX + 1) % len(TABLE_STYLES)
+                TABLE_STYLE_IDX = (TABLE_STYLE_IDX+1) % len(TABLE_STYLES)
+
             if state == 'betting':
                 if evento.key == pygame.K_BACKSPACE:
                     current_bet_input = current_bet_input[:-1]
@@ -541,183 +1008,127 @@ while True:
                     try:
                         if current_bet_input.strip() == "":
                             if last_bet is None:
-                                mensaje = "Escribe una apuesta"
-                                round_end_time = now
+                                mensaje = "Escribe una apuesta"; round_end_time = now
                             else:
                                 bet_val = int(last_bet)
-                                if bet_val <= 0:
-                                    mensaje = "Apuesta invalida"
-                                    round_end_time = now
-                                elif bet_val > BET_MAX:
-                                    mensaje = f"Apuesta max {BET_MAX}"
-                                    round_end_time = now
-                                elif bet_val > player_money:
-                                    mensaje = "No tienes suficiente dinero"
-                                    round_end_time = now
+                                if   bet_val <= 0:            mensaje = "Apuesta invalida"; round_end_time = now
+                                elif bet_val > BET_MAX:       mensaje = f"Apuesta max {BET_MAX}"; round_end_time = now
+                                elif bet_val > player_money:  mensaje = "No tienes suficiente dinero"; round_end_time = now
                                 else:
-                                    current_bet = bet_val
-                                    player_money -= current_bet
-                                    bet_locked = True
-                                    state = 'dealing'
-                                    dealing_step = 0
-                                    next_deal = now + 300
-                                    mensaje = ""
+                                    current_bet = bet_val; player_money -= current_bet; bet_locked = True
+                                    state = 'dealing'; dealing_step = 0; next_deal = now+300; mensaje = ""
                                     placed_chip = create_placed_chip(current_bet, ANCHO//2, ALTO-120)
                                     current_bet_input = ""
                         else:
                             bet_val = int(current_bet_input)
-                            if bet_val <= 0:
-                                mensaje = "Apuesta invalida"
-                                round_end_time = now
-                            elif bet_val > BET_MAX:
-                                mensaje = f"Apuesta max {BET_MAX}"
-                                round_end_time = now
-                            elif bet_val > player_money:
-                                mensaje = "No tienes suficiente dinero"
-                                round_end_time = now
+                            if   bet_val <= 0:            mensaje = "Apuesta invalida"; round_end_time = now
+                            elif bet_val > BET_MAX:       mensaje = f"Apuesta max {BET_MAX}"; round_end_time = now
+                            elif bet_val > player_money:  mensaje = "No tienes suficiente dinero"; round_end_time = now
                             else:
-                                current_bet = bet_val
-                                player_money -= current_bet
-                                bet_locked = True
-                                state = 'dealing'
-                                dealing_step = 0
-                                next_deal = now + 300
-                                mensaje = ""
+                                current_bet = bet_val; player_money -= current_bet; bet_locked = True
+                                state = 'dealing'; dealing_step = 0; next_deal = now+300; mensaje = ""
                                 placed_chip = create_placed_chip(current_bet, ANCHO//2, ALTO-120)
-                                last_bet = current_bet
-                                current_bet_input = ""
+                                last_bet = current_bet; current_bet_input = ""
                     except ValueError:
-                        mensaje = "Apuesta invalida"
-                        round_end_time = now
+                        mensaje = "Apuesta invalida"; round_end_time = now
                 else:
                     if evento.unicode and evento.unicode.isdigit():
-                        if len(current_bet_input) < 6:
-                            current_bet_input += evento.unicode
+                        if len(current_bet_input) < 6: current_bet_input += evento.unicode
 
             elif state == 'player':
                 if evento.key == pygame.K_d:
                     hand = get_current_hand()
                     if split_active and not doubledown_flags:
-                        doubledown_flags = [False] * len(jugador_hands)
+                        doubledown_flags = [False]*len(jugador_hands)
                     can_double = False
                     if split_active:
-                        can_double = (len(hand) == 2 and player_money >= (per_hand_bets[current_hand_index] if per_hand_bets else current_bet) and (not doubledown_flags[current_hand_index]))
+                        can_double = (len(hand)==2 and
+                                      player_money>=(per_hand_bets[current_hand_index] if per_hand_bets else current_bet) and
+                                      (not doubledown_flags[current_hand_index]))
                     else:
-                        can_double = (len(hand) == 2 and player_money >= current_bet and (not doubledown_flags))
+                        can_double = (len(hand)==2 and player_money>=current_bet and (not doubledown_flags))
                     if can_double:
                         if split_active:
                             bet_to_deduct = per_hand_bets[current_hand_index] if per_hand_bets else current_bet
-                            player_money -= bet_to_deduct
-                            doubledown_flags[current_hand_index] = True
-                            if per_hand_bets:
-                                per_hand_bets[current_hand_index] *= 2
+                            player_money -= bet_to_deduct; doubledown_flags[current_hand_index] = True
+                            if per_hand_bets: per_hand_bets[current_hand_index] *= 2
+                            else: per_hand_bets = [current_bet, current_bet]; per_hand_bets[current_hand_index] *= 2
+                            dest_y2 = 200+current_hand_index*70; repartir(hand, dest_y2)
+                            if current_hand_index < len(jugador_hands)-1: current_hand_index += 1
                             else:
-                                per_hand_bets = [current_bet, current_bet]
-                                per_hand_bets[current_hand_index] *= 2
-                            dest_y = 200 + current_hand_index * 70
-                            repartir(hand, dest_y)
-                            if current_hand_index < len(jugador_hands)-1:
-                                current_hand_index += 1
-                            else:
-                                state = 'dealer'
-                                revelar_banca(now)
-                                dealer_thinking = False
-                                dealer_target = schedule_dealer_target()
-                                next_action = now + 600
+                                state = 'dealer'; revelar_banca(now); dealer_thinking = False
+                                dealer_target = schedule_dealer_target(); next_action = now+600
                         else:
-                            player_money -= current_bet
-                            current_bet *= 2
-                            dest_y = 200
-                            repartir(hand, dest_y)
-                            state = 'dealer'
-                            revelar_banca(now)
-                            dealer_thinking = False
-                            dealer_target = schedule_dealer_target()
-                            next_action = now + 600
+                            player_money -= current_bet; current_bet *= 2; repartir(hand, 200)
+                            state = 'dealer'; revelar_banca(now); dealer_thinking = False
+                            dealer_target = schedule_dealer_target(); next_action = now+600
 
                 if evento.key == pygame.K_p:
                     hand = get_current_hand()
-                    if len(hand) == 2 and (hand[0][2] == hand[1][2]) and player_money >= current_bet:
-                        jugador_hands = [[], []]
-                        jugador_hands[0].append(hand[0])
-                        jugador_hands[1].append(hand[1])
-                        jugador[:] = jugador_hands[0]
-                        split_active = True
-                        current_hand_index = 0
-                        player_money -= current_bet
-                        last_bet = current_bet
-                        per_hand_bets = [current_bet, current_bet]
-                        doubledown_flags = [False, False]
+                    if len(hand)==2 and (hand[0][2]==hand[1][2]) and player_money>=current_bet:
+                        jugador_hands = [[],[]]
+                        jugador_hands[0].append(hand[0]); jugador_hands[1].append(hand[1])
+                        jugador[:] = jugador_hands[0]; split_active = True; current_hand_index = 0
+                        player_money -= current_bet; last_bet = current_bet
+                        per_hand_bets = [current_bet, current_bet]; doubledown_flags = [False, False]
                         state = 'player'
                         for i, h in enumerate(jugador_hands):
-                            base_x = 120 + i * HAND_SEP
-                            dest_y = 200 + i * 70
-                            for idx, card_tuple in enumerate(h):
-                                c_obj = card_tuple[4]
-                                c_obj.dest_x = base_x + idx * CARD_SPACING
-                                c_obj.dest_y = dest_y
-                                c_obj.target_scale = 1.06 if i == current_hand_index else 1.0
-                                c_obj.oculta = False
-                                c_obj.start_flip(now, to_back=False)
+                            base_x2 = 120+i*HAND_SEP; dest_y3 = 200+i*70
+                            for idx2, ct2 in enumerate(h):
+                                c2 = ct2[4]; c2.dest_x = base_x2+idx2*CARD_SPACING; c2.dest_y = dest_y3
+                                c2.target_scale = 1.06 if i==current_hand_index else 1.0
+                                c2.oculta = False; c2.start_flip(now, to_back=False)
 
                 if evento.key == pygame.K_i and insurance_offered and not insurance_taken:
-                    insurance_bet = min(current_bet // 2, player_money)
-                    if insurance_bet > 0:
-                        player_money -= insurance_bet
-                        insurance_taken = True
+                    insurance_bet = min(current_bet//2, player_money)
+                    if insurance_bet > 0: player_money -= insurance_bet; insurance_taken = True
 
                 if evento.key == pygame.K_SPACE:
-                    if (now >= last_pedir_time + PEDIR_DELAY) and (not clearing):
-                        if split_active and jugador_hands:
-                            dest_y = 200 + current_hand_index * 70
-                        else:
-                            dest_y = 200
-                        repartir(get_current_hand(), dest_y)
-                        last_pedir_time = now
+                    if (now >= last_pedir_time+PEDIR_DELAY) and (not clearing):
+                        dest_y4 = 200+current_hand_index*70 if (split_active and jugador_hands) else 200
+                        repartir(get_current_hand(), dest_y4); last_pedir_time = now
 
                 if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     if split_active:
-                        if current_hand_index < len(jugador_hands) - 1:
-                            current_hand_index += 1
+                        if current_hand_index < len(jugador_hands)-1: current_hand_index += 1
                         else:
-                            state = 'dealer'
-                            revelar_banca(now)
-                            dealer_thinking = False
-                            dealer_target = schedule_dealer_target()
-                            next_action = now + 600
+                            state = 'dealer'; revelar_banca(now); dealer_thinking = False
+                            dealer_target = schedule_dealer_target(); next_action = now+600
                     else:
-                        state = 'dealer'
-                        revelar_banca(now)
-                        dealer_thinking = False
-                        dealer_target = schedule_dealer_target()
-                        next_action = now + 600
+                        state = 'dealer'; revelar_banca(now); dealer_thinking = False
+                        dealer_target = schedule_dealer_target(); next_action = now+600
 
             elif state == 'round_end':
                 if evento.key == pygame.K_s:
                     if not clearing:
-                        player_cards = sum(jugador_hands, []) if jugador_hands else jugador
-                        all_cards = banca + player_cards
-                        if not all_cards:
-                            nueva_ronda()
+                        player_cards2 = sum(jugador_hands,[]) if jugador_hands else jugador
+                        all_cards2 = banca + player_cards2
+                        if not all_cards2: nueva_ronda()
                         else:
-                            clearing_cards = list(all_cards)
-                            for card_tuple in clearing_cards:
-                                c = card_tuple[4]
-                                c.oculta = False
-                                c.start_flip(now, to_back=True)
-                            clearing = True
-                            clear_phase = 'flipping'
+                            clearing_cards = list(all_cards2)
+                            for ct3 in clearing_cards:
+                                c3 = ct3[4]; c3.oculta = False; c3.start_flip(now, to_back=True)
+                            clearing = True; clear_phase = 'flipping'
 
-    if player_money <= 0 and state == 'betting' and state != 'game_over':
-        state = 'game_over'
+    if app_state == 'game':
+        if player_money >= EPIC_WIN_THRESHOLD and not epic_win_triggered and state == 'betting':
+            epic_win_triggered = True
+            _start_story(WIN_ENDING_SCENES, 'win_ending')
+        elif player_money <= 0 and state == 'betting' and not epic_win_triggered:
+            _start_story(LOSE_ENDING_SCENES, 'lose_ending')
 
+    if app_state in ('intro','win_ending','lose_ending'):
+        _render_story(now)
+        flip_display()
+        continue
     if state == 'game_over':
-        VENTANA.fill((0,0,0))
-        txt1 = FUENTE_GRANDE.render("Te has quedado sin fichas", True, BLANCO)
-        txt2 = FUENTE.render("ENTER o R: volver a empezar (1000 fichas)", True, BLANCO)
+        VENTANA.fill((4, 2, 8))
+        draw_rain(VENTANA, now, alpha=60)
+        txt1 = FUENTE_GRANDE.render("Sin fichas... Víctor sonríe.", True, (210,70,25))
+        txt2 = FUENTE.render("ENTER o R: volver a empezar con 1000 fichas", True, (180,148,90))
         VENTANA.blit(txt1, ((ANCHO - txt1.get_width())//2, ALTO//2 - 60))
         VENTANA.blit(txt2, ((ANCHO - txt2.get_width())//2, ALTO//2 + 20))
-        pygame.display.update()
+        flip_display()
         continue
 
     style = TABLE_STYLES[TABLE_STYLE_IDX]
@@ -725,8 +1136,6 @@ while True:
 
     if DEALER_AVATAR:
         VENTANA.blit(DEALER_AVATAR, (ANCHO//2 - DEALER_AVATAR.get_width()//2, 0))
-    else:
-        pass
 
     if state == 'dealing' and (not clearing) and now >= next_deal:
         if dealing_step == 0:
@@ -740,211 +1149,104 @@ while True:
         elif dealing_step == 4:
             if banca:
                 if banca[0][0] == 'A':
-                    insurance_offered = True
-                    insurance_taken = False
-                    insurance_bet = 0
+                    insurance_offered = True; insurance_taken = False; insurance_bet = 0
                 banca[0][4].start_flip(now)
             state = 'player'
-            if split_active:
-                pass
-            else:
+            if not split_active:
                 if len(jugador) == 2 and calcular(jugador) == 21:
                     revelar_banca(now)
                     mensaje = "BLACKJACK!"
-                    state = 'dealer'
-                    dealer_thinking = False
-                    dealer_target = schedule_dealer_target()
-                    next_action = now + 600
+                    state = 'dealer'; dealer_thinking = False
+                    dealer_target = schedule_dealer_target(); next_action = now+600
         dealing_step += 1
         next_deal = now + 400
 
     if state == 'dealer' and (not clearing):
-        cards_settled = len(banca) > 0 and all((not c[4].flipping) and (abs(c[4].x - c[4].dest_x) < 1) for c in banca)
+        cards_settled = len(banca) > 0 and all(
+            (not c[4].flipping) and (abs(c[4].x - c[4].dest_x) < 1) for c in banca)
         if cards_settled:
             if not dealer_thinking:
                 dealer_thinking = True
                 think_delay = DEALER_SETTLE_DELAY + random_module.randint(-200, 800)
                 next_action = now + max(400, think_delay)
-            else:
-                if now >= next_action:
-                    pb = calcular(banca)
-                    if 'dealer_target' not in globals():
-                        dealer_target = schedule_dealer_target()
-                    hands = list(iter_player_hands())
-                    any_player_blackjack = any(len(h) == 2 and calcular(h) == 21 for h in hands)
-                    dealer_blackjack = (len(banca) == 2 and calcular(banca) == 21)
-                    if any_player_blackjack and not dealer_blackjack:
-                        dealer_thinking = False
-                        revelar_banca(now)
-                        if insurance_taken:
-                            if dealer_blackjack:
-                                player_money += insurance_bet * 2
-                            insurance_taken = False
-                            insurance_offered = False
-                        results = []
-                        for idx, hand in enumerate(hands):
-                            bet_amt = per_hand_bets[idx] if (per_hand_bets and idx < len(per_hand_bets)) else current_bet
-                            pj = calcular(hand)
-                            round_result_type = None
-                            if len(hand) == 2 and calcular(hand) == 21 and not dealer_blackjack:
-                                payout = int(bet_amt * 2.5)
-                                player_money += payout
-                                player_money += 25
-                                stats['blackjacks'] += 1
-                                stats['won'] += 1
-                                round_result_type = 'blackjack'
-                            else:
-                                if pj > 21:
-                                    round_result_type = 'lose'
-                                elif pb > 21 or pj > pb:
-                                    round_result_type = 'win'
-                                elif pj < pb:
-                                    round_result_type = 'lose'
-                                else:
-                                    round_result_type = 'tie'
-                                if round_result_type == 'win':
-                                    player_money += bet_amt * 2
-                                    stats['won'] += 1
-                                elif round_result_type == 'tie':
-                                    player_money += bet_amt
-                                else:
-                                    stats['lost'] += 1
-                            results.append(round_result_type)
-                        stats['played'] += 1
-                        if any(r == 'blackjack' for r in results):
-                            mensaje = "BLACKJACK!"
-                        elif any(r == 'win' for r in results):
-                            mensaje = "HAS GANADO"
-                        elif all(r == 'tie' for r in results):
-                            mensaje = "EMPATE"
+            elif now >= next_action:
+                pb = calcular(banca)
+                hands = list(iter_player_hands())
+                any_player_blackjack = any(len(h)==2 and calcular(h)==21 for h in hands)
+                dealer_blackjack = (len(banca)==2 and calcular(banca)==21)
+
+                if any_player_blackjack and not dealer_blackjack:
+                    dealer_thinking = False; revelar_banca(now)
+                    if insurance_taken:
+                        if dealer_blackjack: player_money += insurance_bet * 2
+                        insurance_taken = False; insurance_offered = False
+                    results = []
+                    for idx, hand in enumerate(hands):
+                        bet_amt = per_hand_bets[idx] if (per_hand_bets and idx < len(per_hand_bets)) else current_bet
+                        pj = calcular(hand)
+                        if len(hand)==2 and calcular(hand)==21 and not dealer_blackjack:
+                            player_money += int(bet_amt * 2.5) + 25
+                            stats['blackjacks'] += 1; stats['won'] += 1
+                            results.append('blackjack')
                         else:
-                            mensaje = "HAS PERDIDO"
-                        if placed_chip:
-                            if any(r in ('win', 'blackjack') for r in results):
-                                sx, sy = placed_chip['x'], placed_chip['y']
-                                tx, ty = ANCHO + 120, -120
-                                speed = 10.0
-                                dx = tx - sx; dy = ty - sy
-                                dist = math.hypot(dx, dy) or 1.0
-                                placed_chip.update({'moving': True, 'vx': dx/dist*speed, 'vy': dy/dist*speed, 'target_x': tx, 'target_y': ty, 'expire_on_arrival': True})
-                            elif all(r == 'tie' for r in results):
-                                sx, sy = placed_chip['x'], placed_chip['y']
-                                tx, ty = ANCHO//2, ALTO - 120
-                                speed = 10.0
-                                dx = tx - sx; dy = ty - sy
-                                dist = math.hypot(dx, dy) or 1.0
-                                placed_chip.update({'moving': True, 'vx': dx/dist*speed, 'vy': dy/dist*speed, 'target_x': tx, 'target_y': ty, 'expire_on_arrival': True})
-                            else:
-                                sx, sy = placed_chip['x'], placed_chip['y']
-                                tx, ty = BANK_POS
-                                speed = 10.0
-                                dx = tx - sx; dy = ty - sy
-                                dist = math.hypot(dx, dy) or 1.0
-                                placed_chip.update({'moving': True, 'vx': dx/dist*speed, 'vy': dy/dist*speed, 'target_x': tx, 'target_y': ty, 'expire_on_arrival': True})
-                        player_chip_stack = []
-                        if any(r in ('win','blackjack') for r in results):
-                            spawn_particles(ANCHO//2, ALTO//2 + 40, DORADO, count=20)
-                            overlay_flash.update({'active':True,'color':(255,255,255),'alpha':180,'start':now,'duration':300})
-                        elif all(r=='tie' for r in results):
-                            overlay_flash.update({'active':True,'color':(200,200,200),'alpha':120,'start':now,'duration':220})
+                            if pj > 21:               rtype = 'lose'
+                            elif pb > 21 or pj > pb:  rtype = 'win'
+                            elif pj < pb:             rtype = 'lose'
+                            else:                     rtype = 'tie'
+                            if rtype == 'win':   player_money += bet_amt*2; stats['won'] += 1
+                            elif rtype == 'tie': player_money += bet_amt
+                            else:                stats['lost'] += 1
+                            results.append(rtype)
+                    stats['played'] += 1
+                    if any(r == 'blackjack' for r in results): mensaje = "BLACKJACK!"
+                    elif any(r == 'win' for r in results):    mensaje = "HAS GANADO"
+                    elif all(r == 'tie' for r in results):    mensaje = "EMPATE"
+                    else:                                      mensaje = "HAS PERDIDO"
+                    _apply_chip_result(results)
+                    state = 'round_end'; round_end_time = now
+
+                elif pb < 17 and pb < dealer_target:
+                    repartir(banca, 50)
+                    dealer_thinking = True
+                    next_action = now + DEALER_SETTLE_DELAY + random_module.randint(0, 600)
+
+                else:
+                    dealer_thinking = False
+                    dealer_blackjack = (len(banca)==2 and calcular(banca)==21)
+                    if insurance_taken:
+                        if dealer_blackjack: player_money += insurance_bet * 2
+                        insurance_taken = False; insurance_offered = False
+                    hands2 = list(iter_player_hands())
+                    results = []
+                    for idx, hand in enumerate(hands2):
+                        bet_amt = per_hand_bets[idx] if (per_hand_bets and idx < len(per_hand_bets)) else current_bet
+                        pj = calcular(hand)
+                        if len(hand)==2 and calcular(hand)==21 and not dealer_blackjack:
+                            player_money += int(bet_amt * 2.5) + 25
+                            stats['blackjacks'] += 1; stats['won'] += 1
+                            results.append('blackjack')
                         else:
-                            spawn_particles(ANCHO//2, ANCHO//2, ROJO, count=25)
-                            overlay_flash.update({'active':True,'color':(150,0,0),'alpha':180,'start':now,'duration':350})
-                        per_hand_bets = None
-                        state = 'round_end'
-                        round_end_time = now
-                        continue
-                    if pb < 17 and pb < dealer_target:
-                        repartir(banca, 50)
-                        dealer_thinking = True
-                        next_action = now + DEALER_SETTLE_DELAY + random_module.randint(0, 600)
-                    else:
-                        dealer_thinking = False
-                        dealer_blackjack = (len(banca) == 2 and calcular(banca) == 21)
-                        if insurance_taken:
-                            if dealer_blackjack:
-                                player_money += insurance_bet * 2
-                            insurance_taken = False
-                            insurance_offered = False
-                        hands = list(iter_player_hands())
-                        results = []
-                        for idx, hand in enumerate(hands):
-                            bet_amt = per_hand_bets[idx] if (per_hand_bets and idx < len(per_hand_bets)) else current_bet
-                            pj = calcular(hand)
-                            round_result_type = None
-                            if len(hand) == 2 and calcular(hand) == 21 and not dealer_blackjack:
-                                payout = int(bet_amt * 2.5)
-                                player_money += payout
-                                player_money += 25
-                                stats['blackjacks'] += 1
-                                stats['won'] += 1
-                                round_result_type = 'blackjack'
-                            else:
-                                if pj > 21:
-                                    round_result_type = 'lose'
-                                elif pb > 21 or pj > pb:
-                                    round_result_type = 'win'
-                                elif pj < pb:
-                                    round_result_type = 'lose'
-                                else:
-                                    round_result_type = 'tie'
-                                if round_result_type == 'win':
-                                    player_money += bet_amt * 2
-                                    stats['won'] += 1
-                                elif round_result_type == 'tie':
-                                    player_money += bet_amt
-                                else:
-                                    stats['lost'] += 1
-                            results.append(round_result_type)
-                        stats['played'] += 1
-                        if any(r == 'blackjack' for r in results):
-                            mensaje = "BLACKJACK!"
-                        elif any(r == 'win' for r in results):
-                            mensaje = "HAS GANADO"
-                        elif all(r == 'tie' for r in results):
-                            mensaje = "EMPATE"
-                        else:
-                            mensaje = "HAS PERDIDO"
-                        if placed_chip:
-                            if any(r in ('win', 'blackjack') for r in results):
-                                sx, sy = placed_chip['x'], placed_chip['y']
-                                tx, ty = ANCHO + 120, -120
-                                speed = 10.0
-                                dx = tx - sx; dy = ty - sy
-                                dist = math.hypot(dx, dy) or 1.0
-                                placed_chip.update({'moving': True, 'vx': dx/dist*speed, 'vy': dy/dist*speed, 'target_x': tx, 'target_y': ty, 'expire_on_arrival': True})
-                            elif all(r == 'tie' for r in results):
-                                sx, sy = placed_chip['x'], placed_chip['y']
-                                tx, ty = ANCHO//2, ALTO - 120
-                                speed = 10.0
-                                dx = tx - sx; dy = ty - sy
-                                dist = math.hypot(dx, dy) or 1.0
-                                placed_chip.update({'moving': True, 'vx': dx/dist*speed, 'vy': dy/dist*speed, 'target_x': tx, 'target_y': ty, 'expire_on_arrival': True})
-                            else:
-                                sx, sy = placed_chip['x'], placed_chip['y']
-                                tx, ty = BANK_POS
-                                speed = 10.0
-                                dx = tx - sx; dy = ty - sy
-                                dist = math.hypot(dx, dy) or 1.0
-                                placed_chip.update({'moving': True, 'vx': dx/dist*speed, 'vy': dy/dist*speed, 'target_x': tx, 'target_y': ty, 'expire_on_arrival': True})
-                        player_chip_stack = []
-                        if any(r in ('win','blackjack') for r in results):
-                            spawn_particles(ANCHO//2, ALTO//2 + 40, DORADO, count=20)
-                            overlay_flash.update({'active':True,'color':(255,255,255),'alpha':180,'start':now,'duration':300})
-                        elif all(r=='tie' for r in results):
-                            overlay_flash.update({'active':True,'color':(200,200,200),'alpha':120,'start':now,'duration':220})
-                        else:
-                            spawn_particles(ANCHO//2, ANCHO//2, ROJO, count=25)
-                            overlay_flash.update({'active':True,'color':(150,0,0),'alpha':180,'start':now,'duration':350})
-                        per_hand_bets = None
-                        state = 'round_end'
-                        round_end_time = now
+                            if pj > 21:               rtype = 'lose'
+                            elif pb > 21 or pj > pb:  rtype = 'win'
+                            elif pj < pb:             rtype = 'lose'
+                            else:                     rtype = 'tie'
+                            if rtype == 'win':   player_money += bet_amt*2; stats['won'] += 1
+                            elif rtype == 'tie': player_money += bet_amt
+                            else:                stats['lost'] += 1
+                            results.append(rtype)
+                    stats['played'] += 1
+                    if any(r == 'blackjack' for r in results): mensaje = "BLACKJACK!"
+                    elif any(r == 'win' for r in results):    mensaje = "HAS GANADO"
+                    elif all(r == 'tie' for r in results):    mensaje = "EMPATE"
+                    else:                                      mensaje = "HAS PERDIDO"
+                    _apply_chip_result(results)
+                    per_hand_bets = None
+                    state = 'round_end'; round_end_time = now
 
     for mano in [banca]:
         for c in mano:
             c[4].target_scale = 1.0
-            c[4].actualizar(now)
-            c[4].dibujar(now)
+            c[4].actualizar(now); c[4].dibujar(now)
 
     if split_active and jugador_hands:
         for i, hand in enumerate(jugador_hands):
@@ -956,13 +1258,11 @@ while True:
                 c[4].dest_x = hand_offset_x + idx * CARD_SPACING
                 c[4].dest_y = offset_y
                 c[4].target_scale = target_for_hand
-                c[4].actualizar(now)
-                c[4].dibujar(now)
+                c[4].actualizar(now); c[4].dibujar(now)
     else:
         for c in jugador:
             c[4].target_scale = 1.0
-            c[4].actualizar(now)
-            c[4].dibujar(now)
+            c[4].actualizar(now); c[4].dibujar(now)
 
     hand = get_current_hand()
     player_visible = calcular_visible(hand)
@@ -971,53 +1271,38 @@ while True:
             if split_active and current_hand_index < len(jugador_hands)-1:
                 current_hand_index += 1
             else:
-                state = 'dealer'
-                revelar_banca(now)
-                dealer_thinking = False
-                dealer_target = schedule_dealer_target()
-                next_action = now + 600
+                state = 'dealer'; revelar_banca(now); dealer_thinking = False
+                dealer_target = schedule_dealer_target(); next_action = now+600
         elif player_visible > 21:
-            if split_active and current_hand_index < len(jugador_hands) - 1:
+            if split_active and current_hand_index < len(jugador_hands)-1:
+                overlay_flash.update({'active':True,'color':(150,0,0),'alpha':200,'start':now,'duration':300})
+                mensaje = f"MANO {current_hand_index+1} BUST"; current_hand_index += 1; last_pedir_time = now
+            elif split_active and current_hand_index == len(jugador_hands)-1:
                 overlay_flash.update({'active':True,'color':(150,0,0),'alpha':200,'start':now,'duration':300})
                 mensaje = f"MANO {current_hand_index+1} BUST"
-                current_hand_index += 1
-                last_pedir_time = now
-            elif split_active and current_hand_index == len(jugador_hands) - 1:
-                overlay_flash.update({'active':True,'color':(150,0,0),'alpha':200,'start':now,'duration':300})
-                mensaje = f"MANO {current_hand_index+1} BUST"
-                revelar_banca(now)
-                state = 'dealer'
-                dealer_thinking = False
-                dealer_target = schedule_dealer_target()
-                next_action = now + 600
+                revelar_banca(now); state = 'dealer'; dealer_thinking = False
+                dealer_target = schedule_dealer_target(); next_action = now+600
             else:
-                mensaje = "HAS PERDIDO"
-                stats['lost'] += 1
-                stats['played'] += 1
+                mensaje = "HAS PERDIDO"; stats['lost'] += 1; stats['played'] += 1
                 overlay_flash.update({'active':True,'color':(150,0,0),'alpha':200,'start':now,'duration':350})
-                revelar_banca(now)
-                state = 'round_end'
-                round_end_time = now
+                revelar_banca(now); state = 'round_end'; round_end_time = now
                 if placed_chip:
                     sx, sy = placed_chip['x'], placed_chip['y']
-                    tx, ty = BANK_POS
-                    speed = 10.0
-                    dx = tx - sx; dy = ty - sy
-                    dist = math.hypot(dx, dy) or 1.0
-                    placed_chip.update({'moving': True, 'vx': dx/dist*speed, 'vy': dy/dist*speed, 'target_x': tx, 'target_y': ty, 'expire_on_arrival': True})
+                    tx, ty = BANK_POS; speed = 10.0
+                    dx = tx - sx; dy = ty - sy; dist = math.hypot(dx, dy) or 1.0
+                    placed_chip.update({'moving':True,'vx':dx/dist*speed,'vy':dy/dist*speed,
+                                        'target_x':tx,'target_y':ty,'expire_on_arrival':True})
 
     if state == 'round_end' and (not clearing) and round_end_time != 0 and now >= round_end_time + ROUND_DELAY:
-        player_cards = sum(jugador_hands, []) if jugador_hands else jugador
+        player_cards = sum(jugador_hands,[]) if jugador_hands else jugador
         all_cards = banca + player_cards
         if not all_cards:
             nueva_ronda()
         else:
             clearing_cards = list(all_cards)
-            for mano in clearing_cards:
-                mano[4].oculta = False
-                mano[4].start_flip(now, to_back=True)
-            clearing = True
-            clear_phase = 'flipping'
+            for ct4 in clearing_cards:
+                ct4[4].oculta = False; ct4[4].start_flip(now, to_back=True)
+            clearing = True; clear_phase = 'flipping'
         round_end_time = 0
 
     if clearing:
@@ -1030,16 +1315,11 @@ while True:
                 clear_phase = 'moving'
         elif clear_phase == 'moving':
             if not clearing_cards:
-                clearing = False
-                clear_phase = None
-                nueva_ronda()
+                clearing = False; clear_phase = None; nueva_ronda()
             else:
                 done = all(c[4].x >= c[4].dest_x - 1 for c in clearing_cards)
                 if done:
-                    clearing = False
-                    clear_phase = None
-                    clearing_cards = []
-                    nueva_ronda()
+                    clearing = False; clear_phase = None; clearing_cards = []; nueva_ronda()
 
     if any(c[4].oculta for c in banca):
         texto = " + ".join("?" if c[4].oculta else str(c[2]) for c in banca)
@@ -1051,24 +1331,24 @@ while True:
     if split_active and jugador_hands:
         left = f"Mano 1: {calcular(jugador_hands[0])}"
         right = f"Mano 2: {calcular(jugador_hands[1])}"
-        hud_y = ALTO - 220
         surf = FUENTE.render(f"{left}    {right}", True, BLANCO)
-        VENTANA.blit(surf, (50, hud_y))
+        VENTANA.blit(surf, (50, ALTO - 220))
     else:
         VENTANA.blit(FUENTE.render(f"Jugador: {calcular(jugador)}", True, BLANCO), (50, 380))
 
     if state == 'betting':
-        instrucciones = ["Escribe tu apuesta"]
+        instrucciones = ["Escribe tu apuesta y pulsa ENTER"]
     elif state == 'player':
-        instrucciones = ["ESPACIO: Pedir  ENTER: Plantarse  D: Doblar  P: Dividir"]
+        instrucciones = ["ESPACIO: Pedir  ENTER: Plantarse  D: Doblar  P: Dividir  I: Seguro"]
     elif state in ('dealing', 'dealer'):
         instrucciones = ["Esperando..."]
     else:
         instrucciones = ["S = Siguiente ronda"]
 
-    box_w = 760
-    padding = 12
-    line_h = 28
+    if insurance_offered and not insurance_taken and state == 'player':
+        instrucciones = ["I: Tomar seguro  |  " + instrucciones[0]]
+
+    box_w = 860; padding = 12; line_h = 28
     box_h = line_h * (len(instrucciones) + 4) + padding
     reglas_x = (ANCHO - box_w) // 2
     reglas_y = ALTO - box_h - 20
@@ -1079,11 +1359,10 @@ while True:
     pygame.draw.rect(VENTANA, NEGRO, (reglas_x, reglas_y, box_w, box_h), 2, border_radius=8)
     y_off = reglas_y + padding
 
-    label_money = FUENTE_PEQUENA.render(f"Dinero: {player_money}", True, BLANCO)
+    label_money = FUENTE_PEQUENA.render(f"Fichas: {player_money}", True, DORADO)
     VENTANA.blit(label_money, (reglas_x + padding, y_off))
 
-    input_box_w = 220
-    input_box_h = 36
+    input_box_w = 220; input_box_h = 36
     input_box_x = reglas_x + box_w - input_box_w - padding
     input_box_y = y_off - 6
     input_bg = pygame.Surface((input_box_w, input_box_h), pygame.SRCALPHA)
@@ -1091,57 +1370,48 @@ while True:
     VENTANA.blit(input_bg, (input_box_x, input_box_y))
     pygame.draw.rect(VENTANA, NEGRO, (input_box_x, input_box_y, input_box_w, input_box_h), 2, border_radius=6)
 
-    if state == 'betting':
-        display_text = current_bet_input if current_bet_input else ""
-    else:
-        display_text = str(current_bet)
+    display_text = current_bet_input if state == 'betting' else str(current_bet)
 
     def clip_text_right(text, font, max_w):
         txt = text
-        if font.size(txt)[0] <= max_w:
-            return txt
-        while font.size(txt)[0] > max_w and len(txt) > 0:
-            txt = txt[1:]
+        while font.size(txt)[0] > max_w and len(txt) > 0: txt = txt[1:]
         return txt
 
     txt_to_show = clip_text_right(display_text, FUENTE_PEQUENA, input_box_w - 16)
     txt_surf = FUENTE_PEQUENA.render(txt_to_show, True, BLANCO)
     VENTANA.blit(txt_surf, (input_box_x + 8, input_box_y + (input_box_h - txt_surf.get_height()) // 2))
-
     lbl_ap = FUENTE_PEQUENA.render("Apuesta:", True, BLANCO)
     VENTANA.blit(lbl_ap, (input_box_x - lbl_ap.get_width() - 12, input_box_y + (input_box_h - lbl_ap.get_height()) // 2))
 
     y_off += line_h
-
-    chips_text = f"Máx apuesta: {BET_MAX}"
-    surf_chips = FUENTE_PEQUENA.render(chips_text, True, BLANCO)
+    surf_chips = FUENTE_PEQUENA.render(f"Máx apuesta: {BET_MAX}  |  Meta: {EPIC_WIN_THRESHOLD} fichas para el final épico", True, BLANCO)
     VENTANA.blit(surf_chips, (reglas_x + padding, y_off))
     y_off += line_h
 
     for linea in instrucciones:
-        surf = FUENTE_INSTR.render(linea, True, BLANCO)
-        text_x = reglas_x + (box_w - surf.get_width()) // 2
-        VENTANA.blit(surf, (text_x, y_off))
+        surf2 = FUENTE_INSTR.render(linea, True, BLANCO)
+        text_x = reglas_x + (box_w - surf2.get_width()) // 2
+        VENTANA.blit(surf2, (text_x, y_off))
         y_off += 24
 
     if mensaje:
         if "BLACKJACK" in mensaje.upper():
-            surf = FUENTE_GRANDE.render(mensaje, True, DORADO)
+            surf_m = FUENTE_GRANDE.render(mensaje, True, DORADO)
         elif "GAN" in mensaje.upper():
-            surf = FUENTE_MSG.render(mensaje, True, DORADO)
+            surf_m = FUENTE_MSG.render(mensaje, True, DORADO)
         elif "EMPATE" in mensaje.upper():
-            surf = FUENTE_MSG.render(mensaje, True, (200, 200, 200))
+            surf_m = FUENTE_MSG.render(mensaje, True, (200, 200, 200))
         else:
-            surf = FUENTE_MSG.render(mensaje, True, ROJO)
-        msg_x = (ANCHO - surf.get_width()) // 2
-        msg_y = ALTO // 2 + 20
-        VENTANA.blit(surf, (msg_x, msg_y))
+            surf_m = FUENTE_MSG.render(mensaje, True, ROJO)
+        msg_x = (ANCHO - surf_m.get_width()) // 2
+        VENTANA.blit(surf_m, (msg_x, ALTO // 2 + 20))
 
     if placed_chip:
         if placed_chip.get('moving'):
             placed_chip['x'] += placed_chip['vx']
             placed_chip['y'] += placed_chip['vy']
-            if math.hypot(placed_chip['x'] - placed_chip['target_x'], placed_chip['y'] - placed_chip['target_y']) < 8:
+            if math.hypot(placed_chip['x']-placed_chip['target_x'],
+                          placed_chip['y']-placed_chip['target_y']) < 8:
                 placed_chip['x'] = placed_chip['target_x']
                 placed_chip['y'] = placed_chip['target_y']
                 placed_chip['moving'] = False
@@ -1150,21 +1420,20 @@ while True:
         if placed_chip:
             if placed_chip.get('shape') == 'rect':
                 w = placed_chip.get('w', 44); h = placed_chip.get('h', 28)
-                rect = pygame.Rect(int(placed_chip['x'] - w//2), int(placed_chip['y'] - h//2), w, h)
+                rect = pygame.Rect(int(placed_chip['x']-w//2), int(placed_chip['y']-h//2), w, h)
                 pygame.draw.rect(VENTANA, placed_chip['color'], rect, border_radius=8)
                 pygame.draw.rect(VENTANA, NEGRO, rect, 2, border_radius=8)
                 font = _chip_font_for_rect(h)
                 txt = font.render(str(placed_chip['value']), True, BLANCO)
-                VENTANA.blit(txt, (rect.centerx - txt.get_width()//2, rect.centery - txt.get_height()//2))
+                VENTANA.blit(txt, (rect.centerx-txt.get_width()//2, rect.centery-txt.get_height()//2))
             else:
                 r = placed_chip.get('r', 20)
-                cx = int(placed_chip['x'])
-                cy = int(placed_chip['y'])
+                cx = int(placed_chip['x']); cy = int(placed_chip['y'])
                 pygame.draw.circle(VENTANA, placed_chip['color'], (cx, cy), r)
                 pygame.draw.circle(VENTANA, NEGRO, (cx, cy), r, 2)
                 font = _chip_font_for_circle(r)
                 txt = font.render(str(placed_chip['value']), True, BLANCO)
-                VENTANA.blit(txt, (cx - txt.get_width()//2, cy - txt.get_height()//2))
+                VENTANA.blit(txt, (cx-txt.get_width()//2, cy-txt.get_height()//2))
 
     for i, c in enumerate(player_chip_stack[-12:]):
         x = PLAYER_STACK_POS[0] + (i % 6) * 10
@@ -1172,31 +1441,29 @@ while True:
         pygame.draw.circle(VENTANA, (220,170,60), (int(x), int(y)), 18)
         pygame.draw.circle(VENTANA, NEGRO, (int(x), int(y)), 18, 2)
         txt = FUENTE_PEQUENA.render(str(c['value']), True, BLANCO)
-        VENTANA.blit(txt, (int(x - txt.get_width()//2), int(y - txt.get_height()//2)))
+        VENTANA.blit(txt, (int(x-txt.get_width()//2), int(y-txt.get_height()//2)))
 
     for c in chips_anim[:]:
         c['x'] += c['vx']; c['y'] += c['vy']
-        if math.hypot(c['x'] - c['target_x'], c['y'] - c['target_y']) < 8:
-            try:
-                chips_anim.remove(c)
-            except ValueError:
-                pass
+        if math.hypot(c['x']-c['target_x'], c['y']-c['target_y']) < 8:
+            try: chips_anim.remove(c)
+            except ValueError: pass
             continue
         if c.get('shape') == 'rect':
             w = c.get('w', 44); h = c.get('h', 28)
-            rect = pygame.Rect(int(c['x'] - w//2), int(c['y'] - h//2), w, h)
+            rect = pygame.Rect(int(c['x']-w//2), int(c['y']-h//2), w, h)
             pygame.draw.rect(VENTANA, c['color'], rect, border_radius=8)
             pygame.draw.rect(VENTANA, NEGRO, rect, 2, border_radius=8)
             font = _chip_font_for_rect(h)
             txt = font.render(str(c['value']), True, BLANCO)
-            VENTANA.blit(txt, (rect.centerx - txt.get_width()//2, rect.centery - txt.get_height()//2))
+            VENTANA.blit(txt, (rect.centerx-txt.get_width()//2, rect.centery-txt.get_height()//2))
         else:
             r = c.get('r', 20)
             pygame.draw.circle(VENTANA, c['color'], (int(c['x']), int(c['y'])), r)
             pygame.draw.circle(VENTANA, NEGRO, (int(c['x']), int(c['y'])), r, 2)
             font = _chip_font_for_circle(r)
             txt = font.render(str(c['value']), True, BLANCO)
-            VENTANA.blit(txt, (int(c['x'] - txt.get_width()//2), int(c['y'] - txt.get_height()//2)))
+            VENTANA.blit(txt, (int(c['x']-txt.get_width()//2), int(c['y']-txt.get_height()//2)))
 
     dt = RELOJ.get_time()
     for p in particles[:]:
@@ -1204,9 +1471,9 @@ while True:
         if p[4] <= 0:
             particles.remove(p); continue
         alpha = max(0, min(255, int(255 * (p[4] / 1200.0))))
-        surf = pygame.Surface((6, 6), pygame.SRCALPHA)
-        surf.fill((*p[5], alpha))
-        VENTANA.blit(surf, (p[0], p[1]))
+        surf_p = pygame.Surface((6, 6), pygame.SRCALPHA)
+        surf_p.fill((*p[5], alpha))
+        VENTANA.blit(surf_p, (p[0], p[1]))
 
     if overlay_flash['active']:
         elapsed = now - overlay_flash['start']
@@ -1218,14 +1485,14 @@ while True:
             ov.fill((*overlay_flash['color'], a))
             VENTANA.blit(ov, (0, 0))
 
-    mouse_pos = pygame.mouse.get_pos()
+    mouse_pos = to_logical(pygame.mouse.get_pos())
     btn_hovered = DOTS_BTN.collidepoint(mouse_pos)
-    btn_color = (80, 80, 80) if not btn_hovered else (120, 120, 120)
+    btn_color = (80,80,80) if not btn_hovered else (120,120,120)
     pygame.draw.rect(VENTANA, btn_color, DOTS_BTN, border_radius=6)
     pygame.draw.rect(VENTANA, NEGRO, DOTS_BTN, 1, border_radius=6)
     dots_surf = FUENTE_PEQUENA.render("...", True, BLANCO)
-    VENTANA.blit(dots_surf, (DOTS_BTN.centerx - dots_surf.get_width()//2,
-                              DOTS_BTN.centery - dots_surf.get_height()//2))
+    VENTANA.blit(dots_surf, (DOTS_BTN.centerx-dots_surf.get_width()//2,
+                              DOTS_BTN.centery-dots_surf.get_height()//2))
 
     if update_status is not None:
         elapsed_notif = now - update_notif_time
@@ -1234,37 +1501,34 @@ while True:
         if show_notif:
             alpha_notif = 230
             if not is_permanent and elapsed_notif > 3500:
-                alpha_notif = max(0, int(230 * (1 - (elapsed_notif - 3500) / 1500)))
+                alpha_notif = max(0, int(230 * (1-(elapsed_notif-3500)/1500)))
             if update_status == 'restarting':
-                notif_color = (20, 100, 200)
-                secs_left = max(0, 2 - (now - update_restart_time) // 1000)
+                notif_color = (20,100,200)
+                secs_left = max(0, 2-(now-update_restart_time)//1000)
                 display_msg = f"Actualizado! Reiniciando en {secs_left}s..."
             else:
                 display_msg = update_msg
-                notif_color = (30, 120, 50) if update_status == 'up_to_date' else \
-                              (40, 40, 40) if update_status == 'checking' else \
-                              (150, 30, 30)
+                notif_color = (30,120,50) if update_status=='up_to_date' else \
+                              (40,40,40)  if update_status=='checking'   else (150,30,30)
             notif_surf = FUENTE_PEQUENA.render(display_msg, True, BLANCO)
-            nw = notif_surf.get_width() + 24
-            nh = notif_surf.get_height() + 14
-            nx = ANCHO - nw - 10
-            ny = DOTS_BTN.bottom + 6
+            nw = notif_surf.get_width()+24; nh = notif_surf.get_height()+14
+            nx = ANCHO-nw-10; ny = DOTS_BTN.bottom+6
             bg = pygame.Surface((nw, nh), pygame.SRCALPHA)
             bg.fill((*notif_color, alpha_notif))
             VENTANA.blit(bg, (nx, ny))
             pygame.draw.rect(VENTANA, NEGRO, (nx, ny, nw, nh), 1, border_radius=6)
-            VENTANA.blit(notif_surf, (nx + 12, ny + 7))
+            VENTANA.blit(notif_surf, (nx+12, ny+7))
 
-    reiniciar_rect = pygame.Rect(ANCHO - 140, ALTO - 44, 130, 34)
+    reiniciar_rect = pygame.Rect(ANCHO-140, ALTO-44, 130, 34)
     r_hovered = reiniciar_rect.collidepoint(mouse_pos)
-    r_color = (140, 30, 30) if not r_hovered else (180, 50, 50)
+    r_color = (140,30,30) if not r_hovered else (180,50,50)
     pygame.draw.rect(VENTANA, r_color, reiniciar_rect, border_radius=7)
     pygame.draw.rect(VENTANA, NEGRO, reiniciar_rect, 1, border_radius=7)
     r_txt = FUENTE_PEQUENA.render("R: Reiniciar", True, BLANCO)
-    VENTANA.blit(r_txt, (reiniciar_rect.centerx - r_txt.get_width()//2,
-                          reiniciar_rect.centery - r_txt.get_height()//2))
+    VENTANA.blit(r_txt, (reiniciar_rect.centerx-r_txt.get_width()//2,
+                          reiniciar_rect.centery-r_txt.get_height()//2))
 
     if pygame.mouse.get_pressed()[0] and reiniciar_rect.collidepoint(mouse_pos):
         reiniciar_partida()
 
-    pygame.display.update()
+    flip_display()
