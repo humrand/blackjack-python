@@ -12,7 +12,7 @@ pygame.init()
 VERSION = "0.2.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 
-ANCHO, ALTO = 1000, 700
+ANCHO, ALTO = 1920, 960
 VENTANA = pygame.display.set_mode((ANCHO, ALTO))
 pygame.display.set_caption("Blackjack 2D - FIXED - Hand Anim v4")
 
@@ -40,7 +40,7 @@ HAND_SEP = 300
 PEDIR_DELAY = 500
 ROUND_DELAY = 2000
 
-BET_MAX = 250
+BET_MAX = 50000
 
 SUIT_CHAR = {'S': '♠', 'H': '♥', 'D': '♦', 'C': '♣'}
 
