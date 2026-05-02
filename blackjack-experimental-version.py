@@ -19,6 +19,9 @@ _IMAGE_FILES = {
     'victor2':      ('victor2.png',            'victor2.png'),
     'victor3':      ('victor3.png',            'victor3.png'),
     'victor4':      ('victor4.png',            'victor4.png'),
+    'victor5':      ('victor5.png',            'victor5.png'),
+    'segurata-pierdes': ('segurata-pierdes.png', 'segurata-pierdes.png'),
+    'rosita-seria': ('rosita-seria.png',       'rosita-seria.png'),
     'rosita-caos':  ('rosita-caos.png',        'rosita-caos.png'),
     'rosita-guino': ('rosita-gui%C3%B1o.png',  'rosita-guino.png'),
     'barcelona':    ('barcelona.png',          'barcelona.png'),
@@ -69,7 +72,7 @@ def get_story_image(key):
         _image_downloading.add(key)
         t = threading.Thread(target=_download_image_bg, args=(key,), daemon=True)
         t.start()
-    return None 
+    return None  
 
 def preload_images(*keys):
     for k in keys:
@@ -675,6 +678,7 @@ INTRO_SCENES = [
     {
         'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
         'scene_image': 'rosita',
+        'line_images': [None, None, None, None, 'rosita-seria', None, None, None, None],
         'lines': [
             ('Rosa', 'Primera vez que te veo por aquí.'),
             ('Tú', 'Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.'),
@@ -761,6 +765,7 @@ WIN_ENDING_SCENES = [
 LOSE_ENDING_SCENES = [
     {
         'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
+        'scene_image': 'victor5',
         'lines': [
             ('narrador', 'Y así terminó.'),
             ('Víctor', 'Ya está. Eso es todo lo que tenías.'),
@@ -772,6 +777,7 @@ LOSE_ENDING_SCENES = [
     },
     {
         'bg': 'street', 'chars': [], 'counter': False,
+        'scene_image': 'segurata-pierdes',
         'lines': [
             ('narrador', 'Volviste a la calle con los bolsillos vacíos y la cabeza llena de preguntas.'),
             ('narrador', 'La lluvia seguía ahí. Indiferente. Como siempre.'),
@@ -790,7 +796,7 @@ story_scene_idx   = 0
 story_line_idx    = 0
 epic_win_triggered = False
 
-preload_images('farol-rojo', 'rosita', 'victor2', 'victor3', 'victor4', 'rosita-caos', 'rosita-guino', 'barcelona')
+preload_images('farol-rojo', 'rosita', 'rosita-seria', 'victor2', 'victor3', 'victor4', 'victor5', 'rosita-caos', 'rosita-guino', 'barcelona', 'segurata-pierdes')
 
 
 def _start_story(scenes, new_state):
