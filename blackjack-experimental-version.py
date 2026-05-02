@@ -689,8 +689,7 @@ INTRO_SCENES = [
     },
     {
         'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
-        'scene_image': 'rosita',
-        'line_images': ['victor2','victor2',None,'victor2','victor2','victor2',None,'victor2',None,'victor2','victor2',None],
+        'scene_image': 'victor2',
         'lines': [
             ('Víctor', 'Vaya, vaya... carne fresca. Hacía tiempo que no veía una cara nueva.'),
             ('Víctor', 'Siéntate. ¿Cuánto dinero traes?'),
