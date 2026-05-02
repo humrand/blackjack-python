@@ -12,6 +12,87 @@ pygame.init()
 VERSION = "0.3.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 
+_IMAGE_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/"
+_IMAGE_FILES = {
+    'farol-rojo':   ('farol-rojo.png',        'farol-rojo.png'),
+    'rosita':       ('rosita.png',             'rosita.png'),
+    'victor2':      ('victor2.png',            'victor2.png'),
+    'victor3':      ('victor3.png',            'victor3.png'),
+    'victor4':      ('victor4.png',            'victor4.png'),
+    'rosita-caos':  ('rosita-caos.png',        'rosita-caos.png'),
+    'rosita-guino': ('rosita-gui%C3%B1o.png',  'rosita-guino.png'),
+    'barcelona':    ('barcelona.png',          'barcelona.png'),
+}
+_image_cache = {}
+_image_downloading = set()
+
+def _ensure_imagenes_dir():
+    os.makedirs('imagenes', exist_ok=True)
+
+def _download_image_bg(key):
+    """Descarga una imagen en segundo plano y la guarda en cache."""
+    global _image_cache, _image_downloading
+    if key in _image_cache or key not in _IMAGE_FILES:
+        _image_downloading.discard(key)
+        return
+    url_file, local_file = _IMAGE_FILES[key]
+    _ensure_imagenes_dir()
+    local_path = os.path.join('imagenes', local_file)
+    if not os.path.exists(local_path):
+        try:
+            url = _IMAGE_BASE + url_file
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = resp.read()
+            with open(local_path, 'wb') as f:
+                f.write(data)
+        except Exception as e:
+            print(f"[IMG] Error descargando {key}: {e}")
+            _image_cache[key] = None
+            _image_downloading.discard(key)
+            return
+    try:
+        img = pygame.image.load(local_path).convert_alpha()
+        _image_cache[key] = img
+    except Exception as e:
+        print(f"[IMG] Error cargando {key}: {e}")
+        _image_cache[key] = None
+    _image_downloading.discard(key)
+
+def get_story_image(key):
+    """Devuelve la surface de la imagen (o None). Lanza descarga si falta."""
+    if key is None:
+        return None
+    if key in _image_cache:
+        return _image_cache[key]
+    if key not in _image_downloading:
+        _image_downloading.add(key)
+        t = threading.Thread(target=_download_image_bg, args=(key,), daemon=True)
+        t.start()
+    return None  
+
+def preload_images(*keys):
+    for k in keys:
+        get_story_image(k)
+
+def draw_story_image(key, surf):
+    """Dibuja la imagen de escena sobre el fondo, centrada y escalada."""
+    img = get_story_image(key)
+    if img is None:
+        return
+    dialog_h  = 215
+    margin    = 18
+    max_w     = ANCHO - margin * 2
+    max_h     = ALTO - dialog_h - margin * 2
+    iw, ih    = img.get_size()
+    scale     = min(max_w / iw, max_h / ih)
+    new_w     = int(iw * scale)
+    new_h     = int(ih * scale)
+    scaled    = pygame.transform.smoothscale(img, (new_w, new_h))
+    x         = (ANCHO - new_w) // 2
+    y         = margin + (max_h - new_h) // 2
+    surf.blit(scaled, (x, y))
+
 
 ANCHO, ALTO = 1920, 960
 
@@ -584,6 +665,7 @@ INTRO_SCENES = [
     },
     {
         'bg': 'street', 'chars': [('portero', ANCHO//2+300, 760)], 'counter': False,
+        'scene_image': 'farol-rojo',
         'lines': [
             ('Portero', '¿A dónde crees que vas, amigo?'),
             ('Tú', 'Vengo a jugar.'),
@@ -596,6 +678,7 @@ INTRO_SCENES = [
     },
     {
         'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+        'scene_image': 'rosita',
         'lines': [
             ('Rosa', 'Primera vez que te veo por aquí.'),
             ('Tú', 'Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.'),
@@ -610,6 +693,8 @@ INTRO_SCENES = [
     },
     {
         'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
+        'scene_image': 'rosita',
+        'line_images': ['victor2','victor2',None,'victor2','victor2','victor2',None,'victor2',None,'victor2','victor2',None],
         'lines': [
             ('Víctor', 'Vaya, vaya... carne fresca. Hacía tiempo que no veía una cara nueva.'),
             ('Víctor', 'Siéntate. ¿Cuánto dinero traes?'),
@@ -630,6 +715,8 @@ INTRO_SCENES = [
 WIN_ENDING_SCENES = [
     {
         'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
+        'scene_image': 'victor3',
+        'line_images': [None, None, None, None, None, None, None, 'victor4'],
         'lines': [
             ('narrador', 'Diez mil fichas. El número imposible.'),
             ('narrador', 'El aire en la sala cambió. Fue como si alguien hubiera apagado la música sin tocar nada.'),
@@ -643,6 +730,8 @@ WIN_ENDING_SCENES = [
     },
     {
         'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+        'scene_image': 'rosita-caos',
+        'line_images': [None, None, None, None, None, None, None, None, 'rosita-guino'],
         'lines': [
             ('narrador', 'Dos hombres muy grandes se levantan de las sombras. El ambiente se congela.'),
             ('narrador', 'Y entonces Rosa actúa.'),
@@ -657,6 +746,7 @@ WIN_ENDING_SCENES = [
     },
     {
         'bg': 'street_dawn', 'chars': [], 'counter': False,
+        'scene_image': 'barcelona',
         'lines': [
             ('narrador', 'El aire de la madrugada huele a lluvia limpia. A libertad.'),
             ('narrador', 'Caminas despacio por los adoquines mojados. No hay prisa. Ya no.'),
@@ -705,6 +795,8 @@ story_scene_idx   = 0
 story_line_idx    = 0
 epic_win_triggered = False
 
+preload_images('farol-rojo', 'rosita', 'victor2', 'victor3', 'victor4', 'rosita-caos', 'rosita-guino', 'barcelona')
+
 
 def _start_story(scenes, new_state):
     global story_scenes_data, story_scene_idx, story_line_idx, app_state
@@ -751,6 +843,14 @@ def _render_story(now):
     elif bg == 'table':      draw_bg_table_scene(VENTANA, now)
     elif bg == 'street_dawn':draw_bg_street_dawn(VENTANA, now)
     else:                    VENTANA.fill(NEGRO)
+    scene_img_key = scene.get('scene_image')
+    line_images   = scene.get('line_images')
+    if line_images and story_line_idx < len(line_images) and line_images[story_line_idx] is not None:
+        img_key = line_images[story_line_idx]
+    else:
+        img_key = scene_img_key
+    if img_key:
+        draw_story_image(img_key, VENTANA)
     for (ct, cx2, fy2) in scene.get('chars', []):
         if   ct == 'portero':         draw_portero(VENTANA, cx2, fy2)
         elif ct == 'camarera':        draw_camarera(VENTANA, cx2, fy2)
