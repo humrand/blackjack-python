@@ -649,6 +649,57 @@ def draw_dialogue_box(surf, speaker, text, now):
         cont = FUENTE_INSTR.render("[ ESPACIO  o  clic  para continuar ]", True, (125,112,88))
         surf.blit(cont, (ANCHO - cont.get_width() - PAD, ALTO - 26))
 
+def draw_choice_box(surf, options, now):
+    """Dibuja el cuadro de elección del jugador. Devuelve lista de Rect para clic."""
+    BTN_H   = 54
+    PAD_X   = 72
+    GAP     = 10
+    HEADER_H = 52
+    total_h = HEADER_H + len(options) * (BTN_H + GAP) + 22
+    BOX_Y   = ALTO - total_h - 8
+
+    bg = pygame.Surface((ANCHO, ALTO - BOX_Y), pygame.SRCALPHA)
+    bg.fill((3, 2, 8, 222))
+    surf.blit(bg, (0, BOX_Y))
+    pygame.draw.line(surf, DORADO, (0, BOX_Y), (ANCHO, BOX_Y), 2)
+    pygame.draw.line(surf, (80, 65, 30), (PAD_X, BOX_Y + 8), (ANCHO - PAD_X, BOX_Y + 8), 1)
+
+    sc = _SPEAKER_COLORS.get('Tú', (125, 225, 162))
+    header = FUENTE_NAME.render("¿Qué dices?", True, sc)
+    surf.blit(header, (PAD_X, BOX_Y + 12))
+
+    hint = FUENTE_INSTR.render("[ pulsa 1 / 2 / 3  o  haz clic ]", True, (100, 90, 70))
+    surf.blit(hint, (ANCHO - hint.get_width() - PAD_X, BOX_Y + 18))
+
+    mouse_pos = to_logical(pygame.mouse.get_pos())
+    btn_rects = []
+    btn_y = BOX_Y + HEADER_H
+
+    for i, opt in enumerate(options):
+        btn_w    = ANCHO - PAD_X * 2
+        btn_rect = pygame.Rect(PAD_X, btn_y, btn_w, BTN_H)
+        hovered  = btn_rect.collidepoint(mouse_pos)
+
+        bg_col = (55, 95, 68) if hovered else (26, 44, 32)
+        bsurf  = pygame.Surface((btn_w, BTN_H), pygame.SRCALPHA)
+        bsurf.fill((*bg_col, 230))
+        surf.blit(bsurf, (PAD_X, btn_y))
+        border_col = DORADO if hovered else (75, 115, 85)
+        pygame.draw.rect(surf, border_col, btn_rect, 1, border_radius=7)
+
+        num_s = FUENTE_PEQUENA.render(f"[{i + 1}]", True, DORADO)
+        surf.blit(num_s, (PAD_X + 14, btn_y + (BTN_H - num_s.get_height()) // 2))
+
+        txt_col = (210, 255, 220) if hovered else BLANCO
+        txt     = FUENTE_STORY.render(opt['label'], True, txt_col)
+        surf.blit(txt, (PAD_X + 62, btn_y + (BTN_H - txt.get_height()) // 2))
+
+        btn_rects.append(btn_rect)
+        btn_y += BTN_H + GAP
+
+    return btn_rects
+
+
 INTRO_SCENES = [
     {
         'bg': 'title', 'chars': [], 'counter': False,
@@ -667,28 +718,140 @@ INTRO_SCENES = [
         'scene_image': 'farol-rojo',
         'lines': [
             ('Portero', '¿A dónde crees que vas, amigo?'),
-            ('Tú', 'Vengo a jugar.'),
-            ('Portero', 'Aquí no entra cualquiera. Este no es un sitio para turistas.'),
-            ('Tú', 'Tengo mil fichas y no tengo prisa. ¿Suficiente?'),
-            ('Portero', '(Te mira de arriba abajo durante un momento largo.)'),
-            ('Portero', '...Pasa. Pero sabe que nadie ha salido de aquí ganando. Nadie.'),
-            ('Tú', 'Hay una primera vez para todo.'),
+            ('CHOICE', [
+                {
+                    'label': '"Vengo a jugar."',
+                    'tu_text': 'Vengo a jugar.',
+                    'reactions': [
+                        ('Portero', 'Aquí no entra cualquiera. Este no es un sitio para turistas.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"Tengo una cita con Víctor."',
+                    'tu_text': 'Tengo una cita con Víctor. Dice que me esperaba.',
+                    'reactions': [
+                        ('Portero', '(Frunce el ceño.) ¿Con el jefe? Nadie tiene "citas" con Víctor...'),
+                        ('Portero', '(Tras una pausa.) Pero algo en tu cara dice que no mientes. Venga.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"He oído que aquí hay acción de verdad."',
+                    'tu_text': 'He oído que aquí hay acción de verdad. Vine a comprobarlo.',
+                    'reactions': [
+                        ('Portero', '(Resopla.) Todo el mundo "ha oído". Lo que no todo el mundo tiene es pasta para respaldarlo.'),
+                    ],
+                    'effect': {}
+                },
+            ]),
+            ('CHOICE', [
+                {
+                    'label': '"Mil fichas. ¿Suficiente?"',
+                    'tu_text': 'Tengo mil fichas y no tengo prisa. ¿Suficiente?',
+                    'reactions': [
+                        ('Portero', '(Te mira de arriba abajo durante un momento largo.)'),
+                        ('Portero', '...Pasa. Pero sabe que nadie ha salido de aquí ganando. Nadie.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"Las suficientes para limpiar la mesa de Víctor."',
+                    'tu_text': 'Las suficientes para limpiar la mesa de Víctor. Y sobrar.',
+                    'reactions': [
+                        ('Portero', '(Casi sonríe.) Otro que viene con ganas. Venga, pasa antes de que me arrepienta.'),
+                        ('Portero', 'Que conste: nadie ha salido de aquí ganando. Nadie.'),
+                    ],
+                    'effect': {'money': 50, 'msg': '+50 fichas — el portero queda impresionado'}
+                },
+            ]),
+            ('CHOICE', [
+                {
+                    'label': '"Hay una primera vez para todo."',
+                    'tu_text': 'Hay una primera vez para todo.',
+                    'reactions': [],
+                    'effect': {}
+                },
+                {
+                    'label': '"Esta noche las cosas cambian."',
+                    'tu_text': 'Esta noche las cosas van a cambiar, amigo.',
+                    'reactions': [],
+                    'effect': {}
+                },
+                {
+                    'label': '(Entras sin decir nada.)',
+                    'tu_text': '...',
+                    'reactions': [],
+                    'effect': {}
+                },
+            ]),
         ]
     },
     {
         'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
         'scene_image': 'rosita',
-        'line_images': [None, None, None, None, 'rosita-seria', None, None, None, None],
         'lines': [
             ('Rosa', 'Primera vez que te veo por aquí.'),
             ('Tú', 'Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.'),
             ('Rosa', '(Sonríe) Y el peor whisky. Te lo advierto. ¿Qué te pongo?'),
-            ('Tú', 'Nada por ahora. Estoy aquí por Víctor.'),
-            ('Rosa', '(La sonrisa desaparece.) Cuidado con él. Lleva tres años sin perder. Dicen que ve las cartas antes de que salgan.'),
-            ('Tú', '¿Y si pierde? ¿Qué pasa?'),
-            ('Rosa', 'Eso... nadie lo sabe. Nunca ha pasado. Nadie ha llegado tan lejos.'),
-            ('Tú', 'Pues esta noche vamos a descubrirlo.'),
-            ('Rosa', '(En voz baja) Ten cuidado. En serio.'),
+            ('CHOICE', [
+                {
+                    'label': '"Nada. Estoy aquí por Víctor."',
+                    'tu_text': 'Nada por ahora. Estoy aquí por Víctor.',
+                    'reactions': [
+                        ('Rosa', '(La sonrisa desaparece.) Cuidado con él. Lleva tres años sin perder. Dicen que ve las cartas antes de que salgan.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"Ponme lo que tú tomarías."',
+                    'tu_text': 'Ponme lo que tú tomarías. Y cuéntame algo sobre este sitio.',
+                    'reactions': [
+                        ('Rosa', '(Sonríe con melancolía.) Un Laphroaig, entonces. Y sobre este sitio... todo lo que ves tiene dueño. Incluidas las cartas.'),
+                        ('Rosa', 'Un consejo gratis: cuando Víctor se toque el nudo de la corbata, tiene buena mano. Guárdatelo.'),
+                        ('narrador', '(Rosa te pasa discretamente un billete doblado. +100 fichas para la partida.)'),
+                    ],
+                    'effect': {'money': 100, 'msg': '+100 fichas — Rosa confía en ti'}
+                },
+                {
+                    'label': '"El whisky más caro. Lo celebro por adelantado."',
+                    'tu_text': 'El whisky más caro que tengas. Esta noche lo celebro por adelantado.',
+                    'reactions': [
+                        ('Rosa', '(Arquea una ceja.) Confiado. Me gusta. Aunque aquí los que llegan muy seguros... suelen salir más callados.'),
+                        ('narrador', '(El whisky de malta llega rápido. Vacías la copa de un trago. −50 fichas de tu bolsillo.)'),
+                    ],
+                    'effect': {'money': -50, 'msg': '−50 fichas — ese whisky era caro de verdad'}
+                },
+            ]),
+            ('CHOICE', [
+                {
+                    'label': '"¿Y si pierde? ¿Qué pasa entonces?"',
+                    'tu_text': '¿Y si pierde? ¿Qué pasa?',
+                    'reactions': [
+                        ('Rosa', 'Eso... nadie lo sabe. Nunca ha pasado. Nadie ha llegado tan lejos.'),
+                        ('Tú', 'Pues esta noche vamos a descubrirlo.'),
+                        ('Rosa', '(En voz baja) Ten cuidado. En serio.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"¿Le has visto hacer trampa alguna vez?"',
+                    'tu_text': '¿Tú le has visto hacer trampa alguna vez?',
+                    'reactions': [
+                        ('Rosa', '(Pausa. Baja la voz.) No exactamente... pero hay momentos en que las cartas parecen obedecerle. Como si las conociera de antes.'),
+                        ('Rosa', 'Nada demostrable. Nunca nada demostrable. Ten cuidado, ¿de acuerdo?'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"Gracias por el aviso. Me lo guardo."',
+                    'tu_text': 'Gracias por el aviso. Me lo guardo.',
+                    'reactions': [
+                        ('Rosa', '(Asiente en silencio y vuelve a limpiar la barra.)'),
+                    ],
+                    'effect': {}
+                },
+            ]),
         ]
     },
     {
@@ -701,11 +864,39 @@ INTRO_SCENES = [
             ('Víctor', '(Ríe suavemente.) Suficiente para entretenernos unas horas. Quizás.'),
             ('Víctor', 'Las reglas son simples: gana el que llega a 21 sin pasarse. Yo soy la banca.'),
             ('Víctor', 'Y en este establecimiento... la banca siempre gana. Siempre.'),
-            ('Tú', 'De acuerdo. Pero tengo una condición.'),
-            ('Víctor', '(Arquea una ceja.) ¿Condición? Eso es... inusual.'),
-            ('Tú', 'Si llego a diez mil fichas... me dices cómo lo haces. Cómo haces trampa.'),
-            ('Víctor', '(Pausa larga. Te mira fijamente. Luego sonríe.) ...Trato hecho, forastero. Suerte.'),
-            ('Víctor', 'La vas a necesitar.'),
+            ('CHOICE', [
+                {
+                    'label': '"Si llego a 10.000… me dices cómo haces trampa."',
+                    'tu_text': 'De acuerdo. Pero tengo una condición.',
+                    'reactions': [
+                        ('Víctor', '(Arquea una ceja.) ¿Condición? Eso es... inusual.'),
+                        ('Tú', 'Si llego a diez mil fichas... me dices cómo lo haces. Cómo haces trampa.'),
+                        ('Víctor', '(Pausa larga. Te mira fijamente. Luego sonríe.) ...Trato hecho, forastero. Suerte.'),
+                        ('Víctor', 'La vas a necesitar.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"Si llego a 10.000… que toda la sala lo sepa."',
+                    'tu_text': 'Si llego a diez mil fichas... quiero que esta sala sepa que la banca puede perder.',
+                    'reactions': [
+                        ('Víctor', '(Una sonrisa fría, casi apreciativa.) Ambicioso. Me gustan los ambiciosos.'),
+                        ('Víctor', 'Suelen quedarse sin nada antes del amanecer. Pero... de acuerdo. Trato hecho.'),
+                        ('Víctor', 'Veamos de qué pasta estás hecho, forastero.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"Sin condiciones. Solo voy a ganar."',
+                    'tu_text': 'Sin condiciones, Víctor. Solo vengo a ganar.',
+                    'reactions': [
+                        ('Víctor', '(Se recuesta en la silla.) Simple. Directo. Curioso.'),
+                        ('Víctor', 'Hace mucho que nadie se sienta aquí sin pretensiones. Casi resulta... refrescante.'),
+                        ('Víctor', 'Muy bien. Sin condiciones. Que empiece el juego.'),
+                    ],
+                    'effect': {}
+                },
+            ]),
             ('narrador', '¡Que empiece el juego!'),
         ]
     },
@@ -796,6 +987,13 @@ story_scene_idx   = 0
 story_line_idx    = 0
 epic_win_triggered = False
 
+story_choice_active  = False        
+story_choice_options = []           
+story_choice_rects   = []          
+story_injected_lines = []           
+story_injected_idx   = 0            
+story_in_injection   = False        
+
 preload_images('farol-rojo', 'rosita', 'rosita-seria', 'victor2', 'victor3', 'victor4', 'victor5', 'rosita-caos', 'rosita-guino', 'barcelona', 'segurata-pierdes')
 
 
@@ -807,7 +1005,37 @@ def _start_story(scenes, new_state):
     app_state         = new_state
 
 
-def _story_advance():
+def _apply_choice(idx):
+    """Aplica la elección del jugador: inyecta las reacciones y avanza la historia."""
+    global story_choice_active, story_choice_options, story_choice_rects
+    global story_injected_lines, story_injected_idx, story_in_injection, player_money
+
+    opt    = story_choice_options[idx]
+    effect = opt.get('effect', {})
+    if 'money' in effect:
+        player_money = max(0, player_money + effect['money'])
+
+    injected = []
+    tu_text = opt.get('tu_text', '')
+    if tu_text:
+        injected.append(('Tú', tu_text))
+    for line in opt.get('reactions', []):
+        injected.append(line)
+
+    story_choice_active  = False
+    story_choice_options = []
+    story_choice_rects   = []
+
+    if injected:
+        story_injected_lines = injected
+        story_injected_idx   = 0
+        story_in_injection   = True
+    else:
+        _story_advance_scene()
+
+
+def _story_advance_scene():
+    """Avanza un paso dentro de la escena / al siguiente bloque de escenas."""
     global story_scenes_data, story_scene_idx, story_line_idx, app_state
     global player_money, stats, current_bet, current_bet_input, last_bet, epic_win_triggered
 
@@ -815,7 +1043,7 @@ def _story_advance():
     scene = story_scenes_data[story_scene_idx]
     if story_line_idx >= len(scene['lines']):
         story_scene_idx += 1
-        story_line_idx = 0
+        story_line_idx   = 0
         if story_scene_idx >= len(story_scenes_data):
             if app_state == 'intro':
                 app_state = 'game'
@@ -831,32 +1059,72 @@ def _story_advance():
                 nueva_ronda()
 
 
+def _story_advance():
+    global story_in_injection, story_injected_lines, story_injected_idx
+
+    if story_in_injection:
+        story_injected_idx += 1
+        if story_injected_idx >= len(story_injected_lines):
+            story_in_injection   = False
+            story_injected_lines = []
+            story_injected_idx   = 0
+            _story_advance_scene()
+        return
+
+    _story_advance_scene()
+
+
 def _render_story(now):
     global story_scenes_data, story_scene_idx, story_line_idx
+    global story_choice_active, story_choice_options, story_choice_rects
+    global story_in_injection, story_injected_lines, story_injected_idx
+
     if story_scene_idx >= len(story_scenes_data):
         return
-    scene = story_scenes_data[story_scene_idx]
-    bg    = scene['bg']
+    scene       = story_scenes_data[story_scene_idx]
+    bg          = scene['bg']
     has_counter = scene.get('counter', False)
-    if bg == 'title':        draw_bg_title(VENTANA, now)
-    elif bg == 'street':     draw_bg_street(VENTANA, now)
-    elif bg == 'bar':        draw_bg_bar_base(VENTANA, now)
-    elif bg == 'table':      draw_bg_table_scene(VENTANA, now)
-    elif bg == 'street_dawn':draw_bg_street_dawn(VENTANA, now)
-    else:                    VENTANA.fill(NEGRO)
+    if bg == 'title':         draw_bg_title(VENTANA, now)
+    elif bg == 'street':      draw_bg_street(VENTANA, now)
+    elif bg == 'bar':         draw_bg_bar_base(VENTANA, now)
+    elif bg == 'table':       draw_bg_table_scene(VENTANA, now)
+    elif bg == 'street_dawn': draw_bg_street_dawn(VENTANA, now)
+    else:                     VENTANA.fill(NEGRO)
+
     scene_img_key = scene.get('scene_image')
-    line_images   = scene.get('line_images')
-    if line_images and story_line_idx < len(line_images) and line_images[story_line_idx] is not None:
-        img_key = line_images[story_line_idx]
+    if not story_in_injection:
+        line_images = scene.get('line_images')
+        if line_images and story_line_idx < len(line_images) and line_images[story_line_idx] is not None:
+            img_key = line_images[story_line_idx]
+        else:
+            img_key = scene_img_key
     else:
         img_key = scene_img_key
     if img_key:
         draw_story_image(img_key, VENTANA)
+
     if has_counter:
         draw_bar_counter_overlay(VENTANA, now)
+
+    if story_in_injection:
+        story_choice_active = False
+        if story_injected_idx < len(story_injected_lines):
+            speaker2, text2 = story_injected_lines[story_injected_idx]
+            draw_dialogue_box(VENTANA, speaker2, text2, now)
+        return
+
     if story_line_idx < len(scene['lines']):
-        speaker2, text2 = scene['lines'][story_line_idx]
-        draw_dialogue_box(VENTANA, speaker2, text2, now)
+        current_line = scene['lines'][story_line_idx]
+        if current_line[0] == 'CHOICE':
+            choices = current_line[1]
+            rects = draw_choice_box(VENTANA, choices, now)
+            story_choice_active  = True
+            story_choice_options = choices
+            story_choice_rects   = rects
+        else:
+            story_choice_active = False
+            speaker2, text2 = current_line
+            draw_dialogue_box(VENTANA, speaker2, text2, now)
 
 
 def crear_baraja():
@@ -1071,10 +1339,22 @@ while True:
             pygame.quit(); sys.exit()
 
         if app_state in ('intro','win_ending','lose_ending'):
-            advance = False
-            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE: advance = True
-            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:   advance = True
-            if advance: _story_advance()
+            if story_choice_active:
+                if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                    lpos = to_logical(evento.pos)
+                    for i, rect in enumerate(story_choice_rects):
+                        if rect.collidepoint(lpos) and i < len(story_choice_options):
+                            _apply_choice(i)
+                            break
+                if evento.type == pygame.KEYDOWN:
+                    key_idx = {pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2}.get(evento.key, -1)
+                    if 0 <= key_idx < len(story_choice_options):
+                        _apply_choice(key_idx)
+            else:
+                advance = False
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE: advance = True
+                if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:   advance = True
+                if advance: _story_advance()
             continue
 
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
