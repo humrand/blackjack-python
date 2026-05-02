@@ -69,28 +69,24 @@ def get_story_image(key):
         _image_downloading.add(key)
         t = threading.Thread(target=_download_image_bg, args=(key,), daemon=True)
         t.start()
-    return None  
+    return None 
 
 def preload_images(*keys):
     for k in keys:
         get_story_image(k)
 
 def draw_story_image(key, surf):
-    """Dibuja la imagen de escena sobre el fondo, centrada y escalada."""
+    """Dibuja la imagen de escena a pantalla completa."""
     img = get_story_image(key)
     if img is None:
         return
-    dialog_h  = 215
-    margin    = 18
-    max_w     = ANCHO - margin * 2
-    max_h     = ALTO - dialog_h - margin * 2
-    iw, ih    = img.get_size()
-    scale     = min(max_w / iw, max_h / ih)
-    new_w     = int(iw * scale)
-    new_h     = int(ih * scale)
-    scaled    = pygame.transform.smoothscale(img, (new_w, new_h))
-    x         = (ANCHO - new_w) // 2
-    y         = margin + (max_h - new_h) // 2
+    iw, ih = img.get_size()
+    scale  = max(ANCHO / iw, ALTO / ih)
+    new_w  = int(iw * scale)
+    new_h  = int(ih * scale)
+    scaled = pygame.transform.smoothscale(img, (new_w, new_h))
+    x = (ANCHO - new_w) // 2
+    y = (ALTO  - new_h) // 2
     surf.blit(scaled, (x, y))
 
 
@@ -851,11 +847,6 @@ def _render_story(now):
         img_key = scene_img_key
     if img_key:
         draw_story_image(img_key, VENTANA)
-    for (ct, cx2, fy2) in scene.get('chars', []):
-        if   ct == 'portero':         draw_portero(VENTANA, cx2, fy2)
-        elif ct == 'camarera':        draw_camarera(VENTANA, cx2, fy2)
-        elif ct == 'victor':          draw_victor(VENTANA, cx2, fy2, nervous=False)
-        elif ct == 'victor_nervioso': draw_victor(VENTANA, cx2, fy2, nervous=True)
     if has_counter:
         draw_bar_counter_overlay(VENTANA, now)
     if story_line_idx < len(scene['lines']):
