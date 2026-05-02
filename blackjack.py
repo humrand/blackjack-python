@@ -10,7 +10,7 @@ import shutil
 pygame.init()
 
 VERSION = "0.2.0"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack_V0.2.py"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack.py"
 
 ANCHO, ALTO = 1000, 700
 VENTANA = pygame.display.set_mode((ANCHO, ALTO))
