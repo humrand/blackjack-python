@@ -649,89 +649,6 @@ def draw_dialogue_box(surf, speaker, text, now):
         cont = FUENTE_INSTR.render("[ ESPACIO  o  clic  para continuar ]", True, (125,112,88))
         surf.blit(cont, (ANCHO - cont.get_width() - PAD, ALTO - 26))
 
-
-player_attitude = 'neutral'  
-player_attitude_counts = {'neutral': 0, 'charming': 0, 'bold': 0}
-
-story_pending_lines  = []
-story_pending_idx    = 0
-story_choice_active  = False   
-story_choices        = []      
-story_choice_rects   = []      
-story_choice_hover   = -1     
-
-FUENTE_CHOICE       = pygame.font.SysFont("georgia", 26)
-FUENTE_CHOICE_LABEL = pygame.font.SysFont("georgia", 18)
-
-
-def _dominant_attitude():
-    """Devuelve la actitud más elegida hasta el momento."""
-    return max(player_attitude_counts, key=player_attitude_counts.get)
-
-
-def draw_choice_buttons(surf, choices, hover_idx, now):
-    """Dibuja los botones de elección de diálogo en la parte inferior de la pantalla."""
-    n       = len(choices)
-    BTN_W   = 640
-    BTN_H   = 62
-    GAP     = 14
-    total_h = n * BTN_H + (n-1) * GAP
-    start_y = ALTO - total_h - 28
-    start_x = (ANCHO - BTN_W) // 2
-
-    bg = pygame.Surface((BTN_W + 40, total_h + 28), pygame.SRCALPHA)
-    bg.fill((0, 0, 0, 160))
-    surf.blit(bg, (start_x - 20, start_y - 14))
-
-    label = FUENTE_CHOICE_LABEL.render("¿Qué dices?", True, (160, 140, 90))
-    surf.blit(label, (ANCHO//2 - label.get_width()//2, start_y - 30))
-
-    rects = []
-    for i, (btn_text, attitude, _next_lines) in enumerate(choices):
-        bx = start_x
-        by = start_y + i * (BTN_H + GAP)
-        rect = pygame.Rect(bx, by, BTN_W, BTN_H)
-        rects.append(rect)
-
-        is_hovered = (i == hover_idx)
-        pulse = 0.5 + 0.5 * math.sin(now / 400.0 + i)
-
-        base_colors = {
-            'neutral':  (40, 40, 55),
-            'charming': (40, 55, 40),
-            'bold':     (65, 30, 30),
-        }
-        hover_colors = {
-            'neutral':  (70, 70, 100),
-            'charming': (55, 90, 60),
-            'bold':     (110, 45, 45),
-        }
-        border_colors = {
-            'neutral':  (100, 100, 160),
-            'charming': (100, 180, 110),
-            'bold':     (200, 80,  80),
-        }
-        bg_col  = hover_colors[attitude] if is_hovered else base_colors[attitude]
-        brd_col = border_colors[attitude]
-        if is_hovered:
-            brd_col = tuple(min(255, int(c * (1 + 0.3*pulse))) for c in brd_col)
-
-        btn_surf = pygame.Surface((BTN_W, BTN_H), pygame.SRCALPHA)
-        btn_surf.fill((*bg_col, 210))
-        surf.blit(btn_surf, (bx, by))
-        pygame.draw.rect(surf, brd_col, rect, 2, border_radius=8)
-
-        num_col = border_colors[attitude]
-        num_s   = FUENTE_CHOICE_LABEL.render(f"{i+1}.", True, num_col)
-        surf.blit(num_s, (bx + 16, by + BTN_H//2 - num_s.get_height()//2))
-
-        text_col = (230, 225, 210) if is_hovered else (185, 180, 170)
-        txt_s    = FUENTE_CHOICE.render(btn_text, True, text_col)
-        surf.blit(txt_s, (bx + 46, by + BTN_H//2 - txt_s.get_height()//2))
-
-    return rects
-
-
 INTRO_SCENES = [
     {
         'bg': 'title', 'chars': [], 'counter': False,
@@ -750,106 +667,27 @@ INTRO_SCENES = [
         'scene_image': 'farol-rojo',
         'lines': [
             ('Portero', '¿A dónde crees que vas, amigo?'),
-
-            ('CHOICE', [
-                ('Vengo a jugar. Tengo fichas.',
-                 'neutral',
-                 [('Tú',     'Vengo a jugar.'),
-                  ('Portero','Aquí no entra cualquiera. Este no es un sitio para turistas.')]),
-
-                ('A ver qué tiene este sitio de especial. He oído cosas.',
-                 'charming',
-                 [('Tú',     'A ver qué tiene este sitio de especial. He oído cosas muy interesantes.'),
-                  ('Portero','(Entrecierra los ojos.) ¿Quién te ha hablado de este lugar? No salimos en ningún mapa.')]),
-
-                ('Vengo por Víctor Carvalho. Dile que hay alguien que quiere hablar.',
-                 'bold',
-                 [('Tú',     'Vengo por Víctor Carvalho. Dile que hay alguien que quiere hablar con él.'),
-                  ('Portero','(Su expresión se endurece.) Víctor no recibe visitas sin aviso. ¿Quién demonios eres?')]),
-            ]),
-
-            ('CHOICE', [
-                ('Tengo mil fichas y no tengo prisa. ¿Suficiente?',
-                 'neutral',
-                 [('Tú',     'Tengo mil fichas y no tengo prisa. ¿Suficiente?'),
-                  ('Portero','(Te mira de arriba abajo durante un momento largo.) ...Pasa.')]),
-
-                ('No quiero líos. Solo una noche de cartas y me voy en paz.',
-                 'charming',
-                 [('Tú',     'Mira, no busco problemas. Mil fichas, una noche de cartas y desaparezco. Fácil.'),
-                  ('Portero','(Resopla.) Todos dicen eso. (Pausa.) Mil fichas es el mínimo. Pasa. Sin dramas.')]),
-
-                ('Las suficientes para humillar a tu jefe esta noche.',
-                 'bold',
-                 [('Tú',     'Las suficientes. Y más que suficientes si Víctor es tan bueno como dicen.'),
-                  ('Portero','(Te estudia en silencio. Hay algo en su mirada que no es del todo hostil.) ...Pasa.')]),
-            ]),
-
-            ('Portero', '...Pero sabe que nadie ha salido de aquí ganando. Nadie.'),
-
-            ('CHOICE', [
-                ('Hay una primera vez para todo.',
-                 'neutral',
-                 [('Tú',     'Hay una primera vez para todo.'),
-                  ('Portero','(No responde. Solo señala la puerta con un gesto cansado.)')]),
-
-                ('(Sonríes y entras sin decir nada.)',
-                 'charming',
-                 [('Tú',     '(Le sonríes, sin decir nada más, y entras.)'),
-                  ('Portero','(Murmura algo que prefieres no escuchar. Pero no te detiene.)')]),
-
-                ('Esta noche será la última derrota para él, no para mí.',
-                 'bold',
-                 [('Tú',     'Esta noche será la última derrota para Víctor, no para mí.'),
-                  ('Portero','(Te observa entrar con algo nuevo en la mirada. Algo parecido al respeto.)')]),
-            ]),
+            ('Tú', 'Vengo a jugar.'),
+            ('Portero', 'Aquí no entra cualquiera. Este no es un sitio para turistas.'),
+            ('Tú', 'Tengo mil fichas y no tengo prisa. ¿Suficiente?'),
+            ('Portero', '(Te mira de arriba abajo durante un momento largo.)'),
+            ('Portero', '...Pasa. Pero sabe que nadie ha salido de aquí ganando. Nadie.'),
+            ('Tú', 'Hay una primera vez para todo.'),
         ]
     },
     {
         'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
         'scene_image': 'rosita',
-        'line_images': [None, None, None, None, None, 'rosita-seria', None, None, None, None, None, None],
+        'line_images': [None, None, None, None, 'rosita-seria', None, None, None, None],
         'lines': [
             ('Rosa', 'Primera vez que te veo por aquí.'),
-
-            ('CHOICE', [
-                ('Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.',
-                 'neutral',
-                 [('Tú',  'Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.'),
-                  ('Rosa','(Sonríe.) Y el peor whisky. Te lo advierto. ¿Qué te pongo?')]),
-
-                ('El portero no parecía muy contento de dejarme entrar, pero aquí estoy.',
-                 'charming',
-                 [('Tú',  'El portero no estaba muy contento de verme. Pero me ha dejado pasar. Buena señal, ¿no?'),
-                  ('Rosa','(Ríe suavemente.) Bruno es un oso con traje. Que te haya dejado pasar ya dice algo de ti. ¿Qué te pongo?')]),
-
-                ('Vengo a terminar con la racha de Víctor. Tres años invicto es demasiado.',
-                 'bold',
-                 [('Tú',  'Vengo a terminar con la racha de Víctor. Tres años sin perder es una anomalía.'),
-                  ('Rosa','(La sonrisa se congela un segundo. Luego vuelve, más cautelosa.) Eso... es una declaración muy seria. ¿Qué te pongo?')]),
-            ]),
-
-            ('Tú',  'Nada por ahora. Estoy aquí por Víctor.'),
+            ('Tú', 'Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.'),
+            ('Rosa', '(Sonríe) Y el peor whisky. Te lo advierto. ¿Qué te pongo?'),
+            ('Tú', 'Nada por ahora. Estoy aquí por Víctor.'),
             ('Rosa', '(La sonrisa desaparece.) Cuidado con él. Lleva tres años sin perder. Dicen que ve las cartas antes de que salgan.'),
-
-            ('CHOICE', [
-                ('¿Y si pierde? ¿Qué pasa?',
-                 'neutral',
-                 [('Tú',  '¿Y si pierde? ¿Qué pasa entonces?'),
-                  ('Rosa','Eso... nadie lo sabe. Nunca ha pasado. Nadie ha llegado tan lejos.')]),
-
-                ('¿Cómo lo hace? ¿Hay algo que deba saber?',
-                 'charming',
-                 [('Tú',  '¿Cómo lo hace? ¿Hay alguna señal, algún tell que deba conocer?'),
-                  ('Rosa','(Baja la voz.) Dicen que cuando tiene una mala mano, toca el gemelo izquierdo. No sé si es verdad. Pero... fíjate.')]),
-
-                ('Tres años es mucha racha. Pero todas las rachas tienen un final.',
-                 'bold',
-                 [('Tú',  'Tres años es una racha impresionante. Pero todas las rachas acaban. Esta noche acaba la suya.'),
-                  ('Rosa','(Te mira fijamente.) Llevas eso muy dentro, ¿verdad? (Pausa.) Ten cuidado. Los hombres que vienen con esa mirada no suelen salir bien.')]),
-            ]),
-
-            ('Tú',  'Pues esta noche vamos a descubrirlo.'),
+            ('Tú', '¿Y si pierde? ¿Qué pasa?'),
+            ('Rosa', 'Eso... nadie lo sabe. Nunca ha pasado. Nadie ha llegado tan lejos.'),
+            ('Tú', 'Pues esta noche vamos a descubrirlo.'),
             ('Rosa', '(En voz baja) Ten cuidado. En serio.'),
         ]
     },
@@ -859,44 +697,14 @@ INTRO_SCENES = [
         'lines': [
             ('Víctor', 'Vaya, vaya... carne fresca. Hacía tiempo que no veía una cara nueva.'),
             ('Víctor', 'Siéntate. ¿Cuánto dinero traes?'),
-
-            ('CHOICE', [
-                ('Mil fichas. Las suficientes para empezar.',
-                 'neutral',
-                 [('Tú',    'Mil fichas. Las suficientes para empezar.'),
-                  ('Víctor','(Ríe suavemente.) Suficiente para entretenernos unas horas. Quizás.')]),
-
-                ('Mil fichas ahora. Pero puedo conseguir más si la noche se pone interesante.',
-                 'charming',
-                 [('Tú',    'Mil fichas por el momento. Pero si la noche se pone interesante, puedo conseguir más.'),
-                  ('Víctor','(Te observa con una ceja arqueada.) Confiado. Eso es... refrescante. La mayoría llega temblando.')]),
-
-                ('Las suficientes para ganarte. Con las tuyas bastará para salir de aquí.',
-                 'bold',
-                 [('Tú',    'Las suficientes para ganarte. Y cuando lo haga, me llevaré también lo tuyo.'),
-                  ('Víctor','(Una sonrisa fría.) Qué encantador. Nadie me había dicho eso... y seguía en la mesa al amanecer.')]),
-            ]),
-
+            ('Tú', 'Mil fichas.'),
+            ('Víctor', '(Ríe suavemente.) Suficiente para entretenernos unas horas. Quizás.'),
             ('Víctor', 'Las reglas son simples: gana el que llega a 21 sin pasarse. Yo soy la banca.'),
             ('Víctor', 'Y en este establecimiento... la banca siempre gana. Siempre.'),
-
-            ('CHOICE', [
-                ('De acuerdo. Pero tengo una condición: si llego a diez mil fichas, me dices cómo haces trampa.',
-                 'neutral',
-                 [('Tú',    'De acuerdo. Pero tengo una condición: si llego a diez mil fichas, me dices cómo lo haces. Cómo haces trampa.'),
-                  ('Víctor','(Pausa larga. Te mira fijamente. Luego sonríe despacio.) ...Trato hecho, forastero.')]),
-
-                ('Suena bien. Y si llego a diez mil, me cuentas el secreto. Parece justo, ¿no?',
-                 'charming',
-                 [('Tú',    'Suena razonable. Y si llego a diez mil fichas... me cuentas tu método. Los dos salimos ganando.'),
-                  ('Víctor','(Inclina la cabeza, divertido.) Sabe negociar. Interesante. ...Trato hecho. Aunque dudo que llegues tan lejos.')]),
-
-                ('Diez mil fichas y me dices cómo haces trampa. Esa es la apuesta real.',
-                 'bold',
-                 [('Tú',    'Diez mil fichas. Y cuando llegue, me dices exactamente cómo engañas a todo el mundo. Esa es la apuesta real.'),
-                  ('Víctor','(La sonrisa desaparece un instante. Luego vuelve, más afilada.) ...Muy bien. Trato hecho. Pero te advierto: nadie ha llegado tan lejos.')]),
-            ]),
-
+            ('Tú', 'De acuerdo. Pero tengo una condición.'),
+            ('Víctor', '(Arquea una ceja.) ¿Condición? Eso es... inusual.'),
+            ('Tú', 'Si llego a diez mil fichas... me dices cómo lo haces. Cómo haces trampa.'),
+            ('Víctor', '(Pausa larga. Te mira fijamente. Luego sonríe.) ...Trato hecho, forastero. Suerte.'),
             ('Víctor', 'La vas a necesitar.'),
             ('narrador', '¡Que empiece el juego!'),
         ]
