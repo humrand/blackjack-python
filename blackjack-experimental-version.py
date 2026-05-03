@@ -1553,14 +1553,14 @@ def _he_ai_compute_action(ai_idx):
     call_amt = min(he_blind, money)
 
     def do_raise(mult_lo, mult_hi):
-        global he_ai_raised_this_round, he_ai_raise_amount
+        global he_pot, he_ai_raised_this_round, he_ai_raise_amount
         amt = min(he_blind * random_module.randint(mult_lo, mult_hi), money)
         he_pot += amt; he_ai_money[ai_idx] -= amt
         he_ai_raised_this_round = True
         he_ai_raise_amount = max(he_ai_raise_amount, amt)
         return amt
 
-    if rank >= 5:        
+    if rank >= 5:       
         if r < 0.80:
             amt = do_raise(3, 7)
             return f"SUBE {amt}"
