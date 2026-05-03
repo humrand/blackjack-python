@@ -1517,18 +1517,20 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
-he_ai_turn_active  = False  
-he_ai_turn_idx     = 0       
-he_ai_turn_phase   = 'announcing' 
-he_ai_turn_timer   = 0      
-he_ai_actions      = []     
-he_ai_folded       = [False, False, False, False]
-_HE_ANNOUNCE_MS    = 650    
-_HE_DECIDE_MS      = 900    
+he_ai_turn_active       = False
+he_ai_turn_idx          = 0
+he_ai_turn_phase        = 'announcing'  
+he_ai_turn_timer        = 0
+he_ai_actions           = []
+he_ai_folded            = [False, False, False, False]
+he_ai_raised_this_round = False   
+he_ai_raise_amount      = 0      
+_HE_ANNOUNCE_MS         = 650
+_HE_DECIDE_MS           = 900
 
 def _he_ai_compute_action(ai_idx):
     """Decide what AI player ai_idx does. Returns action string and modifies pot/money."""
-    global he_pot, he_ai_money, he_ai_folded
+    global he_pot, he_ai_money, he_ai_folded, he_ai_raised_this_round, he_ai_raise_amount
     if he_ai_folded[ai_idx]:
         return "ya retirado"
     ai_hand = he_ai_cards[ai_idx] if ai_idx < len(he_ai_cards) else []
@@ -1549,42 +1551,45 @@ def _he_ai_compute_action(ai_idx):
         rank = -1
     r = random_module.random()
     call_amt = min(he_blind, money)
-    if rank >= 5:       
+
+    def do_raise(mult_lo, mult_hi):
+        global he_ai_raised_this_round, he_ai_raise_amount
+        amt = min(he_blind * random_module.randint(mult_lo, mult_hi), money)
+        he_pot += amt; he_ai_money[ai_idx] -= amt
+        he_ai_raised_this_round = True
+        he_ai_raise_amount = max(he_ai_raise_amount, amt)
+        return amt
+
+    if rank >= 5:        
         if r < 0.80:
-            raise_mult = random_module.randint(3, 7)
-            amt = min(he_blind * raise_mult, money)
-            he_pot += amt; he_ai_money[ai_idx] -= amt
+            amt = do_raise(3, 7)
             return f"SUBE {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 3:      
+    elif rank >= 3:     
         if r < 0.50:
-            raise_mult = random_module.randint(2, 4)
-            amt = min(he_blind * raise_mult, money)
-            he_pot += amt; he_ai_money[ai_idx] -= amt
+            amt = do_raise(2, 4)
             return f"sube {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 0:     
+    elif rank >= 0:      
         if r < 0.22:
             he_ai_folded[ai_idx] = True
             return "se retira"
         elif r < 0.38:
-            amt = min(he_blind * 2, money)
-            he_pot += amt; he_ai_money[ai_idx] -= amt
+            amt = do_raise(1, 2)
             return f"sube {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    else:                
+    else:               
         if r < 0.50:
             he_ai_folded[ai_idx] = True
             return "se retira"
         elif r < 0.65:
-            amt = min(he_blind * random_module.randint(1, 3), money)
-            he_pot += amt; he_ai_money[ai_idx] -= amt
+            amt = do_raise(1, 3)
             return f"farolea y sube {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
@@ -1594,18 +1599,20 @@ def _he_ai_compute_action(ai_idx):
 def _he_start_ai_turns(now):
     """Call this instead of _advance_street to let AIs play their turns first."""
     global he_ai_turn_active, he_ai_turn_idx, he_ai_turn_phase, he_ai_turn_timer
-    global he_ai_actions
-    he_ai_turn_active = True
-    he_ai_turn_idx    = 0
-    he_ai_turn_phase  = 'announcing'
-    he_ai_turn_timer  = now
-    he_ai_actions     = []
+    global he_ai_actions, he_ai_raised_this_round, he_ai_raise_amount
+    he_ai_turn_active       = True
+    he_ai_turn_idx          = 0
+    he_ai_turn_phase        = 'announcing'
+    he_ai_turn_timer        = now
+    he_ai_actions           = []
+    he_ai_raised_this_round = False
+    he_ai_raise_amount      = 0
 
 
 def _he_update_ai_turns(now):
     """Called every frame when he_ai_turn_active is True. Drives the AI turn sequence."""
     global he_ai_turn_active, he_ai_turn_idx, he_ai_turn_phase, he_ai_turn_timer
-    global he_ai_actions
+    global he_ai_actions, he_street_bet
     elapsed = now - he_ai_turn_timer
     if he_ai_turn_phase == 'announcing':
         if elapsed >= _HE_ANNOUNCE_MS:
@@ -1618,7 +1625,12 @@ def _he_update_ai_turns(now):
             he_ai_turn_idx += 1
             if he_ai_turn_idx >= len(HE_AI_NAMES):
                 he_ai_turn_active = False
-                _advance_street(now)
+                if all(he_ai_folded):
+                    _he_all_folded_win(now)
+                elif he_ai_raised_this_round:
+                    he_street_bet = he_ai_raise_amount
+                else:
+                    _advance_street(now)
             else:
                 he_ai_turn_phase = 'announcing'
                 he_ai_turn_timer = now
@@ -1718,6 +1730,8 @@ def he_reiniciar():
     global he_ai_turn_active, he_ai_turn_idx, he_ai_actions, he_ai_folded
     he_ai_turn_active = False; he_ai_turn_idx = 0
     he_ai_actions = []; he_ai_folded = [False, False, False, False]
+    global he_ai_raised_this_round, he_ai_raise_amount
+    he_ai_raised_this_round = False; he_ai_raise_amount = 0
 
 def he_start_hand(now):
     """Deal pre-flop: 2 to player, 2 to dealer (face down), 2 to each AI player (face down), post blinds."""
@@ -1733,10 +1747,12 @@ def he_start_hand(now):
     global he_ai_folded, he_ai_turn_active, he_ai_actions
     he_ai_folded = [False, False, False, False]
     he_ai_turn_active = False; he_ai_actions = []
+    global he_ai_raised_this_round, he_ai_raise_amount
+    he_ai_raised_this_round = False; he_ai_raise_amount = 0
     px = [_he_card_x(i, 2) for i in range(2)]
     dx = [_he_card_x(i, 2) for i in range(2)]
     he_player_cards = [_he_deal_card(he_deck, px[i], HE_PLAYER_Y) for i in range(2)]
-    he_dealer_cards = [_he_deal_card(he_deck, dx[i], HE_DEALER_Y, face_down=True) for i in range(2)]
+    he_dealer_cards = []
     he_ai_cards = []
     for ai_i, (ax, ay) in enumerate(HE_AI_POSITIONS):
         ai_hand = [
@@ -1779,68 +1795,64 @@ def he_do_showdown(now):
     global he_state, he_winner, he_player_hand_name, he_dealer_hand_name
     global he_player_money, he_pot, he_mensaje, he_stats
     global poker_player_money, he_ai_hand_names, he_ai_winner
-    for entry in he_dealer_cards:
-        entry[4].start_flip(now, to_back=False)
-        entry[4].oculta = False
-    for ai_hand in he_ai_cards:
-        for entry in ai_hand:
-            entry[4].start_flip(now, to_back=False)
-            entry[4].oculta = False
+    for ai_i, ai_hand in enumerate(he_ai_cards):
+        if not he_ai_folded[ai_i]:
+            for entry in ai_hand:
+                entry[4].start_flip(now, to_back=False)
+                entry[4].oculta = False
     pc = [(e[0],e[1],e[2],e[3]) for e in he_player_cards]
-    dc = [(e[0],e[1],e[2],e[3]) for e in he_dealer_cards]
     cc = [(e[0],e[1],e[2],e[3]) for e in he_community_cards]
     ps, pn = evaluate_holdem_hand(pc + cc)
-    ds, dn = evaluate_holdem_hand(dc + cc)
-    he_player_hand_name = pn; he_dealer_hand_name = dn
+    he_player_hand_name = pn; he_dealer_hand_name = ""
     ai_scores = []
+    active_ai_indices = []
     for ai_i, ai_hand in enumerate(he_ai_cards):
-        ac = [(e[0],e[1],e[2],e[3]) for e in ai_hand]
-        a_sc, a_nm = evaluate_holdem_hand(ac + cc)
-        he_ai_hand_names[ai_i] = a_nm
-        ai_scores.append(a_sc)
-    all_scores = [ps, ds] + ai_scores
-    best_score = max(all_scores)
-    he_ai_winner = False
-    if ps >= best_score and ps == best_score:
-        if all(ps >= s for s in all_scores):
-            if all(ps == s for s in all_scores):
-                he_winner = 'tie'; he_player_money += he_pot // len(all_scores)
-                he_mensaje = f"Empate general — {pn}"
-                he_stats['tied'] += 1
-            elif ps > max([ds] + ai_scores):
-                he_winner = 'player'; he_player_money += he_pot
-                he_mensaje = f"¡Ganaste! {pn}  (+{he_pot} fichas)"
-                he_stats['won'] += 1
-                spawn_particles(ANCHO//2, ALTO//2, DORADO, count=55)
-                overlay_flash.update({'active':True,'color':(255,220,0),'alpha':200,'start':now,'duration':400})
-            else:
-                he_winner = 'tie'; he_player_money += he_pot // 2
-                he_mensaje = f"Empate — {pn}"
-                he_stats['tied'] += 1
+        if he_ai_folded[ai_i]:
+            he_ai_hand_names[ai_i] = ""
+            ai_scores.append(None)
         else:
-            he_ai_winner = True
-            he_winner = 'dealer'
-            winners = []
-            if ds == best_score: winners.append("Dealer")
-            for i, s in enumerate(ai_scores):
-                if s == best_score: winners.append(HE_AI_NAMES[i])
-            he_mensaje = f"{', '.join(winners)} gana. Tu mano: {pn}"
-            he_stats['lost'] += 1
-            spawn_particles(ANCHO//2, ALTO//2, ROJO, count=30)
-            overlay_flash.update({'active':True,'color':(150,0,0),'alpha':180,'start':now,'duration':350})
+            ac = [(e[0],e[1],e[2],e[3]) for e in ai_hand]
+            a_sc, a_nm = evaluate_holdem_hand(ac + cc)
+            he_ai_hand_names[ai_i] = a_nm
+            ai_scores.append(a_sc)
+            active_ai_indices.append(ai_i)
+    active_scores = [ai_scores[i] for i in active_ai_indices]
+    all_active = [ps] + active_scores
+    best_score = max(all_active)
+    he_ai_winner = False
+    if ps == best_score and all(ps >= s for s in active_scores):
+        if all(ps == s for s in active_scores):
+            he_winner = 'tie'; he_player_money += he_pot // len(all_active)
+            he_mensaje = f"Empate — {pn}"
+            he_stats['tied'] += 1
+        else:
+            he_winner = 'player'; he_player_money += he_pot
+            he_mensaje = f"¡Ganaste! {pn}  (+{he_pot} fichas)"
+            he_stats['won'] += 1
+            spawn_particles(ANCHO//2, ALTO//2, DORADO, count=55)
+            overlay_flash.update({'active':True,'color':(255,220,0),'alpha':200,'start':now,'duration':400})
     else:
         he_ai_winner = True
         he_winner = 'dealer'
-        winners = []
-        if ds == best_score: winners.append("Dealer")
-        for i, s in enumerate(ai_scores):
-            if s == best_score: winners.append(HE_AI_NAMES[i])
+        winners = [HE_AI_NAMES[i] for i in active_ai_indices if ai_scores[i] == best_score]
         he_mensaje = f"{', '.join(winners)} gana. Tu mano: {pn}"
         he_stats['lost'] += 1
         spawn_particles(ANCHO//2, ALTO//2, ROJO, count=30)
         overlay_flash.update({'active':True,'color':(150,0,0),'alpha':180,'start':now,'duration':350})
     poker_player_money = he_player_money
     he_stats['played'] += 1
+    he_state = 'result'
+
+def _he_all_folded_win(now):
+    """All AI players folded — player wins the pot without showdown."""
+    global he_state, he_winner, he_mensaje, he_stats, he_player_money, poker_player_money
+    he_winner = 'player'
+    he_player_money += he_pot
+    poker_player_money = he_player_money
+    he_mensaje = f"¡Todos se retiraron! Ganas el bote (+{he_pot} fichas)"
+    he_stats['won'] += 1; he_stats['played'] += 1
+    spawn_particles(ANCHO//2, ALTO//2, DORADO, count=55)
+    overlay_flash.update({'active':True,'color':(255,220,0),'alpha':200,'start':now,'duration':400})
     he_state = 'result'
 
 def he_fold(now):
@@ -1851,10 +1863,17 @@ def he_fold(now):
     overlay_flash.update({'active':True,'color':(100,0,0),'alpha':140,'start':now,'duration':280})
 
 def he_player_check_or_call(now):
-    """Player checks (free) or calls the street bet."""
-    global he_pot, he_street_bet
-    he_street_bet = 0
-    _he_start_ai_turns(now)
+    """Player checks or calls. If responding to an AI raise → advance street directly."""
+    global he_pot, he_street_bet, he_player_money, poker_player_money
+    if he_street_bet > 0:
+        call_amt = min(he_street_bet, he_player_money)
+        he_player_money -= call_amt; poker_player_money = he_player_money
+        he_pot += call_amt
+        he_street_bet = 0
+        _advance_street(now)
+    else:
+        he_street_bet = 0
+        _he_start_ai_turns(now)
 
 def he_player_raise(amount, now):
     """Player raises by `amount`. Dealer + 4 AI players call."""
@@ -1899,9 +1918,6 @@ def _render_poker(now):
 
     title_s = FUENTE_PEQUENA.render("♠  TEXAS HOLD'EM  ♠", True, DORADO)
     VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, 38))
-
-    dl = FUENTE_PEQUENA.render("DEALER", True, (220, 200, 120))
-    VENTANA.blit(dl, (ANCHO//2 - dl.get_width()//2, HE_DEALER_Y - 28))
 
     pl = FUENTE_PEQUENA.render("TÚ", True, (180, 240, 190))
     VENTANA.blit(pl, (ANCHO//2 - pl.get_width()//2, HE_PLAYER_Y - 30))
@@ -1954,11 +1970,6 @@ def _render_poker(now):
                     hn_s = _FUENTE_HE_SMALL.render(he_ai_hand_names[ai_i], True, (255, 200, 180))
                     VENTANA.blit(hn_s, (ax, ay + CARD_H + 6))
 
-    for i, entry in enumerate(he_dealer_cards):
-        c = entry[4]
-        c.target_scale = 1.12 if (pygame.Rect(int(c.x), int(c.y), CARD_W, CARD_H).collidepoint(mouse_pos)
-                                   and not c.oculta) else 1.0
-        c.actualizar(now); c.dibujar(now)
     for i, entry in enumerate(he_community_cards):
         c = entry[4]
         c.target_scale = 1.12 if pygame.Rect(int(c.x), int(c.y), CARD_W, CARD_H).collidepoint(mouse_pos) else 1.0
@@ -2006,9 +2017,6 @@ def _render_poker(now):
     if he_state == 'result' and he_player_hand_name:
         phn_s = FUENTE_PEQUENA.render(f"Tu mano: {he_player_hand_name}", True, (180, 255, 180))
         VENTANA.blit(phn_s, (ANCHO//2 - phn_s.get_width()//2, HE_PLAYER_Y + CARD_H + 10))
-    if he_state == 'result' and he_dealer_hand_name and he_winner != 'fold':
-        dhn_s = FUENTE_PEQUENA.render(f"Dealer: {he_dealer_hand_name}", True, (255, 200, 200))
-        VENTANA.blit(dhn_s, (ANCHO//2 - dhn_s.get_width()//2, HE_DEALER_Y + CARD_H + 10))
 
     box_w = 960; pad = 16; lh = 32
     box_h = 130; bx = (ANCHO - box_w) // 2; by = ALTO - box_h - 14
@@ -2088,7 +2096,7 @@ def _render_poker(now):
             call_r  = pygame.Rect(bx_btns+btn_w+gap,     by_btns, btn_w, btn_h)
             he_raise_btn.update(bx_btns+2*(btn_w+gap), by_btns, btn_w, btn_h)
             _draw_he_btn("F: Retirarse",  fold_r,  (120,30,30), (180,50,50), mouse_pos)
-            call_lbl = "C: Check" if he_street_bet == 0 else f"C: Igualar ({he_street_bet})"
+            call_lbl = "C: Check" if he_street_bet == 0 else f"C: Igualar ({he_street_bet}) — ¡alguien subió!"
             _draw_he_btn(call_lbl, call_r, (30,80,140), (50,120,200), mouse_pos)
             _draw_he_btn("SUBIR",  he_raise_btn, (120,90,0), (200,150,0), mouse_pos, border=DORADO)
             hint2 = FUENTE_INSTR.render("F=Retirarse  C=Check/Igualar  Click SUBIR para apostar más", True, (120,120,120))
@@ -2368,7 +2376,7 @@ while True:
                         if len(he_blind_input) < 6: he_blind_input += evento.unicode
                 elif he_state in ('pre_flop','flop','turn','river'):
                     if he_ai_turn_active:
-                        pass  
+                        pass 
                     elif he_in_raise:
                         if evento.key == pygame.K_BACKSPACE:
                             he_raise_input = he_raise_input[:-1]
