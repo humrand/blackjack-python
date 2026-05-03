@@ -1523,8 +1523,8 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
-he_ai_turn_active  = False  
-he_ai_turn_idx     = 0      
+he_ai_turn_active  = False   
+he_ai_turn_idx     = 0     
 he_ai_turn_phase   = 'announcing'  
 he_ai_turn_timer   = 0      
 he_ai_actions      = []     
@@ -1573,7 +1573,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 0:     
+    elif rank >= 0:      
         if r < 0.22:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -1584,7 +1584,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    else:               
+    else:              
         if r < 0.50:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -1927,25 +1927,38 @@ def _render_poker(now):
     if he_state not in ('betting',):
         for ai_i, (ax, ay) in enumerate(HE_AI_POSITIONS):
             name = HE_AI_NAMES[ai_i]
-            is_left = ai_i < 2
-            name_col = (220, 180, 100)
-            if he_state == 'result' and he_ai_hand_names[ai_i]:
+            folded = he_ai_folded[ai_i] if ai_i < len(he_ai_folded) else False
+            if folded:
+                name_col = (100, 80, 80)
+            elif he_state == 'result' and he_ai_hand_names[ai_i]:
                 name_col = (255, 160, 160)
+            else:
+                name_col = (220, 180, 100)
             name_s = _FUENTE_HE_SMALL.render(name, True, name_col)
             VENTANA.blit(name_s, (ax, ay - 22))
-            for ci in range(2):
-                if ci < len(he_ai_cards[ai_i]):
-                    c = he_ai_cards[ai_i][ci][4]
-                    c.actualizar(now); c.dibujar(now)
-                else:
-                    slot2 = pygame.Surface((CARD_W, CARD_H), pygame.SRCALPHA)
-                    slot2.fill((0, 0, 0, 50))
-                    VENTANA.blit(slot2, (ax + ci * HE_AI_CARD_GAP, ay))
-                    pygame.draw.rect(VENTANA, (60, 100, 60),
-                                     (ax + ci * HE_AI_CARD_GAP, ay, CARD_W, CARD_H), 1, border_radius=8)
-            if he_state == 'result' and he_ai_hand_names[ai_i]:
-                hn_s = _FUENTE_HE_SMALL.render(he_ai_hand_names[ai_i], True, (255, 200, 180))
-                VENTANA.blit(hn_s, (ax, ay + CARD_H + 6))
+            if folded:
+                total_w = 2 * CARD_W + HE_AI_CARD_GAP - CARD_W
+                fold_bg = pygame.Surface((total_w, CARD_H), pygame.SRCALPHA)
+                fold_bg.fill((0, 0, 0, 60))
+                VENTANA.blit(fold_bg, (ax, ay))
+                pygame.draw.rect(VENTANA, (80, 50, 50), (ax, ay, total_w, CARD_H), 1, border_radius=8)
+                fold_s = _FUENTE_HE_SMALL.render("RETIRADO", True, (140, 80, 80))
+                VENTANA.blit(fold_s, (ax + total_w // 2 - fold_s.get_width() // 2,
+                                      ay + CARD_H // 2 - fold_s.get_height() // 2))
+            else:
+                for ci in range(2):
+                    if ci < len(he_ai_cards[ai_i]):
+                        c = he_ai_cards[ai_i][ci][4]
+                        c.actualizar(now); c.dibujar(now)
+                    else:
+                        slot2 = pygame.Surface((CARD_W, CARD_H), pygame.SRCALPHA)
+                        slot2.fill((0, 0, 0, 50))
+                        VENTANA.blit(slot2, (ax + ci * HE_AI_CARD_GAP, ay))
+                        pygame.draw.rect(VENTANA, (60, 100, 60),
+                                         (ax + ci * HE_AI_CARD_GAP, ay, CARD_W, CARD_H), 1, border_radius=8)
+                if he_state == 'result' and he_ai_hand_names[ai_i]:
+                    hn_s = _FUENTE_HE_SMALL.render(he_ai_hand_names[ai_i], True, (255, 200, 180))
+                    VENTANA.blit(hn_s, (ax, ay + CARD_H + 6))
 
     for i, entry in enumerate(he_dealer_cards):
         c = entry[4]
@@ -2361,7 +2374,7 @@ while True:
                         if len(he_blind_input) < 6: he_blind_input += evento.unicode
                 elif he_state in ('pre_flop','flop','turn','river'):
                     if he_ai_turn_active:
-                        pass  
+                        pass 
                     elif he_in_raise:
                         if evento.key == pygame.K_BACKSPACE:
                             he_raise_input = he_raise_input[:-1]
