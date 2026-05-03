@@ -25,6 +25,9 @@ _IMAGE_FILES = {
     'rosita-caos':  ('rosita-caos.png',        'rosita-caos.png'),
     'rosita-guino': ('rosita-gui%C3%B1o.png',  'rosita-guino.png'),
     'barcelona':    ('barcelona.png',          'barcelona.png'),
+    'rosita-dedo':  ('rosita-dedo.png',        'rosita-dedo.png'),
+    'cuarto-oscuro':('cuarto-oscuro.png',      'cuarto-oscuro.png'),
+    'rosita-fichas':('rosita-fichas.png',      'rosita-fichas.png'),
 }
 _image_cache = {}
 _image_downloading = set()
@@ -911,6 +914,17 @@ INTRO_SCENES = [
                         ('Rosa', '(Una sonrisa que intenta esconder, sin éxito.) Anda ya...'),
                         ('narrador', 'Su perfume te acompañará el resto de la noche. +150 fichas — Rosa tiene fe en ti.'),
                     ],
+                    'reaction_images': [
+                        None,
+                        'rosita-dedo',
+                        'cuarto-oscuro',
+                        'cuarto-oscuro',
+                        'rosita',
+                        'rosita',
+                        'rosita',
+                        'rosita',
+                        'rosita-fichas',
+                    ],
                     'effect': {'money': 150, 'msg': '+150 fichas — Rosa tiene fe en ti', 'rosa_secret': True}
                 },
                 {
@@ -1089,11 +1103,12 @@ main_menu_hovered = -1
 story_choice_active  = False      
 story_choice_options = []          
 story_choice_rects   = []          
-story_injected_lines = []         
-story_injected_idx   = 0          
-story_in_injection   = False       
+story_injected_lines  = []         
+story_injected_images = []         
+story_injected_idx    = 0          
+story_in_injection    = False       
 
-preload_images('farol-rojo', 'rosita', 'rosita-seria', 'victor2', 'victor3', 'victor4', 'victor5', 'rosita-caos', 'rosita-guino', 'barcelona', 'segurata-pierdes')
+preload_images('farol-rojo', 'rosita', 'rosita-seria', 'victor2', 'victor3', 'victor4', 'victor5', 'rosita-caos', 'rosita-guino', 'barcelona', 'segurata-pierdes', 'rosita-dedo', 'cuarto-oscuro', 'rosita-fichas')
 
 
 def _start_story(scenes, new_state):
@@ -1107,7 +1122,7 @@ def _start_story(scenes, new_state):
 def _apply_choice(idx):
     """Aplica la elección del jugador: inyecta las reacciones y avanza la historia."""
     global story_choice_active, story_choice_options, story_choice_rects
-    global story_injected_lines, story_injected_idx, story_in_injection, player_money
+    global story_injected_lines, story_injected_images, story_injected_idx, story_in_injection, player_money
     global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done
 
     opt    = story_choice_options[idx]
@@ -1122,20 +1137,26 @@ def _apply_choice(idx):
         rosa_secret_done = True
 
     injected = []
+    injected_imgs = []
     tu_text = opt.get('tu_text', '')
     if tu_text:
         injected.append(('Tú', tu_text))
-    for line in opt.get('reactions', []):
+        injected_imgs.append(None)
+    reaction_images = opt.get('reaction_images', [])
+    for i, line in enumerate(opt.get('reactions', [])):
         injected.append(line)
+        img = reaction_images[i] if i < len(reaction_images) else None
+        injected_imgs.append(img)
 
     story_choice_active  = False
     story_choice_options = []
     story_choice_rects   = []
 
     if injected:
-        story_injected_lines = injected
-        story_injected_idx   = 0
-        story_in_injection   = True
+        story_injected_lines  = injected
+        story_injected_images = injected_imgs
+        story_injected_idx    = 0
+        story_in_injection    = True
     else:
         _story_advance_scene()
 
@@ -1161,14 +1182,15 @@ def _story_advance_scene():
 
 
 def _story_advance():
-    global story_in_injection, story_injected_lines, story_injected_idx
+    global story_in_injection, story_injected_lines, story_injected_images, story_injected_idx
 
     if story_in_injection:
         story_injected_idx += 1
         if story_injected_idx >= len(story_injected_lines):
-            story_in_injection   = False
-            story_injected_lines = []
-            story_injected_idx   = 0
+            story_in_injection    = False
+            story_injected_lines  = []
+            story_injected_images = []
+            story_injected_idx    = 0
             _story_advance_scene()
         return
 
@@ -1200,7 +1222,8 @@ def _render_story(now):
         else:
             img_key = scene_img_key
     else:
-        img_key = scene_img_key
+        inj_img = story_injected_images[story_injected_idx] if story_injected_idx < len(story_injected_images) else None
+        img_key = inj_img if inj_img is not None else scene_img_key
     if img_key:
         draw_story_image(img_key, VENTANA)
 
@@ -2269,7 +2292,7 @@ def _start_story_mode():
     difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
     story_scenes_data = INTRO_SCENES; story_scene_idx = 0; story_line_idx = 0
     story_choice_active = False; story_choice_options = []; story_choice_rects = []
-    story_injected_lines = []; story_injected_idx = 0; story_in_injection = False
+    story_injected_lines = []; story_injected_images = []; story_injected_idx = 0; story_in_injection = False
     app_state = 'intro'
 
 
