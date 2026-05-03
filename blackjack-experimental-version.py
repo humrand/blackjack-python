@@ -1275,7 +1275,8 @@ particles = []; chips_anim = []; placed_chip = None; player_chip_stack = []
 overlay_flash = {'active':False,'color':(0,0,0),'alpha':0,'start':0,'duration':400}
 
 update_status = None; update_msg = ""; update_notif_time = 0; update_restart_time = 0
-DOTS_BTN = pygame.Rect(ANCHO-46, 8, 38, 28)
+DOTS_BTN      = pygame.Rect(ANCHO-46,  8,   38,  28)
+REINICIAR_BTN = pygame.Rect(ANCHO-140, ALTO-44, 130, 34)
 
 nueva_ronda_pending = False
 mensaje = ""
@@ -1376,6 +1377,14 @@ def reiniciar_partida():
     epic_win_triggered = False
     difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
     nueva_ronda()
+
+def clip_text_right(text, font, max_w):
+    """Recorta texto por la izquierda hasta que cabe en max_w píxeles."""
+    txt = text
+    while font.size(txt)[0] > max_w and len(txt) > 0:
+        txt = txt[1:]
+    return txt
+
 def nueva_ronda():
     global baraja, jugador, banca, state, dealing_step, next_deal, mensaje, dealer_thinking, next_action
     global last_pedir_time, round_end_time, current_bet, bet_locked, player_money, stats, placed_chip, chips_anim
@@ -1522,6 +1531,18 @@ def _render_main_menu(now):
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
 
 
+_pause_started_at = 0
+
+def _resume_game():
+    """Reanuda el juego compensando todos los timers por el tiempo en pausa."""
+    global paused, next_deal, next_action, round_end_time, _pause_started_at
+    elapsed = pygame.time.get_ticks() - _pause_started_at
+    if next_deal   > 0: next_deal   += elapsed
+    if next_action > 0: next_action += elapsed
+    if round_end_time > 0: round_end_time += elapsed
+    paused = False
+
+
 def _render_pause_menu(now):
     """Dibuja el menú de pausa encima de la partida en curso."""
     global paused, app_state
@@ -1614,9 +1635,9 @@ while True:
 
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
             if paused:
-                paused = False          # ESC again = resume
+                _resume_game()          # ESC again = resume with timer compensation
             elif app_state in ('game', 'blackjack'):
-                paused = True           # Open pause menu mid-game
+                paused = True; _pause_started_at = now  # Open pause menu mid-game
             elif app_state in ('intro', 'win_ending', 'lose_ending'):
                 app_state = 'main_menu' # ESC in story = back to menu (not a hard quit)
             else:
@@ -1631,12 +1652,12 @@ while True:
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
                 if pygame.Rect(_PAUSE_BX, _PAUSE_BY0, _PAUSE_BTN_W, _PAUSE_BTN_H).collidepoint(lpos):
-                    paused = False
+                    _resume_game()
                 elif pygame.Rect(_PAUSE_BX, _PAUSE_BY1, _PAUSE_BTN_W, _PAUSE_BTN_H).collidepoint(lpos):
-                    paused = False; app_state = 'main_menu'
+                    _resume_game(); app_state = 'main_menu'
             if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_1: paused = False
-                elif evento.key == pygame.K_2: paused = False; app_state = 'main_menu'
+                if evento.key == pygame.K_1: _resume_game()
+                elif evento.key == pygame.K_2: _resume_game(); app_state = 'main_menu'
             continue
 
         # ── Main menu input ──────────────────────────────────────────────────
@@ -1661,6 +1682,8 @@ while True:
                 lpos = to_logical(evento.pos)
                 if bj_menu_btn.collidepoint(lpos):
                     app_state = 'main_menu'; continue
+                if REINICIAR_BTN.collidepoint(lpos):
+                    bj_reiniciar(); continue
                 if DOTS_BTN.collidepoint(lpos):
                     if update_status != 'checking':
                         update_status = 'checking'; update_msg = "Comprobando..."
@@ -1690,6 +1713,8 @@ while True:
 
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             lpos = to_logical(evento.pos)
+            if REINICIAR_BTN.collidepoint(lpos):
+                reiniciar_partida(); continue
             if DOTS_BTN.collidepoint(lpos):
                 if update_status != 'checking':
                     update_status = 'checking'; update_msg = "Comprobando..."
@@ -1859,7 +1884,7 @@ while True:
     if DEALER_AVATAR:
         VENTANA.blit(DEALER_AVATAR, (ANCHO//2 - DEALER_AVATAR.get_width()//2, 0))
 
-    if state == 'dealing' and (not clearing) and now >= next_deal:
+    if state == 'dealing' and (not clearing) and now >= next_deal and not paused:
         if dealing_step == 0:
             repartir(jugador, 200, start_pos=DECK_POS)
         elif dealing_step == 1:
@@ -1883,7 +1908,7 @@ while True:
         dealing_step += 1
         next_deal = now + 400
 
-    if state == 'dealer' and (not clearing):
+    if state == 'dealer' and (not clearing) and not paused:
         cards_settled = len(banca) > 0 and all(
             (not c[4].flipping) and (abs(c[4].x - c[4].dest_x) < 1) for c in banca)
         if cards_settled:
@@ -1899,8 +1924,8 @@ while True:
 
                 if any_player_blackjack and not dealer_blackjack:
                     dealer_thinking = False; revelar_banca(now)
+                    # Insurance is lost when dealer doesn't have blackjack — just clear the flag
                     if insurance_taken:
-                        if dealer_blackjack: player_money += insurance_bet * 2
                         insurance_taken = False; insurance_offered = False
                     results = []
                     for idx, hand in enumerate(hands):
@@ -1988,7 +2013,7 @@ while True:
 
     hand = get_current_hand()
     player_visible = calcular_visible(hand)
-    if state == 'player' and player_visible != 0:
+    if state == 'player' and player_visible != 0 and not paused:
         if player_visible == 21:
             if split_active and current_hand_index < len(jugador_hands)-1:
                 current_hand_index += 1
@@ -2015,7 +2040,7 @@ while True:
                     placed_chip.update({'moving':True,'vx':dx/dist*speed,'vy':dy/dist*speed,
                                         'target_x':tx,'target_y':ty,'expire_on_arrival':True})
 
-    if state == 'round_end' and (not clearing) and round_end_time != 0 and now >= round_end_time + ROUND_DELAY:
+    if state == 'round_end' and (not clearing) and round_end_time != 0 and now >= round_end_time + ROUND_DELAY and not paused:
         player_cards = sum(jugador_hands,[]) if jugador_hands else jugador
         all_cards = banca + player_cards
         if not all_cards:
@@ -2027,7 +2052,7 @@ while True:
             clearing = True; clear_phase = 'flipping'
         round_end_time = 0
 
-    if clearing:
+    if clearing and not paused:
         if clear_phase == 'flipping':
             flips_done = all((not c[4].flipping) for c in clearing_cards)
             if flips_done:
@@ -2093,11 +2118,6 @@ while True:
     pygame.draw.rect(VENTANA, NEGRO, (input_box_x, input_box_y, input_box_w, input_box_h), 2, border_radius=6)
 
     display_text = current_bet_input if state == 'betting' else str(current_bet)
-
-    def clip_text_right(text, font, max_w):
-        txt = text
-        while font.size(txt)[0] > max_w and len(txt) > 0: txt = txt[1:]
-        return txt
 
     txt_to_show = clip_text_right(display_text, FUENTE_PEQUENA, input_box_w - 16)
     txt_surf = FUENTE_PEQUENA.render(txt_to_show, True, BLANCO)
@@ -2247,18 +2267,13 @@ while True:
             pygame.draw.rect(VENTANA, NEGRO, (nx, ny, nw, nh), 1, border_radius=6)
             VENTANA.blit(notif_surf, (nx+12, ny+7))
 
-    reiniciar_rect = pygame.Rect(ANCHO-140, ALTO-44, 130, 34)
-    r_hovered = reiniciar_rect.collidepoint(mouse_pos)
+    r_hovered = REINICIAR_BTN.collidepoint(mouse_pos)
     r_color = (140,30,30) if not r_hovered else (180,50,50)
-    pygame.draw.rect(VENTANA, r_color, reiniciar_rect, border_radius=7)
-    pygame.draw.rect(VENTANA, NEGRO, reiniciar_rect, 1, border_radius=7)
+    pygame.draw.rect(VENTANA, r_color, REINICIAR_BTN, border_radius=7)
+    pygame.draw.rect(VENTANA, NEGRO, REINICIAR_BTN, 1, border_radius=7)
     r_txt = FUENTE_PEQUENA.render("R: Reiniciar", True, BLANCO)
-    VENTANA.blit(r_txt, (reiniciar_rect.centerx-r_txt.get_width()//2,
-                          reiniciar_rect.centery-r_txt.get_height()//2))
-
-    if pygame.mouse.get_pressed()[0] and reiniciar_rect.collidepoint(mouse_pos):
-        if app_state == 'blackjack': bj_reiniciar()
-        else: reiniciar_partida()
+    VENTANA.blit(r_txt, (REINICIAR_BTN.centerx-r_txt.get_width()//2,
+                          REINICIAR_BTN.centery-r_txt.get_height()//2))
 
     # In infinite mode, draw "Menú" button
     if app_state == 'blackjack':
