@@ -204,7 +204,7 @@ class Carta:
         self.flip_start = 0; self.flip_duration = 300
         self.front = None; self.back = None; self.flip_target_back = False
         self.scale = 1.0; self.target_scale = 1.0; self.scale_speed = 0.22
-        self.hover_glow = 0.0  
+        self.hover_glow = 0.0 
         self._create_faces()
 
     def _create_faces(self):
@@ -1079,7 +1079,7 @@ LOSE_ENDING_SCENES = [
 
 
 app_state         = 'main_menu'
-game_mode         = 'story'    
+game_mode         = 'story'     
 story_scenes_data = INTRO_SCENES
 story_scene_idx   = 0
 story_line_idx    = 0
@@ -1487,38 +1487,38 @@ BET_MAX_HOLDEM   = 5000
 he_player_money  = 3000
 he_blind         = 50
 he_blind_input   = ""
-he_state         = 'betting'  
+he_state         = 'betting'   
 he_pot           = 0
-he_street_bet    = 0           
+he_street_bet    = 0         
 he_raise_input   = ""
-he_in_raise      = False       
+he_in_raise      = False      
 he_deck          = []
-he_player_cards  = []          
+he_player_cards  = []         
 he_dealer_cards  = []
 he_community_cards = []
 he_mensaje       = ""
 he_player_hand_name  = ""
 he_dealer_hand_name  = ""
-he_winner        = ""          
+he_winner        = ""         
 he_result_timer  = 0
 he_stats         = {'played':0,'won':0,'lost':0,'tied':0}
 he_menu_btn      = pygame.Rect(ANCHO-164, ALTO-44, 152, 34)
 he_reiniciar_btn = pygame.Rect(ANCHO-324, ALTO-44, 152, 34)
 _FUENTE_HE_BIG   = pygame.font.SysFont("arial", 56, bold=True)
 _FUENTE_HE_SMALL = pygame.font.SysFont("arial", 20, bold=True)
-poker_player_money = he_player_money
+poker_player_money = he_player_money   
 
-HE_AI_CARD_GAP = 58  
+HE_AI_CARD_GAP = 58   
 HE_AI_POSITIONS = [
-    (190, 150), 
+    (190, 150),  
     (190, 540),  
-    (1634, 150), 
+    (1634, 150),
     (1634, 540),  
 ]
 HE_AI_NAMES = ["JUGADOR 1", "JUGADOR 2", "JUGADOR 3", "JUGADOR 4"]
 he_ai_cards  = [[], [], [], []]   
 he_ai_money  = [3000, 3000, 3000, 3000]
-he_ai_hand_names = ["", "", "", ""]   
+he_ai_hand_names = ["", "", "", ""]  
 he_ai_winner = False  
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
@@ -1531,7 +1531,8 @@ def _he_card_x(i, total, card_gap=None):
 
 def _he_val_num(v):
     m = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, '10': 10}
-    return m.get(v, int(v))
+    if v in m: return m[v]
+    return int(v)
 
 def _he_eval_5(hand5):
     """Returns (rank_int, tiebreaker_list) for exactly 5 cards."""
@@ -1637,14 +1638,14 @@ def he_start_hand(now):
         ]
         he_ai_cards.append(ai_hand)
     he_pot = he_blind * 6
-    he_street_bet = 0 
+    he_street_bet = 0   
     he_state = 'pre_flop'
 
 def _he_dealer_act(raise_amount=0):
     """Simple dealer bot: always calls any raise."""
     global he_pot
     if raise_amount > 0:
-        he_pot += raise_amount
+        he_pot += raise_amount  
 
 def he_do_flop(now):
     global he_community_cards, he_state
@@ -1752,7 +1753,7 @@ def he_player_raise(amount, now):
     """Player raises by `amount`. Dealer + 4 AI players call."""
     global he_pot, he_street_bet, he_player_money, poker_player_money
     amount = max(1, min(amount, he_player_money))
-    he_player_money -= amount; he_pot += amount * 5 
+    he_player_money -= amount; he_pot += amount * 5  
     poker_player_money = he_player_money
     he_street_bet = 0
     _advance_street(now)
@@ -2074,7 +2075,7 @@ def _render_pause_menu(now):
     mouse_pos = to_logical(pygame.mouse.get_pos())
     BTN_W = 560; BTN_H = 88; GAP = 22
     BX = (ANCHO - BTN_W) // 2
-    BY0 = ALTO // 2 - 20           
+    BY0 = ALTO // 2 - 20          
     BY1 = BY0 + BTN_H + GAP       
 
     pause_opts = [
@@ -2138,20 +2139,20 @@ while True:
 
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
             if paused:
-                _resume_game()         
+                _resume_game()          
             elif app_state in ('game', 'blackjack'):
                 paused = True; _pause_started_at = now  
             elif app_state == 'poker':
                 app_state = 'main_menu'
             elif app_state in ('intro', 'win_ending', 'lose_ending'):
-                app_state = 'main_menu'
+                app_state = 'main_menu' 
             else:
                 pygame.quit(); sys.exit()
 
         if paused:
             _PAUSE_BTN_W = 560; _PAUSE_BTN_H = 88; _PAUSE_GAP = 22
             _PAUSE_BX    = (ANCHO - _PAUSE_BTN_W) // 2
-            _PAUSE_BY0   = ALTO // 2 - 20  
+            _PAUSE_BY0   = ALTO // 2 - 20
             _PAUSE_BY1   = _PAUSE_BY0 + _PAUSE_BTN_H + _PAUSE_GAP 
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
