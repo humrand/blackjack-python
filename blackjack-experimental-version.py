@@ -240,6 +240,108 @@ def _play_story_sfx(key, volume=0.22):
     threading.Thread(target=_do_sfx, daemon=True).start()
 
 
+import array as _tw_arr
+
+_VOICE_FREQS = {
+    'narrador': 255,
+    'Rosa':     530,
+    'Camarera': 530,
+    'Portero':  155,
+    'Bruno':    155,
+    'Víctor':   305,
+    'Tú':       415,
+}
+_voice_sounds  = {} 
+_voice_channel = None
+
+def _make_voice_sound(freq=400):
+    """Genera tono corto tipo Undertale sin numpy."""
+    try:
+        mfreq, msize, mch = pygame.mixer.get_init()
+        dur_ms = 44
+        n      = int(mfreq * dur_ms / 1000)
+        maxval = (1 << (abs(msize) - 1)) - 1
+        tc     = 'h' if abs(msize) >= 16 else 'b'
+        buf    = _tw_arr.array(tc)
+        for i in range(n):
+            env  = (1.0 - i / n) ** 0.55
+            samp = int(maxval * 0.21 * env *
+                       math.sin(2 * math.pi * freq * i / mfreq))
+            if mch == 2:
+                buf.append(samp); buf.append(samp)
+            else:
+                buf.append(samp)
+        return pygame.mixer.Sound(buffer=buf)
+    except Exception as e:
+        print(f"[TW] Error sintetizando voz: {e}")
+        return None
+
+def _get_voice_sound(speaker):
+    freq = _VOICE_FREQS.get(speaker, 380)
+    if freq not in _voice_sounds:
+        _voice_sounds[freq] = _make_voice_sound(freq)
+    return _voice_sounds[freq]
+
+_tw = {
+    'speaker':    None,
+    'text':       '',
+    'shown':      0,
+    'done':       False,
+    'last_t':     0,
+    'next_delay': 0,
+}
+
+def _tw_char_delay(text, idx):
+    """Retardo aleatorio hasta el siguiente carácter."""
+    if idx <= 0 or idx > len(text):
+        return random_module.randint(30, 72)
+    prev = text[idx - 1]
+    if prev in '.!?…':  return random_module.randint(210, 400)
+    if prev in ',;:–—': return random_module.randint(85, 155)
+    if prev == ' ':     return random_module.randint(8, 28)
+    return random_module.randint(26, 78)
+
+def _tw_set(speaker, text, now):
+    """Inicializa el typewriter para un nuevo parlamento."""
+    global _tw
+    _tw['speaker']    = speaker
+    _tw['text']       = text
+    _tw['shown']      = 0
+    _tw['done']       = len(text) == 0
+    _tw['last_t']     = now
+    _tw['next_delay'] = _tw_char_delay(text, 0)
+
+def _tw_update(now):
+    """Avanza el typewriter y emite el sonido de voz por letra."""
+    global _tw, _voice_channel
+    if _tw['done']:
+        return
+    elapsed = now - _tw['last_t']
+    while elapsed >= _tw['next_delay'] and not _tw['done']:
+        elapsed        -= _tw['next_delay']
+        _tw['shown']   += 1
+        _tw['last_t']   = now - elapsed
+        if _tw['shown'] >= len(_tw['text']):
+            _tw['shown'] = len(_tw['text'])
+            _tw['done']  = True
+            break
+        ch = _tw['text'][_tw['shown'] - 1]
+        if ch.isalpha() and not music_muted:
+            snd = _get_voice_sound(_tw['speaker'])
+            if snd:
+                if _voice_channel is None or not _voice_channel.get_busy():
+                    _voice_channel = pygame.mixer.find_channel(False)
+                if _voice_channel:
+                    _voice_channel.play(snd)
+        _tw['next_delay'] = _tw_char_delay(_tw['text'], _tw['shown'])
+
+def _tw_finish():
+    """Revela el texto completo al instante."""
+    global _tw
+    _tw['shown'] = len(_tw['text'])
+    _tw['done']  = True
+
+
 def _story_check_music_for_scene(scenes_data, scene_idx):
     """Lanza la música correcta según la escena actual del modo historia."""
     if scene_idx >= len(scenes_data):
@@ -884,6 +986,11 @@ def wrap_story(text, font, max_w):
 
 
 def draw_dialogue_box(surf, speaker, text, now):
+    if _tw['speaker'] != speaker or _tw['text'] != text:
+        _tw_set(speaker, text, now)
+    _tw_update(now)
+    displayed = text[:_tw['shown']]
+
     BOX_H = 215; BOX_Y = ALTO - BOX_H; PAD = 65
     bg = pygame.Surface((ANCHO, BOX_H), pygame.SRCALPHA)
     bg.fill((3, 2, 8, 218))
@@ -899,12 +1006,12 @@ def draw_dialogue_box(surf, speaker, text, now):
         surf.blit(name_s, (PAD, BOX_Y + 18))
         text_y = BOX_Y + 18 + name_s.get_height() + 6
     max_w2 = ANCHO - PAD * 2
-    lines2 = wrap_story(text, FUENTE_STORY, max_w2)
+    lines2 = wrap_story(displayed, FUENTE_STORY, max_w2)
     txt_col = (195,195,195) if narrador_mode else BLANCO
     for i, line in enumerate(lines2[:4]):
         ls = FUENTE_STORY.render(line, True, txt_col)
         surf.blit(ls, (PAD, text_y + i*34))
-    if (now // 550) % 2 == 0:
+    if _tw['done'] and (now // 550) % 2 == 0:
         cont = FUENTE_INSTR.render("[ ESPACIO  o  clic  para continuar ]", True, (125,112,88))
         surf.blit(cont, (ANCHO - cont.get_width() - PAD, ALTO - 26))
 
@@ -2758,6 +2865,14 @@ def _render_main_menu(now):
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
 
+    _MENU_FADE_MS = 900
+    elapsed_fade = now - _menu_fade_start
+    if elapsed_fade < _MENU_FADE_MS:
+        alpha_fade = max(0, int(255 * (1.0 - elapsed_fade / _MENU_FADE_MS)))
+        ov = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        ov.fill((0, 0, 0, alpha_fade))
+        VENTANA.blit(ov, (0, 0))
+
 
 _pause_started_at = 0
 
@@ -2927,7 +3042,9 @@ def splash_screen():
         RELOJ.tick(60)
 
 
+_menu_fade_start = 0
 splash_screen()
+_menu_fade_start = pygame.time.get_ticks()
 
 
 while True:
@@ -3095,7 +3212,11 @@ while True:
                 advance = False
                 if evento.type == pygame.KEYDOWN and evento.key == pygame.K_SPACE: advance = True
                 if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:   advance = True
-                if advance: _story_advance()
+                if advance:
+                    if not _tw['done']:
+                        _tw_finish()          
+                    else:
+                        _story_advance()      
             continue
 
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
