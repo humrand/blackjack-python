@@ -2661,7 +2661,7 @@ def splash_screen():
         if FADE_IN < elapsed < FADE_IN + HOLD:
             blink = (elapsed // 500) % 2 == 0
             if blink:
-                hint = FUENTE_PEQUENA.render("Pulsa cualquier tecla para continuar", True, DORADO)
+                hint = FUENTE_PEQUENA.render("hecho por Humrandbm y Dreame282", True, DORADO)
                 hint_alpha = int(200 * (elapsed - FADE_IN) / HOLD)
                 hint.set_alpha(hint_alpha)
                 VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, logo_y + lh + 30))
