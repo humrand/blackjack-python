@@ -161,7 +161,7 @@ _STORY_SFX_FILES = {
 _story_sfx_cache      = {}
 _story_current_track  = None
 _SFX_CHANNEL          = None
-_story_sfx_volume     = 0.22   
+_story_sfx_volume     = 0.22  
 
 
 def _story_download_file(local_path, url):
@@ -1655,11 +1655,6 @@ def _apply_choice(idx):
         mult = diff_multipliers.get(difficulty_level, 1.0)
         scaled = int(effect['money'] * mult) if effect['money'] > 0 else effect['money']
         player_money = max(0, player_money + scaled)
-        if scaled > 0:
-            current_scene = story_scenes_data[story_scene_idx] if story_scene_idx < len(story_scenes_data) else {}
-            if current_scene.get('scene_image', '') in ('rosita', 'rosita-seria', 'rosita-guino',
-                                                         'rosita-caos', 'rosita-dedo', 'rosita-fichas'):
-                _play_story_sfx('chips', volume=0.20)
     if 'difficulty' in effect:
         difficulty_level = effect['difficulty']
         thresholds = {0: 10000, 1: 25000, 2: 50000, 3: 100000}
@@ -1733,6 +1728,10 @@ def _story_advance():
                 _start_story(KICKED_ENDING_SCENES, 'kicked_ending')
             else:
                 _story_advance_scene()
+        else:
+            if (story_injected_idx < len(story_injected_images) and
+                    story_injected_images[story_injected_idx] == 'rosita-fichas'):
+                _play_story_sfx('chips', volume=0.20)
         return
 
     _story_advance_scene()
@@ -2838,7 +2837,7 @@ def _start_story_mode():
     story_choice_active = False; story_choice_options = []; story_choice_rects = []
     story_injected_lines = []; story_injected_images = []; story_injected_idx = 0; story_in_injection = False
     _story_current_track = None
-    _play_story_track('lluvia', volume=0.16, loop=True, fade_out_ms=1800)
+    _play_story_track('lluvia', volume=0.16, loop=True, fade_out_ms=1300)
     app_state = 'intro'
 
 
