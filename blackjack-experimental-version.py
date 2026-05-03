@@ -1517,14 +1517,14 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
-he_ai_turn_active  = False   
-he_ai_turn_idx     = 0      
+he_ai_turn_active  = False  
+he_ai_turn_idx     = 0       
 he_ai_turn_phase   = 'announcing' 
 he_ai_turn_timer   = 0      
 he_ai_actions      = []     
 he_ai_folded       = [False, False, False, False]
-_HE_ANNOUNCE_MS    = 650     
-_HE_DECIDE_MS      = 900
+_HE_ANNOUNCE_MS    = 650    
+_HE_DECIDE_MS      = 900    
 
 def _he_ai_compute_action(ai_idx):
     """Decide what AI player ai_idx does. Returns action string and modifies pot/money."""
@@ -1549,7 +1549,7 @@ def _he_ai_compute_action(ai_idx):
         rank = -1
     r = random_module.random()
     call_amt = min(he_blind, money)
-    if rank >= 5:      
+    if rank >= 5:       
         if r < 0.80:
             raise_mult = random_module.randint(3, 7)
             amt = min(he_blind * raise_mult, money)
@@ -1558,7 +1558,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 3:     
+    elif rank >= 3:      
         if r < 0.50:
             raise_mult = random_module.randint(2, 4)
             amt = min(he_blind * raise_mult, money)
@@ -1567,7 +1567,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 0:      
+    elif rank >= 0:     
         if r < 0.22:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -1578,7 +1578,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    else:               
+    else:                
         if r < 0.50:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -1655,7 +1655,7 @@ def _he_eval_5(hand5):
         qv = max([_he_val_num(v) for v,c in cnt.items() if c == 4])
         kk = sorted([_he_val_num(v) for v,c in cnt.items() if c != 4], reverse=True)
         return (6, [qv] + kk)
-    if freq[0] == 3 and freq[1] == 2:
+    if freq[0] == 3 and len(freq) > 1 and freq[1] == 2:
         tv = max([_he_val_num(v) for v,c in cnt.items() if c == 3])
         pv = max([_he_val_num(v) for v,c in cnt.items() if c == 2])
         return (5, [tv, pv])
@@ -1665,7 +1665,7 @@ def _he_eval_5(hand5):
         tv = max([_he_val_num(v) for v,c in cnt.items() if c == 3])
         kk = sorted([_he_val_num(v) for v,c in cnt.items() if c != 3], reverse=True)
         return (2, [tv] + kk)
-    if freq[0] == 2 and freq[1] == 2:
+    if freq[0] == 2 and len(freq) > 1 and freq[1] == 2:
         pvs = sorted([_he_val_num(v) for v,c in cnt.items() if c == 2], reverse=True)
         kk  = sorted([_he_val_num(v) for v,c in cnt.items() if c == 1], reverse=True)
         return (1, pvs + kk)
@@ -2368,7 +2368,7 @@ while True:
                         if len(he_blind_input) < 6: he_blind_input += evento.unicode
                 elif he_state in ('pre_flop','flop','turn','river'):
                     if he_ai_turn_active:
-                        pass 
+                        pass  
                     elif he_in_raise:
                         if evento.key == pygame.K_BACKSPACE:
                             he_raise_input = he_raise_input[:-1]
