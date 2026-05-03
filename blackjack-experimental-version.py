@@ -1227,7 +1227,7 @@ def _render_story(now):
     if img_key:
         draw_story_image(img_key, VENTANA)
 
-    if has_counter:
+    if has_counter and img_key == scene_img_key:
         draw_bar_counter_overlay(VENTANA, now)
 
     if story_in_injection:
