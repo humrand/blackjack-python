@@ -1053,59 +1053,197 @@ def build_win_ending_scenes():
             ('narrador', 'Es la primera vez en mucho tiempo que oyes reír así a alguien.'),
             ('narrador', 'Los dos caminan hacia el mar. El champán se enfría con la brisa. El neón de El Farol Rojo se apaga para siempre detrás.'),
         ]
-    diff_narrador = {
-        0: 'Lo lograste en modo Normal. Víctor nunca imaginó que alguien llegaría tan lejos.',
-        1: 'Lo lograste en modo Difícil. La banca jugó sin piedad y aun así no fue suficiente.',
-        2: 'Lo lograste en modo Muy Difícil. Cincuenta mil fichas. Una hazaña que nadie olvidará.',
-        3: 'Lo lograste en modo EXTREMO. Cien mil fichas. Ni Víctor mismo se lo creerá jamás.',
-    }
-    return [
-        {
-            'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
-            'scene_image': 'victor3',
-            'line_images': [None, None, None, None, None, None, None, 'victor4'],
-            'lines': [
-                ('narrador', 'El número imposible.'),
-                ('narrador', 'El aire en la sala cambió. Fue como si alguien hubiera apagado la música sin tocar nada.'),
-                ('Víctor', '...'),
-                ('Víctor', '¿Cómo?'),
-                ('Tú', 'Ya sabes lo que eso significa, Víctor.'),
-                ('Víctor', '¡No! ¡Trampa! ¡Este hombre está haciendo trampa de alguna manera!'),
-                ('Tú', 'Las cartas no mienten, Víctor. Tú sí.'),
-                ('Víctor', '(Se pone de pie, volcando la silla.) ¡Garduño! ¡Enrique! ¡Sacad a este hombre de aquí ahora mismo!'),
-            ]
-        },
-        {
-            'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
-            'scene_image': 'rosita-caos',
-            'line_images': [None, None, None, None, None, None, None, None, 'rosita-guino'],
-            'lines': [
-                ('narrador', 'Dos hombres muy grandes se levantan de las sombras. El ambiente se congela.'),
-                ('narrador', 'Y entonces Rosa actúa.'),
-                ('Rosa', '¡Ay, Dios mío, qué torpe soy!'),
-                ('narrador', 'Rosa vuelca toda la barra de un golpe. Una cascada de botellas, vasos y whisky de treinta años inunda el suelo.'),
-                ('narrador', 'El caos es inmediato y total. Gritos, cristales rotos, gente empujando.'),
-                ('narrador', 'En medio de la confusión, tú te guardas los billetes y caminas tranquilamente hacia la puerta.'),
-                ('Portero', '¡Eh! ¡Para ahí!'),
-                ('narrador', 'Pero el portero tiene los pies empapados de Macallan del 62 y otras prioridades.'),
-                ('Rosa', '(Te guiña un ojo desde el otro lado del caos.)'),
-            ]
-        },
+
+    d = difficulty_level
+
+    if d == 0:
+        # Normal — Víctor acepta la derrota con una media confesión
+        table_scenes = [
+            {
+                'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
+                'scene_image': 'victor3',
+                'line_images': [None, None, None, None, None, None, None, 'victor4'],
+                'lines': [
+                    ('narrador', 'Diez mil fichas. La mesa entera se queda en silencio.'),
+                    ('Víctor', '...'),
+                    ('Víctor', '¿Cómo?'),
+                    ('Tú', 'Ya sabes lo que acordamos, Víctor.'),
+                    ('Víctor', '(Una pausa larga. Sus ojos te estudian.) ...Bien.'),
+                    ('Víctor', '(En voz baja, casi solo para ti.) El segundo crupier de la derecha. Lleva cuatro años marcando las cartas con la uña.'),
+                    ('Víctor', 'Nunca esperé tener que decirlo. Nunca.'),
+                    ('Tú', 'Lo sé. Gracias por cumplir tu palabra.'),
+                ]
+            },
+            {
+                'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+                'scene_image': 'rosita-caos',
+                'line_images': [None, None, None, None, None, None, None, None, 'rosita-guino'],
+                'lines': [
+                    ('narrador', 'Al salir, el susurro ya recorre la sala.'),
+                    ('narrador', 'El hombre que hizo hablar a Víctor Carvalho.'),
+                    ('narrador', 'Rosa te espera junto a la barra con una sonrisa que no intenta esconder.'),
+                    ('Rosa', '(En voz baja.) ¿Te lo dijo?'),
+                    ('Tú', 'Me lo dijo.'),
+                    ('Rosa', '(Larga pausa.) Bien. Ya era hora.'),
+                    ('narrador', 'Dos grandes se levantan, pero Víctor los detiene con un gesto. Esta vez, la puerta es tuya.'),
+                    ('Portero', '(Abre la puerta sin decir nada.)'),
+                    ('Rosa', '(Te guiña un ojo desde el otro lado de la sala.)'),
+                ]
+            },
+        ]
+        dawn_lines = [
+            ('narrador', 'El aire de la madrugada huele a lluvia limpia. A libertad.'),
+            ('narrador', 'Caminas despacio por los adoquines mojados.'),
+            ('narrador', 'Detrás de ti, el neón de "El Farol Rojo" parpadea dos veces y se apaga.'),
+            ('narrador', 'Lo lograste en modo Normal. Víctor nunca imaginó que alguien le haría hablar.'),
+            ('narrador', 'La ciudad empieza a despertar. Huele a café y a pan recién hecho.'),
+        ] + rosa_lines + [('narrador', '─────────  FIN  ─────────')]
+
+    elif d == 1:
+        # Difícil — La sala entera presencia la caída de Víctor
+        table_scenes = [
+            {
+                'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
+                'scene_image': 'victor3',
+                'line_images': [None, None, None, None, None, None, 'victor4'],
+                'lines': [
+                    ('narrador', 'Veinticinco mil fichas. La sala entera lo vio.'),
+                    ('narrador', 'El murmullo empieza en las mesas de los laterales y viaja hasta el fondo.'),
+                    ('Víctor', '(Se pone de pie lentamente.) ¡Trampa! ¡Este hombre ha hecho trampa!'),
+                    ('Tú', 'Las cartas no mienten, Víctor. Toda la sala lo vio.'),
+                    ('narrador', 'Un crupier anciano al fondo suelta las cartas sobre la mesa y mueve la cabeza.'),
+                    ('narrador', 'Él también lo sabe. Todos lo saben.'),
+                    ('Víctor', '(Su voz pierde fuerza.) ...Garduño. Enrique.'),
+                ]
+            },
+            {
+                'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+                'scene_image': 'rosita-caos',
+                'line_images': [None, None, None, None, None, None, None, 'rosita-guino'],
+                'lines': [
+                    ('narrador', 'Los dos hombres se levantan, pero el ambiente ya se giró.'),
+                    ('narrador', 'Tres jugadores de las otras mesas se ponen de pie entre tú y ellos.'),
+                    ('narrador', 'Nadie dice nada. No hace falta.'),
+                    ('Rosa', '¡Ay, Dios mío, qué torpe!'),
+                    ('narrador', 'Rosa vuelca la barra entera. Cristales, botellas, caos total.'),
+                    ('narrador', 'En medio del tumulto, tú caminas tranquilamente hacia la puerta.'),
+                    ('Portero', '(Te sostiene la puerta abierta. Con respeto.)'),
+                    ('Rosa', '(Te guiña un ojo desde el otro lado del caos.)'),
+                ]
+            },
+        ]
+        dawn_lines = [
+            ('narrador', 'El aire de la madrugada tiene sabor a victoria.'),
+            ('narrador', 'No solo la tuya. La de todos los que perdieron antes que tú.'),
+            ('narrador', 'Detrás de ti, el neón de "El Farol Rojo" parpadea y se apaga.'),
+            ('narrador', 'Lo lograste en modo Difícil. La banca jugó sin piedad y aun así no fue suficiente.'),
+            ('narrador', 'Veinticinco mil fichas. Una hazaña que el Barrio Gótico no olvidará.'),
+        ] + rosa_lines + [('narrador', '─────────  FIN  ─────────')]
+
+    elif d == 2:
+        # Muy Difícil — Víctor intenta escapar; el casino se vuelve contra él
+        table_scenes = [
+            {
+                'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
+                'scene_image': 'victor3',
+                'line_images': [None, None, None, None, None, 'victor4', None],
+                'lines': [
+                    ('narrador', 'Cincuenta mil fichas. Nadie en esta sala creyó que fuera posible.'),
+                    ('narrador', 'Ni siquiera tú, en el fondo.'),
+                    ('Víctor', '(Volcando la silla.) ¡Imposible! ¡Imposible, digo!'),
+                    ('Tú', 'Este casino es mío. En espíritu. Y tú lo sabes.'),
+                    ('Víctor', '(Mira hacia la puerta trasera. Calcula.)'),
+                    ('narrador', 'Pero los crupiers se pusieron de pie. Rosa bloqueó la barra. Hasta Marcos, el portero, dio un paso al lado.'),
+                    ('Víctor', '(En voz muy baja, solo para ti.) ...¿Cómo lo hiciste?'),
+                ]
+            },
+            {
+                'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+                'scene_image': 'rosita-caos',
+                'line_images': [None, None, None, None, None, None, 'rosita-guino'],
+                'lines': [
+                    ('narrador', 'La sala entera te abre paso. No como a un ganador. Como a alguien que tiene razón.'),
+                    ('Rosa', '(Con voz firme.) Esta noche, el Farol Rojo tiene un nuevo campeón.'),
+                    ('narrador', 'Aplausos. Lentos al principio. Luego toda la sala.'),
+                    ('narrador', 'Víctor observa desde el fondo, solo, con las manos vacías.'),
+                    ('narrador', 'Cincuenta años de impunidad terminaron esta noche.'),
+                    ('Portero', '(Te abre la puerta principal con las dos manos.)'),
+                    ('Rosa', '(Te guiña un ojo. Hay algo diferente en su cara — parece libre.)'),
+                ]
+            },
+        ]
+        dawn_lines = [
+            ('narrador', 'La madrugada de Barcelona te recibe como a un fantasma victorioso.'),
+            ('narrador', 'Detrás de ti, "El Farol Rojo" parpadea y se apaga para siempre.'),
+            ('narrador', 'Lo lograste en modo Muy Difícil. Cincuenta mil fichas. Una hazaña que nadie olvidará.'),
+            ('narrador', 'El Barrio Gótico guarda secretos. Esta noche guarda uno más: el tuyo.'),
+        ] + rosa_lines + [('narrador', '─────────  FIN  ─────────')]
+
+    else:
+        # EXTREMO — Víctor se derrumba; el casino cae con él
+        table_scenes = [
+            {
+                'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
+                'scene_image': 'victor3',
+                'line_images': [None, None, None, None, None, None, 'victor4', None],
+                'lines': [
+                    ('narrador', 'Cien mil fichas.'),
+                    ('narrador', 'El número imposible. El que nadie se atrevió a perseguir en tres años.'),
+                    ('narrador', 'El aire se detuvo. La música se detuvo. Todo se detuvo.'),
+                    ('Víctor', '(En pie. La cara descompuesta.) No... no puede ser...'),
+                    ('Tú', 'Ya lo es, Víctor. Ya lo es.'),
+                    ('Víctor', '(Las manos le tiemblan. Por primera vez en su vida, tiemblan.)'),
+                    ('narrador', 'Nadie en la sala se mueve. El hombre que nunca perdió acaba de perderlo todo.'),
+                    ('Víctor', '(En un susurro.) ...¿Quién eres tú?'),
+                ]
+            },
+            {
+                'bg': 'bar', 'chars': [('camarera', ANCHO//2-180, 770)], 'counter': True,
+                'scene_image': 'rosita-caos',
+                'line_images': [None, None, None, None, None, None, None, 'rosita-guino'],
+                'lines': [
+                    ('narrador', 'Los dos matones no se mueven. Nadie se mueve.'),
+                    ('narrador', 'Hay cosas que el dinero no puede detener, y esta noche todo el mundo lo siente.'),
+                    ('Rosa', '(Deja caer el vaso que estaba limpiando. Se acerca despacio.)'),
+                    ('Rosa', 'Tres años trabajando para ese hombre. Tres años esperando esto.'),
+                    ('narrador', 'Rosa vuelca la barra entera. Un diluvio de cristal y whisky caro.'),
+                    ('narrador', 'En el caos absoluto, tú caminas hacia la puerta con calma de cirujano.'),
+                    ('Portero', '(Se hace a un lado. Asiente una sola vez.)'),
+                    ('Rosa', '(Te guiña un ojo desde el otro lado del infierno.)'),
+                ]
+            },
+        ]
+        dawn_lines = [
+            ('narrador', 'Afuera, la ciudad respira.'),
+            ('narrador', 'Cien mil fichas. El número que nadie pronunció jamás en El Farol Rojo.'),
+            ('narrador', 'Hasta esta noche.'),
+            ('narrador', 'Detrás de ti, el neón parpadea tres veces y se apaga para siempre. Ya no volverá a encenderse.'),
+            ('narrador', 'Lo lograste en modo EXTREMO. Cien mil fichas. Ni Víctor mismo se lo creerá jamás.'),
+            ('narrador', 'Hay cosas que no se explican. Tú eres una de ellas.'),
+        ] + rosa_lines + [('narrador', '─────────  FIN  ─────────')]
+
+    return table_scenes + [
         {
             'bg': 'street_dawn', 'chars': [], 'counter': False,
             'scene_image': 'barcelona',
-            'lines': [
-                ('narrador', 'El aire de la madrugada huele a lluvia limpia. A libertad.'),
-                ('narrador', 'Caminas despacio por los adoquines mojados. No hay prisa. Ya no.'),
-                ('narrador', 'Detrás de ti, el neón de "El Farol Rojo" parpadea dos veces y se apaga.'),
-                ('narrador', diff_narrador.get(difficulty_level, diff_narrador[0])),
-                ('narrador', 'Y tú lo habías encontrado.'),
-                ('narrador', 'La ciudad empieza a despertar. Huele a café y a pan recién hecho.'),
-            ] + rosa_lines + [
-                ('narrador', '─────────  FIN  ─────────'),
-            ]
+            'lines': dawn_lines,
         },
     ]
+
+_RESTART_CHOICE = ('CHOICE', [
+    {
+        'label': 'Volver a intentarlo — esta vez será diferente.',
+        'tu_text': 'No. Todavía no. Esta noche no ha terminado.',
+        'reactions': [],
+        'effect': {'restart_game': True}
+    },
+    {
+        'label': 'Volver al menú principal.',
+        'tu_text': '...',
+        'reactions': [],
+        'effect': {'go_menu': True}
+    },
+])
 
 KICKED_ENDING_SCENES = [
     {
@@ -1132,15 +1270,18 @@ KICKED_ENDING_SCENES = [
             ('narrador', 'En algún lugar detrás de esa puerta, Rosa sigue trabajando. Sin pensar en ti.'),
             ('narrador', 'Algunas derrotas no tienen que ver con las cartas.'),
             ('narrador', '─────────  FINAL MALO  ─────────'),
+            _RESTART_CHOICE,
         ]
     },
 ]
 
-LOSE_ENDING_SCENES = [
-    {
-        'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
-        'scene_image': 'victor5',
-        'lines': [
+def build_lose_ending_scenes():
+    """Construye las escenas de derrota según la dificultad actual."""
+    d = difficulty_level
+
+    if d == 0:
+        # Normal — Víctor calmado, casi aburrido
+        table_lines = [
             ('narrador', 'Y así terminó.'),
             ('Víctor', 'Ya está. Eso es todo lo que tenías.'),
             ('Víctor', 'Ha sido... entretenido. Para mí.'),
@@ -1148,20 +1289,83 @@ LOSE_ENDING_SCENES = [
             ('Víctor', '(Sin levantar la vista de las fichas.) La puerta está donde la dejaste. Buenas noches.'),
             ('narrador', 'No había nada más que decir.'),
         ]
-    },
-    {
-        'bg': 'street', 'chars': [], 'counter': False,
-        'scene_image': 'segurata-pierdes',
-        'lines': [
+        street_lines = [
             ('narrador', 'Volviste a la calle con los bolsillos vacíos y la cabeza llena de preguntas.'),
             ('narrador', 'La lluvia seguía ahí. Indiferente. Como siempre.'),
             ('narrador', 'Víctor seguía dentro, invicto. De momento.'),
             ('narrador', 'Pero el juego no había terminado. Solo esta ronda.'),
             ('narrador', 'Mañana es otro día. Y tú sabes dónde está la puerta.'),
-            ('narrador', '¿Lo intentas de nuevo?'),
+            _RESTART_CHOICE,
         ]
-    },
-]
+    elif d == 1:
+        # Difícil — Víctor disfruta un poco más de la victoria
+        table_lines = [
+            ('narrador', 'Las fichas desaparecieron una a una. Cada mano, una pequeña muerte.'),
+            ('Víctor', '(Con una sonrisa lenta.) Veinticinco mil... qué ambición tan hermosa.'),
+            ('Víctor', 'Lástima que la ambición sin suerte no llegue muy lejos, ¿verdad?'),
+            ('Tú', 'Las cartas no estuvieron de mi lado esta noche.'),
+            ('Víctor', 'Las cartas nunca están de tu lado, forastero. Solo de la mía.'),
+            ('narrador', 'Se recostó en la silla con la comodidad de alguien que nunca ha tenido que preocuparse.'),
+        ]
+        street_lines = [
+            ('narrador', 'La noche te devuelve a los adoquines mojados del Barrio Gótico.'),
+            ('narrador', 'Veinticinco mil fichas. Casi lo tocaste. Casi.'),
+            ('narrador', 'Víctor sigue ahí dentro, intacto, con esa sonrisa que nunca se mueve del todo.'),
+            ('narrador', 'Pero esta vez llegaste más lejos de lo que esperaba. Y lo sabe.'),
+            _RESTART_CHOICE,
+        ]
+    elif d == 2:
+        # Muy Difícil — Víctor algo inquieto; el jugador llegó muy lejos
+        table_lines = [
+            ('narrador', 'Cincuenta mil fichas. Nadie había llegado tan cerca. Nadie.'),
+            ('narrador', 'Hasta hoy.'),
+            ('Víctor', '(Frunciendo ligeramente el ceño.) Has aguantado más de lo esperado.'),
+            ('Tú', 'Eso es porque sé lo que haces, Víctor.'),
+            ('Víctor', '(Una pausa demasiado larga.) No sé de qué hablas. La suerte te ha abandonado. Eso es todo.'),
+            ('narrador', 'Pero su voz tiene una grieta que antes no estaba ahí.'),
+            ('Víctor', 'La puerta, forastero. Y esta vez... no tan tranquilo como antes.'),
+        ]
+        street_lines = [
+            ('narrador', 'El frío de la madrugada te golpea en la cara.'),
+            ('narrador', 'Cincuenta mil fichas. Estuviste a un suspiro de doblarle.'),
+            ('narrador', 'Y Víctor lo sabe. Por primera vez en tres años, alguien le ha puesto nervioso.'),
+            ('narrador', 'El Farol Rojo nunca volverá a ser del todo lo mismo.'),
+            ('narrador', 'Ni tú tampoco.'),
+            _RESTART_CHOICE,
+        ]
+    else:
+        # EXTREMO — Víctor visiblemente sacudido; el jugador casi lo consiguió
+        table_lines = [
+            ('narrador', 'Cien mil fichas. Nadie había pronunciado esa cifra en este casino. Nadie la había perseguido.'),
+            ('narrador', 'Hasta esta noche.'),
+            ('Víctor', '(Se pone de pie. Algo en sus ojos cambió.)'),
+            ('Víctor', 'Yo... no esperaba esto. En tres años, nadie...' ),
+            ('Tú', 'Ya lo sé, Víctor. Y tú también lo sabes.'),
+            ('narrador', 'Un silencio largo cae sobre la sala. Todos miran.'),
+            ('Víctor', '(En voz muy baja.) La puerta. Y... vuelve cuando quieras.'),
+            ('narrador', 'Es lo más cercano a respeto que Víctor Carvalho ha mostrado jamás.'),
+        ]
+        street_lines = [
+            ('narrador', 'La ciudad todavía duerme. Aún no amanece.'),
+            ('narrador', 'Cien mil fichas. Lo perseguiste hasta el borde del abismo y casi lo empujaste.'),
+            ('narrador', 'Víctor sigue dentro. Pero algo se quebró esta noche en El Farol Rojo.'),
+            ('narrador', 'Puedes sentirlo en el aire, como el olor a ozono antes de una tormenta.'),
+            ('narrador', 'Este lugar nunca ha conocido a nadie como tú. Y ahora lo sabe.'),
+            _RESTART_CHOICE,
+        ]
+
+    return [
+        {
+            'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
+            'scene_image': 'victor5',
+            'lines': table_lines,
+        },
+        {
+            'bg': 'street', 'chars': [], 'counter': False,
+            'scene_image': 'segurata-pierdes',
+            'lines': street_lines,
+        },
+    ]
 
 
 app_state         = 'main_menu'
@@ -1195,12 +1399,31 @@ def _apply_choice(idx):
     """Aplica la elección del jugador: inyecta las reacciones y avanza la historia."""
     global story_choice_active, story_choice_options, story_choice_rects
     global story_injected_lines, story_injected_images, story_injected_idx, story_in_injection, player_money
-    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done, rosa_kicked
+    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done, rosa_kicked, app_state
 
     opt    = story_choice_options[idx]
     effect = opt.get('effect', {})
+
+    # Efectos especiales de navegación — se ejecutan inmediatamente
+    if effect.get('restart_game'):
+        story_choice_active = False
+        story_choice_options = []
+        story_choice_rects = []
+        _start_story_mode()
+        return
+    if effect.get('go_menu'):
+        story_choice_active = False
+        story_choice_options = []
+        story_choice_rects = []
+        app_state = 'main_menu'
+        return
+
     if 'money' in effect:
-        player_money = max(0, player_money + effect['money'])
+        # Las fichas ganadas en diálogo escalan con la dificultad para compensar metas más altas
+        diff_multipliers = {0: 1.0, 1: 2.5, 2: 5.0, 3: 10.0}
+        mult = diff_multipliers.get(difficulty_level, 1.0)
+        scaled = int(effect['money'] * mult) if effect['money'] > 0 else effect['money']
+        player_money = max(0, player_money + scaled)
     if 'difficulty' in effect:
         difficulty_level = effect['difficulty']
         thresholds = {0: 10000, 1: 25000, 2: 50000, 3: 100000}
@@ -1254,10 +1477,9 @@ def _story_advance_scene():
                 nueva_ronda()
             elif app_state == 'win_ending':
                 pygame.quit(); sys.exit()
-            elif app_state == 'lose_ending':
-                app_state = 'main_menu'
-            elif app_state == 'kicked_ending':
-                app_state = 'main_menu'
+            elif app_state in ('lose_ending', 'kicked_ending'):
+                # La navegación de salida la gestiona el CHOICE al final de las escenas
+                pass
 
 
 def _story_advance():
@@ -2681,7 +2903,7 @@ while True:
             epic_win_triggered = True
             _start_story(build_win_ending_scenes(), 'win_ending')
         elif player_money <= 0 and state == 'betting' and not epic_win_triggered:
-            _start_story(LOSE_ENDING_SCENES, 'lose_ending')
+            _start_story(build_lose_ending_scenes(), 'lose_ending')
 
     if app_state == 'main_menu':
         _render_main_menu(now)
