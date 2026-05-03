@@ -37,6 +37,23 @@ _CARDS_BASE_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/m
 _card_img_cache       = {}
 _card_img_downloading = set()
 
+_VALOR_MAP = {
+    'A': 'ace', '2': '2', '3': '3', '4': '4', '5': '5',
+    '6': '6', '7': '7', '8': '8', '9': '9', '10': '10',
+    'J': 'jack', 'Q': 'queen', 'K': 'king'
+}
+_PALO_MAP = {
+    'S': 'spades', 'H': 'hearts', 'D': 'diamonds', 'C': 'clubs'
+}
+
+def _card_filename(valor, palo):
+    """Convierte valor+palo internos al nombre de archivo del repositorio.
+    Ej: ('A','S') → 'ace_of_spades.png', ('10','H') → '10_of_hearts.png'
+    """
+    v = _VALOR_MAP.get(str(valor), str(valor).lower())
+    p = _PALO_MAP.get(str(palo), str(palo).lower())
+    return f"{v}_of_{p}.png"
+
 def _ensure_cards_dir():
     os.makedirs(os.path.join('imagenes', 'cards'), exist_ok=True)
 
@@ -73,7 +90,7 @@ def get_card_image(valor, palo):
         return _card_img_cache[key]
     if key not in _card_img_downloading:
         _card_img_downloading.add(key)
-        filename = f"{valor}{palo}.png"
+        filename = _card_filename(valor, palo)
         t = threading.Thread(target=_download_card_bg, args=(key, filename), daemon=True)
         t.start()
     return None
