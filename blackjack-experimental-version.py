@@ -115,15 +115,15 @@ def flip_display():
     pygame.display.flip()
 
 
-FUENTE         = pygame.font.SysFont("arial",    32, bold=True)
-FUENTE_PEQUENA = pygame.font.SysFont("arial",    24, bold=True)
-FUENTE_GRANDE  = pygame.font.SysFont("arial",    70, bold=True)
-FUENTE_MSG     = pygame.font.SysFont("arial",    40, bold=True)
-FUENTE_INSTR   = pygame.font.SysFont("arial",    20, bold=True)
-FUENTE_STORY   = pygame.font.SysFont("georgia",  28)
-FUENTE_NAME    = pygame.font.SysFont("georgia",  34, bold=True)
-FUENTE_TITLE_B = pygame.font.SysFont("georgia", 115, bold=True)
-FUENTE_SUBTITLE= pygame.font.SysFont("georgia",  52)
+FUENTE         = pygame.font.SysFont("verdana",          32, bold=True)
+FUENTE_PEQUENA = pygame.font.SysFont("verdana",          24, bold=True)
+FUENTE_GRANDE  = pygame.font.SysFont("verdana",          70, bold=True)
+FUENTE_MSG     = pygame.font.SysFont("verdana",          40, bold=True)
+FUENTE_INSTR   = pygame.font.SysFont("verdana",          20, bold=True)
+FUENTE_STORY   = pygame.font.SysFont("book antiqua",     28)
+FUENTE_NAME    = pygame.font.SysFont("book antiqua",     34, bold=True)
+FUENTE_TITLE_B = pygame.font.SysFont("book antiqua",    115, bold=True)
+FUENTE_SUBTITLE= pygame.font.SysFont("book antiqua",     52)
 RELOJ          = pygame.time.Clock()
 
 VERDE        = (20, 120, 20)
@@ -308,10 +308,10 @@ def make_chip_move_dict(value, sx, sy, tx, ty, speed=6.0):
     d.update(style); return d
 
 def _chip_font_for_circle(r):
-    return pygame.font.SysFont("arial", max(10,int(r*0.7)), bold=True)
+    return pygame.font.SysFont("verdana", max(10,int(r*0.7)), bold=True)
 
 def _chip_font_for_rect(h):
-    return pygame.font.SysFont("arial", max(12,int(h*0.6)), bold=True)
+    return pygame.font.SysFont("verdana", max(12,int(h*0.6)), bold=True)
 
 
 TABLE_STYLES = [
@@ -601,7 +601,7 @@ def draw_bg_street_dawn(surf, now):
         pygame.draw.circle(st,(252,248,195,min(a2,165)),(2,2),2)
         surf.blit(st,(sx2,sy2))
     off_col = (55, 18, 8)
-    ns = pygame.font.SysFont("arial",18,bold=True).render("EL FAROL ROJO", True, off_col)
+    ns = pygame.font.SysFont("verdana",18,bold=True).render("EL FAROL ROJO", True, off_col)
     surf.blit(ns,(48, 68))
 
 
@@ -1307,11 +1307,11 @@ def _check_for_updates():
         if sha_remote is None:
             update_status = "error"; update_msg = "No se pudo calcular hash remoto"
         elif sha_local == sha_remote:
-            update_status = "up_to_date"; update_msg = "Ya tienes la ultima version"
+            update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
         else:
             try:
                 shutil.copy2(tmp_path, local_path)
-                update_status = "restarting"; update_msg = "Actualizado! Reiniciando..."
+                update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
                 update_restart_time = pygame.time.get_ticks()
             except Exception as e:
                 update_status = "error"; update_msg = f"No se pudo escribir: {str(e)[:40]}"
@@ -1463,14 +1463,299 @@ def _sync_bj_money():
     bj_player_money = player_money
 
 
+# ── Poker mode ─────────────────────────────────────────────────────────────────
+from collections import Counter as _Counter
+
+POKER_CARD_GAP   = 140
+POKER_CARD_Y     = 250
+POKER_DECK_POS_X = ANCHO // 2
+POKER_DECK_POS_Y = 30
+BET_MAX_POKER    = 5000
+POKER_PAYTABLE   = [
+    ('Escalera Real',      800),
+    ('Escalera de Color',   50),
+    ('Póker (4 iguales)',   25),
+    ('Full House',           9),
+    ('Color',                6),
+    ('Escalera',             4),
+    ('Trío',                 3),
+    ('Doble Pareja',         2),
+    ('Pareja J/Q/K/A',       1),
+]
+
+poker_player_money = 3000
+poker_bet          = 50
+poker_bet_input    = ""
+poker_last_bet     = None
+poker_state        = 'betting'   # 'betting' | 'holding' | 'result'
+poker_hand         = []
+poker_held         = [False]*5
+poker_baraja_deck  = []
+poker_mensaje      = ""
+poker_hand_name    = ""
+poker_last_payout  = 0
+poker_stats        = {'played': 0, 'won': 0, 'lost': 0}
+poker_menu_btn     = pygame.Rect(ANCHO - 164, ALTO - 44, 152, 34)
+poker_reiniciar_btn= pygame.Rect(ANCHO - 324, ALTO - 44, 152, 34)
+_FUENTE_POKER_PAY  = pygame.font.SysFont("verdana", 19, bold=True)
+_FUENTE_POKER_BIG  = pygame.font.SysFont("verdana", 56, bold=True)
+
+
+def _poker_card_x(i):
+    return ANCHO // 2 - 2 * POKER_CARD_GAP + i * POKER_CARD_GAP - CARD_W // 2
+
+
+def _poker_val_num(v):
+    m = {'A': 14, 'K': 13, 'Q': 12, 'J': 11, '10': 10}
+    return m.get(v, int(v))
+
+
+def evaluate_poker_hand(hand):
+    """Returns (hand_name, multiplier) for a 5-card hand."""
+    vs   = [c[0] for c in hand]
+    ss   = [c[1] for c in hand]
+    cnt  = _Counter(vs)
+    freq = sorted(cnt.values(), reverse=True)
+    is_fl = len(set(ss)) == 1
+    nums  = sorted(_poker_val_num(v) for v in vs)
+    is_st = (len(set(nums)) == 5) and (nums[-1] - nums[0] == 4)
+    if not is_st and set(nums) == {14, 2, 3, 4, 5}:
+        is_st = True; nums = [1, 2, 3, 4, 5]
+    is_royal = is_st and is_fl and min(nums) == 10
+    if is_royal:                                  return ('Escalera Real', 800)
+    if is_st and is_fl:                           return ('Escalera de Color', 50)
+    if freq[0] == 4:                              return ('Póker (4 iguales)', 25)
+    if freq[0] == 3 and len(freq) > 1 and freq[1] == 2:
+                                                  return ('Full House', 9)
+    if is_fl:                                     return ('Color', 6)
+    if is_st:                                     return ('Escalera', 4)
+    if freq[0] == 3:                              return ('Trío', 3)
+    if freq[0] == 2 and len(freq) > 1 and freq[1] == 2:
+                                                  return ('Doble Pareja', 2)
+    if freq[0] == 2:
+        for v, c in cnt.items():
+            if c == 2 and v in ('J', 'Q', 'K', 'A'):
+                return ('Pareja J/Q/K/A', 1)
+    return ('Sin Premio', 0)
+
+
+def poker_nueva_ronda():
+    global poker_baraja_deck, poker_hand, poker_held, poker_state
+    global poker_mensaje, poker_hand_name, poker_last_payout
+    poker_baraja_deck = crear_baraja()
+    poker_hand  = []
+    poker_held  = [False]*5
+    poker_mensaje = ""
+    poker_hand_name = ""
+    poker_last_payout = 0
+    poker_state = 'betting'
+
+
+def poker_deal_initial(now):
+    global poker_hand, poker_held, poker_state
+    poker_hand = []
+    poker_held = [False]*5
+    for i in range(5):
+        if not poker_baraja_deck:
+            poker_baraja_deck[:] = crear_baraja()
+        v, p, val, color = poker_baraja_deck.pop()
+        dx = _poker_card_x(i)
+        carta = Carta(v, p, val, color, dx, POKER_CARD_Y,
+                      start_pos=(POKER_DECK_POS_X, POKER_DECK_POS_Y))
+        poker_hand.append((v, p, val, color, carta))
+    poker_state = 'holding'
+
+
+def poker_draw_replace(now):
+    global poker_hand, poker_hand_name, poker_last_payout
+    global poker_player_money, poker_bet, poker_state, poker_mensaje, poker_stats
+    for i in range(5):
+        if not poker_held[i]:
+            if not poker_baraja_deck:
+                poker_baraja_deck[:] = crear_baraja()
+            v, p, val, color = poker_baraja_deck.pop()
+            dx = _poker_card_x(i)
+            carta = Carta(v, p, val, color, dx, POKER_CARD_Y,
+                          start_pos=(POKER_DECK_POS_X, POKER_DECK_POS_Y))
+            poker_hand[i] = (v, p, val, color, carta)
+    hn, mult = evaluate_poker_hand(poker_hand)
+    poker_hand_name   = hn
+    poker_last_payout = poker_bet * mult
+    poker_player_money += poker_last_payout
+    poker_stats['played'] += 1
+    if poker_last_payout > 0:
+        poker_stats['won'] += 1
+        poker_mensaje = f"{hn}  —  +{poker_last_payout} fichas"
+    else:
+        poker_stats['lost'] += 1
+        poker_mensaje = "Sin premio. ¡Suerte en la siguiente!"
+    poker_state = 'result'
+
+
+def poker_reiniciar():
+    global poker_player_money, poker_bet, poker_bet_input, poker_last_bet, poker_stats
+    poker_player_money = 3000
+    poker_bet = 50; poker_bet_input = ""; poker_last_bet = None
+    poker_stats = {'played': 0, 'won': 0, 'lost': 0}
+    poker_nueva_ronda()
+
+
+def _render_poker(now):
+    global poker_held, poker_bet_input, poker_bet, poker_last_bet
+    global poker_player_money, poker_state, poker_mensaje, poker_stats
+
+    # ── Background ────────────────────────────────────────────────────────────
+    VENTANA.fill((10, 55, 10))
+    # Felt texture lines
+    for y in range(0, ALTO, 40):
+        pygame.draw.line(VENTANA, (8, 48, 8), (0, y), (ANCHO, y), 1)
+    for x in range(0, ANCHO, 40):
+        pygame.draw.line(VENTANA, (8, 48, 8), (x, 0), (x, ALTO), 1)
+    # Table oval
+    pygame.draw.ellipse(VENTANA, (14, 88, 14), (200, 100, ANCHO-400, ALTO-200))
+    pygame.draw.ellipse(VENTANA, DORADO,       (200, 100, ANCHO-400, ALTO-200), 3)
+    pygame.draw.ellipse(VENTANA, (8, 55, 8),   (230, 118, ANCHO-460, ALTO-236), 1)
+
+    # ── Pay table (left panel) ─────────────────────────────────────────────
+    pt_x = 28; pt_y = 80; pt_w = 310; line_h = 27
+    pt_bg = pygame.Surface((pt_w, len(POKER_PAYTABLE)*line_h + 46), pygame.SRCALPHA)
+    pt_bg.fill((0, 0, 0, 175))
+    VENTANA.blit(pt_bg, (pt_x, pt_y))
+    pygame.draw.rect(VENTANA, DORADO, (pt_x, pt_y, pt_w, len(POKER_PAYTABLE)*line_h + 46), 1, border_radius=6)
+    hdr = _FUENTE_POKER_PAY.render("TABLA DE PAGOS", True, DORADO)
+    VENTANA.blit(hdr, (pt_x + (pt_w - hdr.get_width())//2, pt_y + 8))
+    for idx, (name, mult) in enumerate(POKER_PAYTABLE):
+        py = pt_y + 36 + idx * line_h
+        highlight = (poker_state == 'result' and poker_hand_name == name)
+        col = DORADO if highlight else BLANCO
+        bg_col = (80, 60, 0) if highlight else (0, 0, 0)
+        if highlight:
+            hl = pygame.Surface((pt_w-2, line_h-1), pygame.SRCALPHA)
+            hl.fill((*bg_col, 180))
+            VENTANA.blit(hl, (pt_x+1, py))
+        n_s = _FUENTE_POKER_PAY.render(name, True, col)
+        m_s = _FUENTE_POKER_PAY.render(f"x{mult}", True, col)
+        VENTANA.blit(n_s, (pt_x + 8, py + 2))
+        VENTANA.blit(m_s, (pt_x + pt_w - m_s.get_width() - 8, py + 2))
+
+    # ── Cards ────────────────────────────────────────────────────────────────
+    for i, entry in enumerate(poker_hand):
+        c = entry[4]
+        c.actualizar(now); c.dibujar(now)
+        # HELD indicator
+        if poker_state == 'holding' and poker_held[i]:
+            cx = _poker_card_x(i) + CARD_W // 2
+            held_s = FUENTE_PEQUENA.render("GUARDAR", True, DORADO)
+            pygame.draw.rect(VENTANA, (0,0,0,180),
+                             (cx - held_s.get_width()//2 - 6,
+                              POKER_CARD_Y + CARD_H + 10,
+                              held_s.get_width() + 12, held_s.get_height() + 6),
+                             border_radius=4)
+            VENTANA.blit(held_s, (cx - held_s.get_width()//2,
+                                   POKER_CARD_Y + CARD_H + 13))
+        # Card number hint
+        if poker_state in ('holding',):
+            cx = _poker_card_x(i) + CARD_W // 2
+            num_s = FUENTE_INSTR.render(f"[{i+1}]", True, (200,200,200))
+            VENTANA.blit(num_s, (cx - num_s.get_width()//2,
+                                  POKER_CARD_Y - num_s.get_height() - 6))
+
+    # ── Bottom info box ───────────────────────────────────────────────────────
+    box_w = 860; pad = 14; lh = 30
+    instr_lines = []
+    if poker_state == 'betting':
+        instr_lines = ["Escribe tu apuesta y pulsa ENTER para repartir"]
+    elif poker_state == 'holding':
+        instr_lines = ["Pulsa 1-5 para guardar cartas · ENTER para robar las demás"]
+    else:
+        instr_lines = ["ENTER o S: siguiente mano"]
+
+    box_h = lh * (len(instr_lines) + 3) + pad * 2
+    bx = (ANCHO - box_w) // 2
+    by = ALTO - box_h - 18
+    s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    s.fill((0, 0, 0, 185))
+    VENTANA.blit(s, (bx, by))
+    pygame.draw.rect(VENTANA, NEGRO, (bx, by, box_w, box_h), 2, border_radius=8)
+
+    y_o = by + pad
+    chips_s = FUENTE_PEQUENA.render(f"Fichas: {poker_player_money}", True, DORADO)
+    VENTANA.blit(chips_s, (bx + pad, y_o))
+
+    # Bet input
+    inp_w = 220; inp_h = 34
+    inp_x = bx + box_w - inp_w - pad; inp_y = y_o - 4
+    inp_bg = pygame.Surface((inp_w, inp_h), pygame.SRCALPHA)
+    inp_bg.fill((20, 20, 20, 230))
+    VENTANA.blit(inp_bg, (inp_x, inp_y))
+    pygame.draw.rect(VENTANA, NEGRO, (inp_x, inp_y, inp_w, inp_h), 2, border_radius=6)
+    disp_bet = poker_bet_input if poker_state == 'betting' else str(poker_bet)
+    disp_bet = clip_text_right(disp_bet, FUENTE_PEQUENA, inp_w - 16)
+    bt = FUENTE_PEQUENA.render(disp_bet, True, BLANCO)
+    VENTANA.blit(bt, (inp_x + 8, inp_y + (inp_h - bt.get_height())//2))
+    lbl_ap = FUENTE_PEQUENA.render("Apuesta:", True, BLANCO)
+    VENTANA.blit(lbl_ap, (inp_x - lbl_ap.get_width() - 10, inp_y + (inp_h - lbl_ap.get_height())//2))
+
+    y_o += lh
+    stats_s = FUENTE_PEQUENA.render(
+        f"Partidas: {poker_stats['played']}  Ganadas: {poker_stats['won']}  Perdidas: {poker_stats['lost']}",
+        True, (180, 180, 180))
+    VENTANA.blit(stats_s, (bx + pad, y_o))
+    y_o += lh
+    for ln in instr_lines:
+        ls = FUENTE_INSTR.render(ln, True, BLANCO)
+        VENTANA.blit(ls, (bx + (box_w - ls.get_width())//2, y_o))
+        y_o += 24
+
+    # ── Result message ───────────────────────────────────────────────────────
+    if poker_mensaje:
+        col_msg = DORADO if poker_last_payout > 0 else ROJO
+        msg_s = FUENTE_MSG.render(poker_mensaje, True, col_msg)
+        VENTANA.blit(msg_s, ((ANCHO - msg_s.get_width())//2, POKER_CARD_Y + CARD_H + 70))
+
+    # ── Buttons ──────────────────────────────────────────────────────────────
+    mouse_pos = to_logical(pygame.mouse.get_pos())
+    # Menu button
+    m_h = poker_menu_btn.collidepoint(mouse_pos)
+    pygame.draw.rect(VENTANA, (30,70,140) if not m_h else (50,100,190), poker_menu_btn, border_radius=7)
+    pygame.draw.rect(VENTANA, NEGRO, poker_menu_btn, 1, border_radius=7)
+    mt = FUENTE_PEQUENA.render("ESC: Menú", True, BLANCO)
+    VENTANA.blit(mt, (poker_menu_btn.centerx - mt.get_width()//2,
+                       poker_menu_btn.centery - mt.get_height()//2))
+    # Restart button
+    r_h = poker_reiniciar_btn.collidepoint(mouse_pos)
+    pygame.draw.rect(VENTANA, (140,30,30) if not r_h else (180,50,50), poker_reiniciar_btn, border_radius=7)
+    pygame.draw.rect(VENTANA, NEGRO, poker_reiniciar_btn, 1, border_radius=7)
+    rt = FUENTE_PEQUENA.render("R: Reiniciar", True, BLANCO)
+    VENTANA.blit(rt, (poker_reiniciar_btn.centerx - rt.get_width()//2,
+                       poker_reiniciar_btn.centery - rt.get_height()//2))
+
+    # Title banner
+    title_s = FUENTE_PEQUENA.render("♠  VÍDEO PÓKER  ♠", True, DORADO)
+    VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, 42))
+
+    # Auto-rebuy
+    if poker_player_money <= 0 and poker_state == 'betting':
+        rb = _FUENTE_POKER_PAY.render("Sin fichas — reiniciando con 3.000...", True, ROJO)
+        VENTANA.blit(rb, (ANCHO//2 - rb.get_width()//2, ALTO//2))
+
+
+def _start_poker_mode():
+    global app_state, game_mode
+    game_mode = 'poker'
+    app_state = 'poker'
+    poker_reiniciar()
+
+
 # ── Main Menu ─────────────────────────────────────────────────────────────────
 MENU_OPTIONS = [
     {'label': 'Modo Historia',  'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
     {'label': 'BlackJack',      'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
+    {'label': 'Póker',          'sub': 'Vídeo Póker infinito · Sin historia · Empieza con 3.000 fichas'},
 ]
-FUENTE_MENU_TITLE = pygame.font.SysFont("georgia", 92, bold=True)
-FUENTE_MENU_OPT   = pygame.font.SysFont("georgia", 44, bold=True)
-FUENTE_MENU_SUB   = pygame.font.SysFont("georgia", 24)
+FUENTE_MENU_TITLE = pygame.font.SysFont("book antiqua", 92, bold=True)
+FUENTE_MENU_OPT   = pygame.font.SysFont("book antiqua", 44, bold=True)
+FUENTE_MENU_SUB   = pygame.font.SysFont("book antiqua", 24)
 
 
 def _render_main_menu(now):
@@ -1638,6 +1923,8 @@ while True:
                 _resume_game()          # ESC again = resume with timer compensation
             elif app_state in ('game', 'blackjack'):
                 paused = True; _pause_started_at = now  # Open pause menu mid-game
+            elif app_state == 'poker':
+                app_state = 'main_menu'
             elif app_state in ('intro', 'win_ending', 'lose_ending'):
                 app_state = 'main_menu' # ESC in story = back to menu (not a hard quit)
             else:
@@ -1665,6 +1952,7 @@ while True:
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_1: _start_story_mode()
                 elif evento.key == pygame.K_2: _start_infinite_mode()
+                elif evento.key == pygame.K_3: _start_poker_mode()
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
                 btn_w = 860; btn_h = 110; gap = 24; btn_start_y = 380
@@ -1674,6 +1962,65 @@ while True:
                     if pygame.Rect(bx, by, btn_w, btn_h).collidepoint(lpos):
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
+                        elif i == 2: _start_poker_mode()
+            continue
+
+        # ── Poker mode input ─────────────────────────────────────────────────
+        if app_state == 'poker':
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                app_state = 'main_menu'; continue
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                if poker_menu_btn.collidepoint(lpos):
+                    app_state = 'main_menu'; continue
+                if poker_reiniciar_btn.collidepoint(lpos):
+                    poker_reiniciar(); continue
+                # Click to toggle held cards
+                if poker_state == 'holding':
+                    for i in range(5):
+                        cx = _poker_card_x(i); cy = POKER_CARD_Y
+                        if pygame.Rect(cx, cy, CARD_W, CARD_H).collidepoint(lpos):
+                            poker_held[i] = not poker_held[i]
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_r:
+                    poker_reiniciar(); continue
+                if poker_state == 'betting':
+                    if evento.key == pygame.K_BACKSPACE:
+                        poker_bet_input = poker_bet_input[:-1]
+                    elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        try:
+                            val = int(poker_bet_input) if poker_bet_input.strip() else (poker_last_bet or poker_bet)
+                            if val <= 0:
+                                pass
+                            elif val > BET_MAX_POKER:
+                                poker_mensaje = f"Apuesta máx. {BET_MAX_POKER}"
+                            elif val > poker_player_money:
+                                poker_mensaje = "No tienes suficientes fichas"
+                            else:
+                                poker_bet = val; poker_last_bet = val
+                                poker_player_money -= poker_bet
+                                poker_bet_input = ""
+                                poker_deal_initial(now)
+                        except ValueError:
+                            poker_mensaje = "Apuesta inválida"
+                    elif evento.unicode and evento.unicode.isdigit():
+                        if len(poker_bet_input) < 6:
+                            poker_bet_input += evento.unicode
+                elif poker_state == 'holding':
+                    # 1-5 toggles held
+                    key_to_idx = {pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2,
+                                  pygame.K_4: 3, pygame.K_5: 4}
+                    if evento.key in key_to_idx:
+                        poker_held[key_to_idx[evento.key]] = not poker_held[key_to_idx[evento.key]]
+                    elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                        poker_draw_replace(now)
+                elif poker_state == 'result':
+                    if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER,
+                                      pygame.K_SPACE, pygame.K_s):
+                        if poker_player_money <= 0:
+                            poker_reiniciar()
+                        else:
+                            poker_nueva_ronda()
             continue
 
         # ── Blackjack infinite: extra button (menu + reiniciar) ──────────────
@@ -1743,8 +2090,8 @@ while True:
                                 mensaje = "Escribe una apuesta"; round_end_time = now
                             else:
                                 bet_val = int(last_bet)
-                                if   bet_val <= 0:            mensaje = "Apuesta invalida"; round_end_time = now
-                                elif bet_val > BET_MAX:       mensaje = f"Apuesta max {BET_MAX}"; round_end_time = now
+                                if   bet_val <= 0:            mensaje = "Apuesta inválida"; round_end_time = now
+                                elif bet_val > BET_MAX:       mensaje = f"Apuesta máx. {BET_MAX}"; round_end_time = now
                                 elif bet_val > player_money:  mensaje = "No tienes suficiente dinero"; round_end_time = now
                                 else:
                                     current_bet = bet_val; player_money -= current_bet; bet_locked = True
@@ -1753,8 +2100,8 @@ while True:
                                     current_bet_input = ""
                         else:
                             bet_val = int(current_bet_input)
-                            if   bet_val <= 0:            mensaje = "Apuesta invalida"; round_end_time = now
-                            elif bet_val > BET_MAX:       mensaje = f"Apuesta max {BET_MAX}"; round_end_time = now
+                            if   bet_val <= 0:            mensaje = "Apuesta inválida"; round_end_time = now
+                            elif bet_val > BET_MAX:       mensaje = f"Apuesta máx. {BET_MAX}"; round_end_time = now
                             elif bet_val > player_money:  mensaje = "No tienes suficiente dinero"; round_end_time = now
                             else:
                                 current_bet = bet_val; player_money -= current_bet; bet_locked = True
@@ -1762,7 +2109,7 @@ while True:
                                 placed_chip = create_placed_chip(current_bet, ANCHO//2, ALTO-120)
                                 last_bet = current_bet; current_bet_input = ""
                     except ValueError:
-                        mensaje = "Apuesta invalida"; round_end_time = now
+                        mensaje = "Apuesta inválida"; round_end_time = now
                 else:
                     if evento.unicode and evento.unicode.isdigit():
                         if len(current_bet_input) < 6: current_bet_input += evento.unicode
@@ -1857,6 +2204,15 @@ while True:
 
     if app_state in ('intro','win_ending','lose_ending'):
         _render_story(now)
+        flip_display()
+        continue
+
+    # ── Poker render ─────────────────────────────────────────────────────────
+    if app_state == 'poker':
+        # Auto-rebuy
+        if poker_player_money <= 0 and poker_state == 'betting':
+            poker_reiniciar()
+        _render_poker(now)
         flip_display()
         continue
 
@@ -2253,7 +2609,7 @@ while True:
             if update_status == 'restarting':
                 notif_color = (20,100,200)
                 secs_left = max(0, 2-(now-update_restart_time)//1000)
-                display_msg = f"Actualizado! Reiniciando en {secs_left}s..."
+                display_msg = f"¡Actualizado! Reiniciando en {secs_left}s..."
             else:
                 display_msg = update_msg
                 notif_color = (30,120,50) if update_status=='up_to_date' else \
