@@ -138,8 +138,120 @@ def toggle_mute():
     music_muted = not music_muted
     if music_muted:
         pygame.mixer.music.set_volume(0.0)
+        if _SFX_CHANNEL:
+            _SFX_CHANNEL.set_volume(0.0)
     else:
         pygame.mixer.music.set_volume(_music_volume)
+        if _SFX_CHANNEL:
+            _SFX_CHANNEL.set_volume(_story_sfx_volume)
+
+
+_STORY_MUSIC_FILES = {
+    'lluvia':  (os.path.join('music', 'sounds-storymode', 'lluvia.mp3'),
+                'https://raw.githubusercontent.com/humrand/blackjack-python/main/music/sounds-storymode/lluvia.mp3'),
+    'jazz':    (os.path.join('music', 'sounds-storymode', 'jazz.mp3'),
+                'https://raw.githubusercontent.com/humrand/blackjack-python/main/music/sounds-storymode/jazz.mp3'),
+    'coffee':  (os.path.join('music', 'coffee_time.mp3'),
+                'https://raw.githubusercontent.com/humrand/blackjack-python/main/music/coffee%20time.mp3'),
+}
+_STORY_SFX_FILES = {
+    'chips':   (os.path.join('music', 'sounds-storymode', 'chips.mp3'),
+                'https://raw.githubusercontent.com/humrand/blackjack-python/main/music/sounds-storymode/chips.mp3'),
+}
+_story_sfx_cache      = {}
+_story_current_track  = None
+_SFX_CHANNEL          = None
+_story_sfx_volume     = 0.22   
+
+
+def _story_download_file(local_path, url):
+    """Descarga un archivo de audio si no existe localmente."""
+    if os.path.exists(local_path):
+        return True
+    try:
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=25) as resp:
+            data = resp.read()
+        with open(local_path, 'wb') as f:
+            f.write(data)
+        return True
+    except Exception as e:
+        print(f"[STORYMUSIC] Error descargando {os.path.basename(local_path)}: {e}")
+        return False
+
+
+def _play_story_track(key, volume=0.15, loop=True, fade_out_ms=1800):
+    """Cambia la pista de fondo del modo historia con fade-out de la anterior."""
+    global _story_current_track
+    if _story_current_track == key:
+        return
+    _story_current_track = key
+    if key not in _STORY_MUSIC_FILES:
+        return
+    local_path, url = _STORY_MUSIC_FILES[key]
+
+    def _do_play():
+        import time
+        if not _story_download_file(local_path, url):
+            return
+        try:
+            pygame.mixer.music.fadeout(fade_out_ms)
+            time.sleep(fade_out_ms / 1000.0 + 0.15)
+            pygame.mixer.music.load(local_path)
+            pygame.mixer.music.set_volume(0.0)
+            pygame.mixer.music.play(-1 if loop else 0)
+            if not music_muted:
+                steps = 25
+                for i in range(steps):
+                    pygame.mixer.music.set_volume(volume * (i + 1) / steps)
+                    time.sleep(0.04)
+                pygame.mixer.music.set_volume(volume)
+        except Exception as e:
+            print(f"[STORYMUSIC] Error reproduciendo '{key}': {e}")
+
+    threading.Thread(target=_do_play, daemon=True).start()
+
+
+def _play_story_sfx(key, volume=0.22):
+    """Reproduce un efecto de sonido en canal secundario sin cortar la música."""
+    global _SFX_CHANNEL, _story_sfx_cache, _story_sfx_volume
+    _story_sfx_volume = volume
+    if key not in _STORY_SFX_FILES:
+        return
+
+    def _do_sfx():
+        global _SFX_CHANNEL, _story_sfx_cache
+        local_path, url = _STORY_SFX_FILES[key]
+        if not _story_download_file(local_path, url):
+            return
+        if key not in _story_sfx_cache:
+            try:
+                _story_sfx_cache[key] = pygame.mixer.Sound(local_path)
+            except Exception as e:
+                print(f"[STORYSFX] Error cargando '{key}': {e}")
+                return
+        snd = _story_sfx_cache[key]
+        snd.set_volume(0.0 if music_muted else volume)
+        channel = pygame.mixer.find_channel(True)
+        if channel:
+            channel.play(snd)
+
+    threading.Thread(target=_do_sfx, daemon=True).start()
+
+
+def _story_check_music_for_scene(scenes_data, scene_idx):
+    """Lanza la música correcta según la escena actual del modo historia."""
+    if scene_idx >= len(scenes_data):
+        return
+    scene = scenes_data[scene_idx]
+    img   = scene.get('scene_image', '')
+
+    if img in ('victor2', 'victor3', 'victor4', 'victor5'):
+        _play_story_track('coffee', volume=0.13, loop=True, fade_out_ms=1500)
+    elif img in ('rosita', 'rosita-seria', 'rosita-guino', 'rosita-caos',
+                 'rosita-dedo', 'rosita-fichas'):
+        _play_story_track('jazz', volume=0.11, loop=True, fade_out_ms=1600)
 
 def _ensure_imagenes_dir():
     os.makedirs('imagenes', exist_ok=True)
@@ -1543,6 +1655,11 @@ def _apply_choice(idx):
         mult = diff_multipliers.get(difficulty_level, 1.0)
         scaled = int(effect['money'] * mult) if effect['money'] > 0 else effect['money']
         player_money = max(0, player_money + scaled)
+        if scaled > 0:
+            current_scene = story_scenes_data[story_scene_idx] if story_scene_idx < len(story_scenes_data) else {}
+            if current_scene.get('scene_image', '') in ('rosita', 'rosita-seria', 'rosita-guino',
+                                                         'rosita-caos', 'rosita-dedo', 'rosita-fichas'):
+                _play_story_sfx('chips', volume=0.20)
     if 'difficulty' in effect:
         difficulty_level = effect['difficulty']
         thresholds = {0: 10000, 1: 25000, 2: 50000, 3: 100000}
@@ -1590,6 +1707,7 @@ def _story_advance_scene():
     if story_line_idx >= len(scene['lines']):
         story_scene_idx += 1
         story_line_idx   = 0
+        _story_check_music_for_scene(story_scenes_data, story_scene_idx)
         if story_scene_idx >= len(story_scenes_data):
             if app_state == 'intro':
                 app_state = 'game'
@@ -2709,7 +2827,7 @@ def _render_pause_menu(now):
 def _start_story_mode():
     global app_state, game_mode, story_scenes_data, story_scene_idx, story_line_idx
     global player_money, current_bet, current_bet_input, last_bet, stats, epic_win_triggered
-    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done
+    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done, _story_current_track
     global story_choice_active, story_choice_options, story_choice_rects
     global story_injected_lines, story_injected_idx, story_in_injection
     game_mode = 'story'
@@ -2719,6 +2837,8 @@ def _start_story_mode():
     story_scenes_data = INTRO_SCENES; story_scene_idx = 0; story_line_idx = 0
     story_choice_active = False; story_choice_options = []; story_choice_rects = []
     story_injected_lines = []; story_injected_images = []; story_injected_idx = 0; story_in_injection = False
+    _story_current_track = None
+    _play_story_track('lluvia', volume=0.16, loop=True, fade_out_ms=1800)
     app_state = 'intro'
 
 
