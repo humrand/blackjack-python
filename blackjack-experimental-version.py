@@ -671,7 +671,7 @@ def draw_choice_box(surf, options, now):
     header = FUENTE_NAME.render("¿Qué dices?", True, sc)
     surf.blit(header, (PAD_X, BOX_Y + 12))
 
-    hint = FUENTE_INSTR.render("[ pulsa 1 / 2 / 3  o  haz clic ]", True, (100, 90, 70))
+    hint = FUENTE_INSTR.render("[ pulsa 1 / 2 / 3 / 4  o  haz clic ]", True, (100, 90, 70))
     surf.blit(hint, (ANCHO - hint.get_width() - PAD_X, BOX_Y + 18))
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
@@ -747,6 +747,16 @@ INTRO_SCENES = [
                     ],
                     'effect': {}
                 },
+                {
+                    'label': '"Un amigo me recomendó este lugar. Dice que no hay otro igual."',
+                    'tu_text': 'Un amigo mío me recomendó este lugar. Dice que no hay otro igual en toda Barcelona.',
+                    'reactions': [
+                        ('Portero', '(Entrecierra los ojos.) ¿Qué amigo?'),
+                        ('Tú', 'El tipo no da su nombre. Solo su palabra.'),
+                        ('Portero', '(Bufido.) Típico. Bueno... si alguien te mandó, algo sabes. Adelante.'),
+                    ],
+                    'effect': {}
+                },
             ]),
             ('CHOICE', [
                 {
@@ -767,6 +777,16 @@ INTRO_SCENES = [
                     ],
                     'effect': {'money': 50, 'msg': '+50 fichas — el portero queda impresionado'}
                 },
+                {
+                    'label': '"Las justas. Pero sé lo que hago."',
+                    'tu_text': 'Las justas. Pero sé exactamente lo que hago.',
+                    'reactions': [
+                        ('Portero', '(Una pausa. Te estudia de arriba abajo.)'),
+                        ('Portero', 'Esa mirada... he visto esa mirada antes. Dos veces. Uno salió rico. El otro no salió.'),
+                        ('Portero', 'A ver en cuál de los dos te conviertes tú. Adelante.'),
+                    ],
+                    'effect': {}
+                },
             ]),
             ('CHOICE', [
                 {
@@ -786,6 +806,16 @@ INTRO_SCENES = [
                     'tu_text': '...',
                     'reactions': [],
                     'effect': {}
+                },
+                {
+                    'label': '"¿Y tú, amigo? ¿Cuánto llevas aquí?"',
+                    'tu_text': '¿Y tú? ¿Cuánto tiempo llevas cuidando esta puerta?',
+                    'reactions': [
+                        ('Portero', '(Te mira sorprendido. Nadie le pregunta eso.)'),
+                        ('Portero', 'Seis años. Seis años viendo entrar a gente con sueños y salir con deudas.'),
+                        ('Portero', '(En voz baja.) Tú... ten cuidado, ¿eh? Víctor no es lo que parece.'),
+                    ],
+                    'effect': {'money': 75, 'msg': '+75 fichas — el portero te tiene simpatía'}
                 },
             ]),
         ]
@@ -825,6 +855,16 @@ INTRO_SCENES = [
                     ],
                     'effect': {'money': -50, 'msg': '−50 fichas — ese whisky era caro de verdad'}
                 },
+                {
+                    'label': '"¿Qué recomiendas tú para una noche larga?"',
+                    'tu_text': '¿Qué recomiendas tú para una noche larga, Rosa?',
+                    'reactions': [
+                        ('Rosa', '(Se apoya en la barra con una sonrisa cómplice.) Para una noche larga...'),
+                        ('Rosa', 'Agua con gas. La cabeza despejada vale más que cualquier carta.'),
+                        ('narrador', '(Rosa añade con discreción un par de fichas al montón.) Un extra, de mi parte.'),
+                    ],
+                    'effect': {'money': 80, 'msg': '+80 fichas — el consejo de Rosa tiene precio'}
+                },
             ]),
             ('CHOICE', [
                 {
@@ -862,6 +902,17 @@ INTRO_SCENES = [
                     ],
                     'effect': {'money': 150, 'msg': '+150 fichas — Rosa tiene fe en ti', 'rosa_secret': True}
                 },
+                {
+                    'label': '"¿Por qué sigues trabajando para Víctor?"',
+                    'tu_text': '¿Por qué sigues trabajando para alguien como Víctor?',
+                    'reactions': [
+                        ('Rosa', '(Una pausa larga. Limpia el vaso sin mirarte.)'),
+                        ('Rosa', 'Porque las deudas no se pagan solas. Y porque... todavía no ha llegado nadie que lo saque de ahí.'),
+                        ('Rosa', '(Te mira fijamente.) Quizás esta noche cambia eso.'),
+                        ('narrador', '(Algo en su voz suena a esperanza. +60 fichas — un pequeño empujón de su parte.)'),
+                    ],
+                    'effect': {'money': 60, 'msg': '+60 fichas — Rosa deposita su esperanza en ti'}
+                },
             ]),
         ]
     },
@@ -889,26 +940,36 @@ INTRO_SCENES = [
                     'effect': {'difficulty': 0}
                 },
                 {
-                    'label': '"Si llego a 10.000… que toda la sala lo sepa."',
-                    'tu_text': 'Si llego a diez mil fichas... quiero que esta sala sepa que la banca puede perder.',
+                    'label': '"Si llego a 25.000… que toda la sala lo sepa."',
+                    'tu_text': 'Si llego a veinticinco mil fichas... quiero que esta sala sepa que la banca puede perder.',
                     'reactions': [
                         ('Víctor', '(Una sonrisa fría, casi apreciativa.) Ambicioso. Me gustan los ambiciosos.'),
                         ('Víctor', 'Suelen quedarse sin nada antes del amanecer. Pero... de acuerdo. Trato hecho.'),
                         ('Víctor', 'Veamos de qué pasta estás hecho, forastero.'),
-                        ('narrador', '[ MODO DIFÍCIL — Meta: 30.000 fichas. Víctor ordena a sus crupiers que jueguen más agresivo. ]'),
+                        ('narrador', '[ MODO DIFÍCIL — Meta: 25.000 fichas. Víctor ordena a sus crupiers que jueguen más agresivo. ]'),
                     ],
                     'effect': {'difficulty': 1}
                 },
                 {
-                    'label': '"Sin condiciones. Solo voy a ganar."',
-                    'tu_text': 'Sin condiciones, Víctor. Solo vengo a ganar.',
+                    'label': '"Si llego a 50.000… este casino es mío."',
+                    'tu_text': 'Si llego a cincuenta mil fichas... este casino pasa a ser mío. En espíritu.',
                     'reactions': [
-                        ('Víctor', '(Se recuesta en la silla.) Simple. Directo. Curioso.'),
-                        ('Víctor', 'Hace mucho que nadie se sienta aquí sin pretensiones. Casi resulta... refrescante.'),
-                        ('Víctor', '(La sonrisa se congela.) Muy bien. Sin condiciones. Pero a este nivel... la banca no se detiene.'),
-                        ('narrador', '[ MODO EXTREMO — Meta: 100.000 fichas. La banca juega sin compasión. Buena suerte. ]'),
+                        ('Víctor', '(Una carcajada seca.) ¡Cincuenta mil! Hace años que nadie me desafía así.'),
+                        ('Víctor', '(Se inclina hacia adelante.) Acepto. Pero cuando pierdas... y perderás... sal por esa puerta y no vuelvas.'),
+                        ('narrador', '[ MODO MUY DIFÍCIL — Meta: 50.000 fichas. La banca juega sin misericordia. ]'),
                     ],
                     'effect': {'difficulty': 2}
+                },
+                {
+                    'label': '"Sin condiciones. Solo voy a ganar. 100.000."',
+                    'tu_text': 'Sin condiciones, Víctor. Cien mil fichas. Solo vengo a ganar.',
+                    'reactions': [
+                        ('Víctor', '(Se recuesta en la silla. Un silencio largo y tenso.)'),
+                        ('Víctor', 'Cien mil. Nadie... absolutamente nadie ha pronunciado esa cifra aquí.'),
+                        ('Víctor', '(La sonrisa se congela.) Muy bien. Sin condiciones. Pero a este nivel... la banca no tiene piedad.'),
+                        ('narrador', '[ MODO EXTREMO — Meta: 100.000 fichas. La banca juega sin compasión. Buena suerte. ]'),
+                    ],
+                    'effect': {'difficulty': 3}
                 },
             ]),
             ('narrador', '¡Que empiece el juego!'),
@@ -927,7 +988,8 @@ def build_win_ending_scenes():
     diff_narrador = {
         0: 'Lo lograste en modo Normal. Víctor nunca imaginó que alguien llegaría tan lejos.',
         1: 'Lo lograste en modo Difícil. La banca jugó sin piedad y aun así no fue suficiente.',
-        2: 'Lo lograste en modo EXTREMO. Cien mil fichas. Ni Víctor mismo se lo creerá jamás.',
+        2: 'Lo lograste en modo Muy Difícil. Cincuenta mil fichas. Una hazaña que nadie olvidará.',
+        3: 'Lo lograste en modo EXTREMO. Cien mil fichas. Ni Víctor mismo se lo creerá jamás.',
     }
     return [
         {
@@ -1005,11 +1067,13 @@ LOSE_ENDING_SCENES = [
 ]
 
 
-app_state         = 'intro'
+app_state         = 'main_menu'
+game_mode         = 'story'     # 'story' | 'infinite'
 story_scenes_data = INTRO_SCENES
 story_scene_idx   = 0
 story_line_idx    = 0
 epic_win_triggered = False
+main_menu_hovered = -1
 
 story_choice_active  = False      
 story_choice_options = []          
@@ -1041,8 +1105,8 @@ def _apply_choice(idx):
         player_money = max(0, player_money + effect['money'])
     if 'difficulty' in effect:
         difficulty_level = effect['difficulty']
-        thresholds = {0: 10000, 1: 30000, 2: 100000}
-        EPIC_WIN_THRESHOLD = thresholds[difficulty_level]
+        thresholds = {0: 10000, 1: 25000, 2: 50000, 3: 100000}
+        EPIC_WIN_THRESHOLD = thresholds.get(difficulty_level, 10000)
     if effect.get('rosa_secret'):
         rosa_secret_done = True
 
@@ -1310,7 +1374,6 @@ def reiniciar_partida():
     epic_win_triggered = False
     difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
     nueva_ronda()
-
 def nueva_ronda():
     global baraja, jugador, banca, state, dealing_step, next_deal, mensaje, dealer_thinking, next_action
     global last_pedir_time, round_end_time, current_bet, bet_locked, player_money, stats, placed_chip, chips_anim
@@ -1363,6 +1426,123 @@ def _apply_chip_result(results):
 nueva_ronda()
 
 
+# ── Infinite BlackJack mode globals ──────────────────────────────────────────
+bj_player_money    = 5000
+bj_current_bet     = 100
+bj_bet_input       = ""
+bj_last_bet        = None
+bj_menu_btn        = pygame.Rect(ANCHO - 160, ALTO - 44, 148, 34)
+
+
+def bj_reiniciar():
+    global bj_player_money, bj_current_bet, bj_bet_input, bj_last_bet
+    global player_money, current_bet, current_bet_input, last_bet, stats
+    global epic_win_triggered
+    bj_player_money = 5000; bj_current_bet = 100
+    bj_bet_input = ""; bj_last_bet = None
+    player_money = bj_player_money; current_bet = bj_current_bet
+    current_bet_input = ""; last_bet = None; epic_win_triggered = False
+    stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
+    nueva_ronda()
+
+
+def _sync_bj_money():
+    """Keep bj_player_money in sync with player_money while in BJ mode."""
+    global bj_player_money
+    bj_player_money = player_money
+
+
+# ── Main Menu ─────────────────────────────────────────────────────────────────
+MENU_OPTIONS = [
+    {'label': 'Modo Historia',  'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
+    {'label': 'BlackJack',      'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
+]
+FUENTE_MENU_TITLE = pygame.font.SysFont("georgia", 92, bold=True)
+FUENTE_MENU_OPT   = pygame.font.SysFont("georgia", 44, bold=True)
+FUENTE_MENU_SUB   = pygame.font.SysFont("georgia", 24)
+
+
+def _render_main_menu(now):
+    """Draw the main menu screen."""
+    global main_menu_hovered
+    # Background: dark with animated rain
+    VENTANA.fill((6, 4, 14))
+    draw_rain(VENTANA, now, alpha=55)
+
+    # Title
+    t_surf = FUENTE_MENU_TITLE.render("El Farol Rojo", True, DORADO)
+    t_x = (ANCHO - t_surf.get_width()) // 2
+    VENTANA.blit(t_surf, (t_x, 120))
+
+    sub_surf = FUENTE_SUBTITLE.render("Blackjack · Barcelona · 1987", True, (160, 140, 90))
+    VENTANA.blit(sub_surf, ((ANCHO - sub_surf.get_width()) // 2, 230))
+
+    # Separator
+    pygame.draw.line(VENTANA, DORADO, (ANCHO//2 - 340, 310), (ANCHO//2 + 340, 310), 1)
+
+    mouse_pos = to_logical(pygame.mouse.get_pos())
+    main_menu_hovered = -1
+    btn_start_y = 380
+    btn_h = 110
+    btn_w = 860
+    gap = 24
+
+    for i, opt in enumerate(MENU_OPTIONS):
+        bx = (ANCHO - btn_w) // 2
+        by = btn_start_y + i * (btn_h + gap)
+        rect = pygame.Rect(bx, by, btn_w, btn_h)
+        hovered = rect.collidepoint(mouse_pos)
+        if hovered:
+            main_menu_hovered = i
+
+        bg_alpha = 210 if hovered else 160
+        bg_col = (55, 95, 68) if hovered else (22, 36, 26)
+        bg_s = pygame.Surface((btn_w, btn_h), pygame.SRCALPHA)
+        bg_s.fill((*bg_col, bg_alpha))
+        VENTANA.blit(bg_s, (bx, by))
+        border_col = DORADO if hovered else (70, 110, 80)
+        pygame.draw.rect(VENTANA, border_col, rect, 2, border_radius=10)
+
+        num_s = FUENTE_MENU_OPT.render(f"[{i+1}]", True, DORADO)
+        VENTANA.blit(num_s, (bx + 24, by + (btn_h - num_s.get_height()) // 2))
+
+        lbl_col = (220, 255, 225) if hovered else BLANCO
+        lbl_s = FUENTE_MENU_OPT.render(opt['label'], True, lbl_col)
+        VENTANA.blit(lbl_s, (bx + 90, by + 20))
+        sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, (160, 190, 165) if hovered else (120, 140, 125))
+        VENTANA.blit(sub_s, (bx + 92, by + 20 + lbl_s.get_height() + 4))
+
+    hint = FUENTE_INSTR.render("Pulsa 1 · 2  o  haz clic para seleccionar", True, (90, 80, 60))
+    VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (btn_h + gap) + 18))
+
+    # Version
+    ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
+    VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
+
+
+def _start_story_mode():
+    global app_state, game_mode, story_scenes_data, story_scene_idx, story_line_idx
+    global player_money, current_bet, current_bet_input, last_bet, stats, epic_win_triggered
+    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done
+    global story_choice_active, story_choice_options, story_choice_rects
+    global story_injected_lines, story_injected_idx, story_in_injection
+    game_mode = 'story'
+    player_money = 1000; current_bet = 10; current_bet_input = ""; last_bet = None
+    stats = {'played':0,'won':0,'lost':0,'blackjacks':0}; epic_win_triggered = False
+    difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
+    story_scenes_data = INTRO_SCENES; story_scene_idx = 0; story_line_idx = 0
+    story_choice_active = False; story_choice_options = []; story_choice_rects = []
+    story_injected_lines = []; story_injected_idx = 0; story_in_injection = False
+    app_state = 'intro'
+
+
+def _start_infinite_mode():
+    global app_state, game_mode
+    game_mode = 'infinite'
+    app_state = 'blackjack'
+    bj_reiniciar()
+
+
 while True:
     RELOJ.tick(60)
     now = pygame.time.get_ticks()
@@ -1376,7 +1556,40 @@ while True:
             pygame.quit(); sys.exit()
 
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-            pygame.quit(); sys.exit()
+            if app_state in ('game', 'blackjack'):
+                app_state = 'main_menu'
+            else:
+                pygame.quit(); sys.exit()
+
+        # ── Main menu input ──────────────────────────────────────────────────
+        if app_state == 'main_menu':
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_1: _start_story_mode()
+                elif evento.key == pygame.K_2: _start_infinite_mode()
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                btn_w = 860; btn_h = 110; gap = 24; btn_start_y = 380
+                for i in range(len(MENU_OPTIONS)):
+                    bx = (ANCHO - btn_w) // 2
+                    by = btn_start_y + i * (btn_h + gap)
+                    if pygame.Rect(bx, by, btn_w, btn_h).collidepoint(lpos):
+                        if i == 0: _start_story_mode()
+                        elif i == 1: _start_infinite_mode()
+            continue
+
+        # ── Blackjack infinite: extra button (menu + reiniciar) ──────────────
+        if app_state == 'blackjack':
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                if bj_menu_btn.collidepoint(lpos):
+                    app_state = 'main_menu'; continue
+                if DOTS_BTN.collidepoint(lpos):
+                    if update_status != 'checking':
+                        update_status = 'checking'; update_msg = "Comprobando..."
+                        update_notif_time = pygame.time.get_ticks()
+                        threading.Thread(target=_check_for_updates, daemon=True).start()
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
+                bj_reiniciar(); continue
 
         if app_state in ('intro','win_ending','lose_ending'):
             if story_choice_active:
@@ -1387,7 +1600,7 @@ while True:
                             _apply_choice(i)
                             break
                 if evento.type == pygame.KEYDOWN:
-                    key_idx = {pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2}.get(evento.key, -1)
+                    key_idx = {pygame.K_1: 0, pygame.K_2: 1, pygame.K_3: 2, pygame.K_4: 3}.get(evento.key, -1)
                     if 0 <= key_idx < len(story_choice_options):
                         _apply_choice(key_idx)
             else:
@@ -1533,10 +1746,25 @@ while True:
         elif player_money <= 0 and state == 'betting' and not epic_win_triggered:
             _start_story(LOSE_ENDING_SCENES, 'lose_ending')
 
+    # ── Main menu render ─────────────────────────────────────────────────────
+    if app_state == 'main_menu':
+        _render_main_menu(now)
+        flip_display()
+        continue
+
     if app_state in ('intro','win_ending','lose_ending'):
         _render_story(now)
         flip_display()
         continue
+
+    # ── Blackjack infinite: sync money, handle game-over rebuy ──────────────
+    if app_state == 'blackjack':
+        _sync_bj_money()
+        # If player runs out of chips: auto-rebuy
+        if player_money <= 0 and state == 'betting':
+            player_money = 5000; bj_player_money = 5000
+            stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
+            nueva_ronda()
     if state == 'game_over':
         VENTANA.fill((4, 2, 8))
         draw_rain(VENTANA, now, alpha=60)
@@ -1800,8 +2028,8 @@ while True:
     VENTANA.blit(lbl_ap, (input_box_x - lbl_ap.get_width() - 12, input_box_y + (input_box_h - lbl_ap.get_height()) // 2))
 
     y_off += line_h
-    diff_labels = {0: 'Normal', 1: 'Difícil', 2: 'EXTREMO'}
-    diff_colors = {0: BLANCO, 1: (255, 200, 80), 2: (255, 80, 80)}
+    diff_labels = {0: 'Normal', 1: 'Difícil', 2: 'Muy Difícil', 3: 'EXTREMO'}
+    diff_colors = {0: BLANCO, 1: (255, 200, 80), 2: (255, 140, 40), 3: (255, 80, 80)}
     diff_label  = diff_labels.get(difficulty_level, 'Normal')
     diff_color  = diff_colors.get(difficulty_level, BLANCO)
     surf_chips = FUENTE_PEQUENA.render(
@@ -1951,6 +2179,22 @@ while True:
                           reiniciar_rect.centery-r_txt.get_height()//2))
 
     if pygame.mouse.get_pressed()[0] and reiniciar_rect.collidepoint(mouse_pos):
-        reiniciar_partida()
+        if app_state == 'blackjack': bj_reiniciar()
+        else: reiniciar_partida()
+
+    # In infinite mode, draw "Menú" button
+    if app_state == 'blackjack':
+        m_hovered = bj_menu_btn.collidepoint(mouse_pos)
+        m_col = (30, 70, 140) if not m_hovered else (50, 100, 190)
+        pygame.draw.rect(VENTANA, m_col, bj_menu_btn, border_radius=7)
+        pygame.draw.rect(VENTANA, NEGRO, bj_menu_btn, 1, border_radius=7)
+        m_txt = FUENTE_PEQUENA.render("ESC: Menú principal", True, BLANCO)
+        VENTANA.blit(m_txt, (bj_menu_btn.centerx - m_txt.get_width()//2,
+                              bj_menu_btn.centery - m_txt.get_height()//2))
+        # Stats overlay top-right
+        inf_s = FUENTE_PEQUENA.render(
+            f"♠ BlackJack Infinito  |  Ganadas: {stats['won']}  Perdidas: {stats['lost']}",
+            True, DORADO)
+        VENTANA.blit(inf_s, (ANCHO//2 - inf_s.get_width()//2, ALTO - 88))
 
     flip_display()
