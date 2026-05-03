@@ -8,6 +8,7 @@ import urllib.request
 import shutil
 
 pygame.init()
+pygame.mixer.init()
 
 VERSION = "0.3.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
@@ -31,6 +32,97 @@ _IMAGE_FILES = {
 }
 _image_cache = {}
 _image_downloading = set()
+
+_CARDS_BASE_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/cards/"
+_card_img_cache       = {}
+_card_img_downloading = set()
+
+def _ensure_cards_dir():
+    os.makedirs(os.path.join('imagenes', 'cards'), exist_ok=True)
+
+def _download_card_bg(key, filename):
+    """Descarga una imagen de carta en segundo plano."""
+    if key in _card_img_cache:
+        _card_img_downloading.discard(key); return
+    _ensure_cards_dir()
+    local_path = os.path.join('imagenes', 'cards', filename)
+    if not os.path.exists(local_path):
+        try:
+            url = _CARDS_BASE_URL + filename
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = resp.read()
+            with open(local_path, 'wb') as f:
+                f.write(data)
+        except Exception as e:
+            print(f"[CARD] Error descargando {filename}: {e}")
+            _card_img_cache[key] = None
+            _card_img_downloading.discard(key); return
+    try:
+        img = pygame.image.load(local_path).convert_alpha()
+        _card_img_cache[key] = img
+    except Exception as e:
+        print(f"[CARD] Error cargando {filename}: {e}")
+        _card_img_cache[key] = None
+    _card_img_downloading.discard(key)
+
+def get_card_image(valor, palo):
+    """Devuelve Surface de la carta descargada, o None si no está lista."""
+    key = f"{valor}{palo}"
+    if key in _card_img_cache:
+        return _card_img_cache[key]
+    if key not in _card_img_downloading:
+        _card_img_downloading.add(key)
+        filename = f"{valor}{palo}.png"
+        t = threading.Thread(target=_download_card_bg, args=(key, filename), daemon=True)
+        t.start()
+    return None
+
+def get_card_back_image():
+    """Devuelve Surface del reverso descargado, o None si no está listo."""
+    key = "__back__"
+    if key in _card_img_cache:
+        return _card_img_cache[key]
+    if key not in _card_img_downloading:
+        _card_img_downloading.add(key)
+        t = threading.Thread(target=_download_card_bg, args=(key, "back.png"), daemon=True)
+        t.start()
+    return None
+
+_MUSIC_URL   = "https://raw.githubusercontent.com/humrand/blackjack-python/main/music/coffee%20time.mp3"
+_MUSIC_LOCAL = os.path.join("music", "coffee_time.mp3")
+_music_ready = False
+_music_volume = 0.18   
+music_muted  = False
+
+def _download_and_start_music():
+    """Descarga la música en segundo plano y la arranca en bucle."""
+    global _music_ready
+    os.makedirs("music", exist_ok=True)
+    if not os.path.exists(_MUSIC_LOCAL):
+        try:
+            req = urllib.request.Request(_MUSIC_URL, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = resp.read()
+            with open(_MUSIC_LOCAL, 'wb') as f:
+                f.write(data)
+        except Exception as e:
+            print(f"[MUSIC] Error descargando música: {e}"); return
+    try:
+        pygame.mixer.music.load(_MUSIC_LOCAL)
+        pygame.mixer.music.set_volume(_music_volume)
+        pygame.mixer.music.play(-1) 
+        _music_ready = True
+    except Exception as e:
+        print(f"[MUSIC] Error cargando música: {e}")
+
+def toggle_mute():
+    global music_muted
+    music_muted = not music_muted
+    if music_muted:
+        pygame.mixer.music.set_volume(0.0)
+    else:
+        pygame.mixer.music.set_volume(_music_volume)
 
 def _ensure_imagenes_dir():
     os.makedirs('imagenes', exist_ok=True)
@@ -208,7 +300,9 @@ class Carta:
         self.flip_start = 0; self.flip_duration = 300
         self.front = None; self.back = None; self.flip_target_back = False
         self.scale = 1.0; self.target_scale = 1.0; self.scale_speed = 0.22
-        self.hover_glow = 0.0 
+        self.hover_glow = 0.0
+        self._front_from_img = False  
+        self._back_from_img  = False  
         self._create_faces()
 
     def _create_faces(self):
@@ -216,6 +310,10 @@ class Carta:
         self.back  = self.crear_back()
 
     def crear_front(self):
+        img = get_card_image(self.valor, self.palo)
+        if img is not None:
+            self._front_from_img = True
+            return pygame.transform.smoothscale(img, (self.w, self.h))
         surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
         pygame.draw.rect(surf, BLANCO, (0,0,self.w,self.h), border_radius=12)
         pygame.draw.rect(surf, NEGRO,  (0,0,self.w,self.h), 2, border_radius=12)
@@ -236,6 +334,10 @@ class Carta:
         return surf
 
     def crear_back(self):
+        img = get_card_back_image()
+        if img is not None:
+            self._back_from_img = True
+            return pygame.transform.smoothscale(img, (self.w, self.h))
         surf = pygame.Surface((self.w, self.h), pygame.SRCALPHA)
         pygame.draw.rect(surf, (150,0,0), (0,0,self.w,self.h), border_radius=12)
         pygame.draw.rect(surf, NEGRO,     (0,0,self.w,self.h), 2, border_radius=12)
@@ -250,6 +352,16 @@ class Carta:
             self.flip_target_back = bool(to_back)
 
     def actualizar(self, now):
+        if not self._front_from_img:
+            img = get_card_image(self.valor, self.palo)
+            if img is not None:
+                self.front = pygame.transform.smoothscale(img, (self.w, self.h))
+                self._front_from_img = True
+        if not self._back_from_img:
+            img = get_card_back_image()
+            if img is not None:
+                self.back = pygame.transform.smoothscale(img, (self.w, self.h))
+                self._back_from_img = True
         dx = self.dest_x - self.x; dy = self.dest_y - self.y
         dist = math.hypot(dx, dy)
         if dist > 0.5:
@@ -1552,6 +1664,8 @@ def crear_baraja():
             elif v in ["J","Q","K"]: vn=10
             else: vn=int(v)
             baraja2.append((v,palo,vn,color))
+            get_card_image(v, palo)
+    get_card_back_image()
     random_module.shuffle(baraja2)
     return baraja2
 
@@ -1596,6 +1710,9 @@ overlay_flash = {'active':False,'color':(0,0,0),'alpha':0,'start':0,'duration':4
 update_status = None; update_msg = ""; update_notif_time = 0; update_restart_time = 0
 DOTS_BTN      = pygame.Rect(ANCHO-46,  8,   38,  28)
 REINICIAR_BTN = pygame.Rect(ANCHO-140, ALTO-44, 130, 34)
+MUTE_BTN      = pygame.Rect(ANCHO-90,  8,   38,  28)
+
+threading.Thread(target=_download_and_start_music, daemon=True).start()
 
 nueva_ronda_pending = False
 mensaje = ""
@@ -2689,6 +2806,13 @@ while True:
         if evento.type == pygame.QUIT:
             pygame.quit(); sys.exit()
 
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_m:
+            toggle_mute()
+
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            if MUTE_BTN.collidepoint(to_logical(evento.pos)):
+                toggle_mute()
+
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
             if paused:
                 _resume_game()          
@@ -3377,6 +3501,22 @@ while True:
     dots_surf = FUENTE_PEQUENA.render("...", True, BLANCO)
     VENTANA.blit(dots_surf, (DOTS_BTN.centerx-dots_surf.get_width()//2,
                               DOTS_BTN.centery-dots_surf.get_height()//2))
+
+    mute_hovered = MUTE_BTN.collidepoint(mouse_pos)
+    if music_muted:
+        mute_bg = (120, 30, 30) if not mute_hovered else (160, 50, 50)
+        mute_label = "🔇"
+    else:
+        mute_bg = (40, 80, 40) if not mute_hovered else (60, 120, 60)
+        mute_label = "🔊"
+    pygame.draw.rect(VENTANA, mute_bg, MUTE_BTN, border_radius=6)
+    pygame.draw.rect(VENTANA, NEGRO, MUTE_BTN, 1, border_radius=6)
+    try:
+        mute_surf = FUENTE_PEQUENA.render(mute_label, True, BLANCO)
+    except Exception:
+        mute_surf = FUENTE_PEQUENA.render("M" if not music_muted else "X", True, BLANCO)
+    VENTANA.blit(mute_surf, (MUTE_BTN.centerx-mute_surf.get_width()//2,
+                              MUTE_BTN.centery-mute_surf.get_height()//2))
 
     if update_status is not None:
         elapsed_notif = now - update_notif_time
