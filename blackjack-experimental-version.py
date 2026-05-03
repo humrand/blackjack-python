@@ -154,6 +154,7 @@ DEALER_SETTLE_DELAY = 900
 
 difficulty_level   = 0
 rosa_secret_done   = False
+rosa_kicked        = False
 
 def get_symbol_font(size):
     candidates = ["Symbola","DejaVuSans","DejaVu Sans","FreeSerif",
@@ -939,6 +940,39 @@ INTRO_SCENES = [
                     'effect': {'money': 60, 'msg': '+60 fichas — Rosa deposita su esperanza en ti'}
                 },
             ]),
+            ('CHOICE', [
+                {
+                    'label': '"Gracias por el consejo, Rosa. Esta noche me traerá suerte."',
+                    'tu_text': 'Gracias por los consejos, Rosa. Esta noche me traerán suerte.',
+                    'reactions': [
+                        ('Rosa', '(Asiente con una sonrisa tranquila.) Eso espero. Ya sé dónde encontrarte si ganas.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '"Oye, ¿me acompañas tú a la mesa de suerte?"',
+                    'tu_text': 'Oye, ¿y si me acompañas a la mesa esta noche? Serías mi amuleto de la suerte.',
+                    'reactions': [
+                        ('Rosa', '(Sonríe con paciencia.) Tengo trabajo. Y tú tienes una partida que ganar. Anda.'),
+                    ],
+                    'effect': {}
+                },
+                {
+                    'label': '[Comportamiento inapropiado con Rosa — Final Malo]',
+                    'tu_text': '...',
+                    'reactions': [
+                        ('narrador', 'Algo en tu actitud cruza una línea que no debería haberse cruzado.'),
+                        ('Rosa', '(Te mira fijamente. Después levanta la mano hacia el fondo de la sala.) Marcos.'),
+                        ('narrador', 'El hombre más grande que has visto en tu vida emerge de las sombras.'),
+                        ('Portero', '¿Algún problema, Rosa?'),
+                        ('Rosa', '(Sin apartar los ojos de ti.) Este señor ya se iba.'),
+                    ],
+                    'reaction_images': [
+                        None, 'rosita-seria', 'segurata-pierdes', 'segurata-pierdes', 'rosita-seria',
+                    ],
+                    'effect': {'segurata_expulsion': True}
+                },
+            ]),
         ]
     },
     {
@@ -1006,9 +1040,18 @@ def build_win_ending_scenes():
     rosa_lines = []
     if rosa_secret_done:
         rosa_lines = [
-            ('narrador', 'Alguien te espera en el Café del Born cuando abra. Con el mismo perfume de anoche.'),
-            ('narrador', 'Ya le has mandado un mensaje. Solo dos palabras: "Lo conseguí."'),
-            ('narrador', 'Su respuesta llegó antes de doblar la primera esquina: "Ya lo sabía. ;)"'),
+            ('narrador', 'A mitad de la calle oyes pasos rápidos detrás de ti.'),
+            ('Rosa', '(Sin aliento.) ¡Espera!'),
+            ('narrador', 'Rosa lleva el abrigo a medio poner y una botella de champán robada al bar bajo el brazo.'),
+            ('Tú', '¿No deberías estar trabajando?'),
+            ('Rosa', '(Sonriendo.) Esta noche no. Esta noche yo también me voy.'),
+            ('narrador', 'Le das la mano sin decir nada. Ella no la suelta.'),
+            ('Rosa', 'Sabía que lo conseguirías. Lo sabía desde el principio.'),
+            ('Tú', 'No me lo creía ni yo.'),
+            ('Rosa', '(Levanta la botella.) ¿Celebramos?'),
+            ('narrador', 'El corcho sale disparado y rebota contra los adoquines mojados. Rosa ríe — alto, sin disimulo, como si la ciudad entera necesitara saberlo.'),
+            ('narrador', 'Es la primera vez en mucho tiempo que oyes reír así a alguien.'),
+            ('narrador', 'Los dos caminan hacia el mar. El champán se enfría con la brisa. El neón de El Farol Rojo se apaga para siempre detrás.'),
         ]
     diff_narrador = {
         0: 'Lo lograste en modo Normal. Víctor nunca imaginó que alguien llegaría tan lejos.',
@@ -1063,6 +1106,35 @@ def build_win_ending_scenes():
             ]
         },
     ]
+
+KICKED_ENDING_SCENES = [
+    {
+        'bg': 'bar', 'chars': [('portero', ANCHO//2+300, 760)], 'counter': True,
+        'scene_image': 'segurata-pierdes',
+        'lines': [
+            ('narrador', 'Marcos no te da tiempo a reaccionar. Dos manos del tamaño de jamones te agarran por los hombros.'),
+            ('Portero', 'Fin de la noche, amigo.'),
+            ('Tú', '¡Espera, espera! Solo estaba...'),
+            ('Portero', 'Ya lo he visto. Y ella también lo ha visto. Vamos.'),
+            ('narrador', 'Cruzas la sala entera escoltado. Cada par de ojos se vuelve hacia ti. El silencio es peor que cualquier insulto.'),
+            ('Rosa', '(Desde la barra, sin mirarte.) Buenas noches.'),
+            ('narrador', 'No hay emoción en su voz. Solo distancia.'),
+        ]
+    },
+    {
+        'bg': 'street', 'chars': [], 'counter': False,
+        'scene_image': 'farol-rojo',
+        'lines': [
+            ('narrador', 'La puerta se cierra detrás de ti con un golpe seco.'),
+            ('narrador', 'El Barrio Gótico te devuelve el frío de siempre. La lluvia. Los adoquines mojados.'),
+            ('narrador', 'No perdiste dinero en la mesa de Víctor. Ni siquiera llegaste a sentarte.'),
+            ('narrador', 'Pero saliste igual de vacío.'),
+            ('narrador', 'En algún lugar detrás de esa puerta, Rosa sigue trabajando. Sin pensar en ti.'),
+            ('narrador', 'Algunas derrotas no tienen que ver con las cartas.'),
+            ('narrador', '─────────  FINAL MALO  ─────────'),
+        ]
+    },
+]
 
 LOSE_ENDING_SCENES = [
     {
@@ -1123,7 +1195,7 @@ def _apply_choice(idx):
     """Aplica la elección del jugador: inyecta las reacciones y avanza la historia."""
     global story_choice_active, story_choice_options, story_choice_rects
     global story_injected_lines, story_injected_images, story_injected_idx, story_in_injection, player_money
-    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done
+    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done, rosa_kicked
 
     opt    = story_choice_options[idx]
     effect = opt.get('effect', {})
@@ -1135,6 +1207,8 @@ def _apply_choice(idx):
         EPIC_WIN_THRESHOLD = thresholds.get(difficulty_level, 10000)
     if effect.get('rosa_secret'):
         rosa_secret_done = True
+    if effect.get('segurata_expulsion'):
+        rosa_kicked = True
 
     injected = []
     injected_imgs = []
@@ -1158,7 +1232,10 @@ def _apply_choice(idx):
         story_injected_idx    = 0
         story_in_injection    = True
     else:
-        _story_advance_scene()
+        if rosa_kicked:
+            _start_story(KICKED_ENDING_SCENES, 'kicked_ending')
+        else:
+            _story_advance_scene()
 
 
 def _story_advance_scene():
@@ -1179,10 +1256,13 @@ def _story_advance_scene():
                 pygame.quit(); sys.exit()
             elif app_state == 'lose_ending':
                 app_state = 'main_menu'
+            elif app_state == 'kicked_ending':
+                app_state = 'main_menu'
 
 
 def _story_advance():
     global story_in_injection, story_injected_lines, story_injected_images, story_injected_idx
+    global rosa_kicked
 
     if story_in_injection:
         story_injected_idx += 1
@@ -1191,7 +1271,10 @@ def _story_advance():
             story_injected_lines  = []
             story_injected_images = []
             story_injected_idx    = 0
-            _story_advance_scene()
+            if rosa_kicked:
+                _start_story(KICKED_ENDING_SCENES, 'kicked_ending')
+            else:
+                _story_advance_scene()
         return
 
     _story_advance_scene()
@@ -1396,11 +1479,12 @@ def spawn_particles(x, y, color, count=40):
 
 def reiniciar_partida():
     global player_money, stats, current_bet_input, current_bet, last_bet, epic_win_triggered
-    global rosa_secret_done
+    global rosa_secret_done, rosa_kicked
     player_money = 1000; stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
     current_bet_input = ""; current_bet = 10; last_bet = None
     epic_win_triggered = False
     rosa_secret_done = False
+    rosa_kicked = False
     nueva_ronda()
 
 def clip_text_right(text, font, max_w):
@@ -2319,8 +2403,8 @@ while True:
                 paused = True; _pause_started_at = now  
             elif app_state == 'poker':
                 app_state = 'main_menu'
-            elif app_state in ('intro', 'win_ending', 'lose_ending'):
-                app_state = 'main_menu' 
+            elif app_state in ('intro', 'win_ending', 'lose_ending', 'kicked_ending'):
+                app_state = 'main_menu'
             else:
                 pygame.quit(); sys.exit()
 
@@ -2442,7 +2526,7 @@ while True:
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
                 bj_reiniciar(); continue
 
-        if app_state in ('intro','win_ending','lose_ending'):
+        if app_state in ('intro','win_ending','lose_ending','kicked_ending'):
             if story_choice_active:
                 if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                     lpos = to_logical(evento.pos)
@@ -2604,7 +2688,7 @@ while True:
         flip_display()
         continue
 
-    if app_state in ('intro','win_ending','lose_ending'):
+    if app_state in ('intro','win_ending','lose_ending','kicked_ending'):
         _render_story(now)
         flip_display()
         continue
@@ -2887,9 +2971,11 @@ while True:
     diff_colors = {0: BLANCO, 1: (255, 200, 80), 2: (255, 140, 40), 3: (255, 80, 80)}
     diff_label  = diff_labels.get(difficulty_level, 'Normal')
     diff_color  = diff_colors.get(difficulty_level, BLANCO)
-    surf_chips = FUENTE_PEQUENA.render(
-        f"Máx apuesta: {BET_MAX}  |  Meta: {EPIC_WIN_THRESHOLD} fichas  |  Dificultad: {diff_label}",
-        True, diff_color)
+    if app_state == 'blackjack':
+        hud_info = f"Máx apuesta: {BET_MAX}  |  Dificultad: {diff_label}"
+    else:
+        hud_info = f"Máx apuesta: {BET_MAX}  |  Meta: {EPIC_WIN_THRESHOLD} fichas  |  Dificultad: {diff_label}"
+    surf_chips = FUENTE_PEQUENA.render(hud_info, True, diff_color)
     VENTANA.blit(surf_chips, (reglas_x + padding, y_off))
     y_off += line_h
 
