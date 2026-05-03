@@ -1280,6 +1280,8 @@ DOTS_BTN = pygame.Rect(ANCHO-46, 8, 38, 28)
 nueva_ronda_pending = False
 mensaje = ""
 
+paused = False
+
 
 def _sha256(path):
     import hashlib
@@ -1520,6 +1522,61 @@ def _render_main_menu(now):
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
 
 
+def _render_pause_menu(now):
+    """Dibuja el menú de pausa encima de la partida en curso."""
+    global paused, app_state
+
+    # Dark dimming overlay
+    dim = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+    dim.fill((0, 0, 0, 195))
+    VENTANA.blit(dim, (0, 0))
+
+    # Decorative border box
+    BOX_W = 700; BOX_H = 420
+    BOX_X = (ANCHO - BOX_W) // 2; BOX_Y = ALTO // 2 - BOX_H // 2 - 30
+    box_bg = pygame.Surface((BOX_W, BOX_H), pygame.SRCALPHA)
+    box_bg.fill((8, 14, 8, 240))
+    VENTANA.blit(box_bg, (BOX_X, BOX_Y))
+    pygame.draw.rect(VENTANA, DORADO, (BOX_X, BOX_Y, BOX_W, BOX_H), 2, border_radius=14)
+    pygame.draw.rect(VENTANA, (80, 65, 30), (BOX_X+6, BOX_Y+6, BOX_W-12, BOX_H-12), 1, border_radius=10)
+
+    # Title
+    title_surf = FUENTE_GRANDE.render("PAUSA", True, DORADO)
+    VENTANA.blit(title_surf, (ANCHO // 2 - title_surf.get_width() // 2, BOX_Y + 28))
+    pygame.draw.line(VENTANA, (80, 65, 30),
+                     (BOX_X + 40, BOX_Y + 28 + title_surf.get_height() + 8),
+                     (BOX_X + BOX_W - 40, BOX_Y + 28 + title_surf.get_height() + 8), 1)
+
+    mouse_pos = to_logical(pygame.mouse.get_pos())
+    BTN_W = 560; BTN_H = 88; GAP = 22
+    BX = (ANCHO - BTN_W) // 2
+    BY0 = ALTO // 2 - 20           # Continuar
+    BY1 = BY0 + BTN_H + GAP        # Menú Principal
+
+    pause_opts = [
+        ("[1]  Continuar", BY0, False),
+        ("[2]  Menú Principal", BY1, True),
+    ]
+    for label, by, goes_menu in pause_opts:
+        rect = pygame.Rect(BX, by, BTN_W, BTN_H)
+        hovered = rect.collidepoint(mouse_pos)
+        bg_col = (55, 95, 68) if (hovered and not goes_menu) else \
+                 (100, 30, 30) if (hovered and goes_menu) else (22, 36, 26)
+        bg_s = pygame.Surface((BTN_W, BTN_H), pygame.SRCALPHA)
+        bg_s.fill((*bg_col, 225))
+        VENTANA.blit(bg_s, (BX, by))
+        border_col = DORADO if hovered else (70, 110, 80)
+        pygame.draw.rect(VENTANA, border_col, rect, 2, border_radius=10)
+        lbl_col = (220, 255, 225) if (hovered and not goes_menu) else \
+                  (255, 180, 180) if (hovered and goes_menu) else BLANCO
+        lbl = FUENTE_MENU_OPT.render(label, True, lbl_col)
+        VENTANA.blit(lbl, (BX + (BTN_W - lbl.get_width()) // 2,
+                            by + (BTN_H - lbl.get_height()) // 2))
+
+    hint = FUENTE_INSTR.render("ESC para reanudar  ·  1 / 2 o clic para elegir", True, (90, 80, 60))
+    VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, BY1 + BTN_H + 22))
+
+
 def _start_story_mode():
     global app_state, game_mode, story_scenes_data, story_scene_idx, story_line_idx
     global player_money, current_bet, current_bet_input, last_bet, stats, epic_win_triggered
@@ -1556,10 +1613,31 @@ while True:
             pygame.quit(); sys.exit()
 
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-            if app_state in ('game', 'blackjack'):
-                app_state = 'main_menu'
+            if paused:
+                paused = False          # ESC again = resume
+            elif app_state in ('game', 'blackjack'):
+                paused = True           # Open pause menu mid-game
+            elif app_state in ('intro', 'win_ending', 'lose_ending'):
+                app_state = 'main_menu' # ESC in story = back to menu (not a hard quit)
             else:
                 pygame.quit(); sys.exit()
+
+        # ── Pause menu input ─────────────────────────────────────────────────
+        if paused:
+            _PAUSE_BTN_W = 560; _PAUSE_BTN_H = 88; _PAUSE_GAP = 22
+            _PAUSE_BX    = (ANCHO - _PAUSE_BTN_W) // 2
+            _PAUSE_BY0   = ALTO // 2 - 20  # Continuar
+            _PAUSE_BY1   = _PAUSE_BY0 + _PAUSE_BTN_H + _PAUSE_GAP  # Menú Principal
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                if pygame.Rect(_PAUSE_BX, _PAUSE_BY0, _PAUSE_BTN_W, _PAUSE_BTN_H).collidepoint(lpos):
+                    paused = False
+                elif pygame.Rect(_PAUSE_BX, _PAUSE_BY1, _PAUSE_BTN_W, _PAUSE_BTN_H).collidepoint(lpos):
+                    paused = False; app_state = 'main_menu'
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_1: paused = False
+                elif evento.key == pygame.K_2: paused = False; app_state = 'main_menu'
+            continue
 
         # ── Main menu input ──────────────────────────────────────────────────
         if app_state == 'main_menu':
@@ -1849,7 +1927,7 @@ while True:
                     _apply_chip_result(results)
                     state = 'round_end'; round_end_time = now
 
-                elif pb < 17 and pb < dealer_target:
+                elif pb < dealer_target:
                     repartir(banca, 50)
                     dealer_thinking = True
                     next_action = now + DEALER_SETTLE_DELAY + random_module.randint(0, 600)
@@ -2196,5 +2274,8 @@ while True:
             f"♠ BlackJack Infinito  |  Ganadas: {stats['won']}  Perdidas: {stats['lost']}",
             True, DORADO)
         VENTANA.blit(inf_s, (ANCHO//2 - inf_s.get_width()//2, ALTO - 88))
+
+    if paused:
+        _render_pause_menu(now)
 
     flip_display()
