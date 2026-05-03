@@ -1057,7 +1057,6 @@ def build_win_ending_scenes():
     d = difficulty_level
 
     if d == 0:
-        # Normal — Víctor acepta la derrota con una media confesión
         table_scenes = [
             {
                 'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
@@ -1100,7 +1099,6 @@ def build_win_ending_scenes():
         ] + rosa_lines + [('narrador', '─────────  FIN  ─────────')]
 
     elif d == 1:
-        # Difícil — La sala entera presencia la caída de Víctor
         table_scenes = [
             {
                 'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
@@ -1141,7 +1139,6 @@ def build_win_ending_scenes():
         ] + rosa_lines + [('narrador', '─────────  FIN  ─────────')]
 
     elif d == 2:
-        # Muy Difícil — Víctor intenta escapar; el casino se vuelve contra él
         table_scenes = [
             {
                 'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
@@ -1180,7 +1177,6 @@ def build_win_ending_scenes():
         ] + rosa_lines + [('narrador', '─────────  FIN  ─────────')]
 
     else:
-        # EXTREMO — Víctor se derrumba; el casino cae con él
         table_scenes = [
             {
                 'bg': 'table', 'chars': [('victor_nervioso', ANCHO//2+210, 730)], 'counter': False,
@@ -1280,7 +1276,6 @@ def build_lose_ending_scenes():
     d = difficulty_level
 
     if d == 0:
-        # Normal — Víctor calmado, casi aburrido
         table_lines = [
             ('narrador', 'Y así terminó.'),
             ('Víctor', 'Ya está. Eso es todo lo que tenías.'),
@@ -1298,7 +1293,6 @@ def build_lose_ending_scenes():
             _RESTART_CHOICE,
         ]
     elif d == 1:
-        # Difícil — Víctor disfruta un poco más de la victoria
         table_lines = [
             ('narrador', 'Las fichas desaparecieron una a una. Cada mano, una pequeña muerte.'),
             ('Víctor', '(Con una sonrisa lenta.) Veinticinco mil... qué ambición tan hermosa.'),
@@ -1315,7 +1309,6 @@ def build_lose_ending_scenes():
             _RESTART_CHOICE,
         ]
     elif d == 2:
-        # Muy Difícil — Víctor algo inquieto; el jugador llegó muy lejos
         table_lines = [
             ('narrador', 'Cincuenta mil fichas. Nadie había llegado tan cerca. Nadie.'),
             ('narrador', 'Hasta hoy.'),
@@ -1334,7 +1327,6 @@ def build_lose_ending_scenes():
             _RESTART_CHOICE,
         ]
     else:
-        # EXTREMO — Víctor visiblemente sacudido; el jugador casi lo consiguió
         table_lines = [
             ('narrador', 'Cien mil fichas. Nadie había pronunciado esa cifra en este casino. Nadie la había perseguido.'),
             ('narrador', 'Hasta esta noche.'),
@@ -1404,7 +1396,6 @@ def _apply_choice(idx):
     opt    = story_choice_options[idx]
     effect = opt.get('effect', {})
 
-    # Efectos especiales de navegación — se ejecutan inmediatamente
     if effect.get('restart_game'):
         story_choice_active = False
         story_choice_options = []
@@ -1419,7 +1410,6 @@ def _apply_choice(idx):
         return
 
     if 'money' in effect:
-        # Las fichas ganadas en diálogo escalan con la dificultad para compensar metas más altas
         diff_multipliers = {0: 1.0, 1: 2.5, 2: 5.0, 3: 10.0}
         mult = diff_multipliers.get(difficulty_level, 1.0)
         scaled = int(effect['money'] * mult) if effect['money'] > 0 else effect['money']
@@ -1478,7 +1468,6 @@ def _story_advance_scene():
             elif app_state == 'win_ending':
                 pygame.quit(); sys.exit()
             elif app_state in ('lose_ending', 'kicked_ending'):
-                # La navegación de salida la gestiona el CHOICE al final de las escenas
                 pass
 
 
@@ -2604,6 +2593,88 @@ def _start_infinite_mode():
     game_mode = 'infinite'
     app_state = 'blackjack'
     bj_reiniciar()
+
+
+def splash_screen():
+    """Muestra el logo del juego con fade-in y fade-out antes de entrar al menú."""
+    _LOGO_URL   = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/logo.png"
+    _LOGO_LOCAL = os.path.join("imagenes", "logo.png")
+
+    _ensure_imagenes_dir()
+    if not os.path.exists(_LOGO_LOCAL):
+        try:
+            req = urllib.request.Request(_LOGO_URL, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                data = resp.read()
+            with open(_LOGO_LOCAL, 'wb') as f:
+                f.write(data)
+        except Exception as e:
+            print(f"[SPLASH] No se pudo descargar el logo: {e}")
+            return   
+
+    try:
+        logo = pygame.image.load(_LOGO_LOCAL).convert_alpha()
+    except Exception as e:
+        print(f"[SPLASH] No se pudo cargar el logo: {e}")
+        return
+
+    lw, lh   = logo.get_size()
+    max_h    = int(ALTO * 0.60)
+    max_w    = int(ANCHO * 0.60)
+    scale    = min(max_w / lw, max_h / lh, 1.0)
+    logo     = pygame.transform.smoothscale(logo, (int(lw * scale), int(lh * scale)))
+    lw, lh   = logo.get_size()
+    logo_x   = ANCHO // 2 - lw // 2
+    logo_y   = ALTO  // 2 - lh // 2
+
+    FADE_IN   = 700
+    HOLD      = 2000
+    FADE_OUT  = 800
+    TOTAL     = FADE_IN + HOLD + FADE_OUT
+
+    start = pygame.time.get_ticks()
+
+    while True:
+        now     = pygame.time.get_ticks()
+        elapsed = now - start
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            if event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                return
+
+        if elapsed < FADE_IN:
+            alpha = int(255 * elapsed / FADE_IN)
+        elif elapsed < FADE_IN + HOLD:
+            alpha = 255
+        else:
+            fade_prog = (elapsed - FADE_IN - HOLD) / FADE_OUT
+            alpha = max(0, int(255 * (1.0 - fade_prog)))
+
+        VENTANA.fill(NEGRO)
+
+        logo_copy = logo.copy()
+        logo_copy.set_alpha(alpha)
+        VENTANA.blit(logo_copy, (logo_x, logo_y))
+
+        if FADE_IN < elapsed < FADE_IN + HOLD:
+            blink = (elapsed // 500) % 2 == 0
+            if blink:
+                hint = FUENTE_PEQUENA.render("Pulsa cualquier tecla para continuar", True, DORADO)
+                hint_alpha = int(200 * (elapsed - FADE_IN) / HOLD)
+                hint.set_alpha(hint_alpha)
+                VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, logo_y + lh + 30))
+
+        flip_display()
+
+        if elapsed >= TOTAL:
+            break
+
+        RELOJ.tick(60)
+
+
+splash_screen()
 
 
 while True:
