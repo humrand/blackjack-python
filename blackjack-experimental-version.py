@@ -1078,6 +1078,19 @@ LOSE_ENDING_SCENES = [
         ]
     },
     {
+        'bg': 'street', 'chars': [('portero', ANCHO//2+300, 760)], 'counter': False,
+        'scene_image': 'segurata-pierdes',
+        'lines': [
+            ('narrador', 'El portero te espera en el callejón de atrás. No para despedirse.'),
+            ('Portero', 'El jefe dice que a los que vienen a desafiarle... les gusta llevarse un recuerdo.'),
+            ('narrador', 'No tuviste tiempo de responder.'),
+            ('narrador', 'Cuando volviste a estar de pie, la puerta trasera ya estaba cerrada. Y tú, solo, en el asfalto mojado.'),
+            ('narrador', 'El labio partido. Un zumbido sordo en el oído derecho. Nada roto. Esta vez.'),
+            ('narrador', 'Te limpias la boca con el dorso de la mano y miras el cielo de Barcelona.'),
+            ('Tú', '(En voz baja.) La próxima vez llego antes de que abran.'),
+        ]
+    },
+    {
         'bg': 'street', 'chars': [], 'counter': False,
         'scene_image': 'segurata-pierdes',
         'lines': [
@@ -1227,7 +1240,7 @@ def _render_story(now):
     if img_key:
         draw_story_image(img_key, VENTANA)
 
-    if has_counter and img_key == scene_img_key:
+    if has_counter:
         draw_bar_counter_overlay(VENTANA, now)
 
     if story_in_injection:
