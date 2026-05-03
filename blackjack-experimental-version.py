@@ -1157,13 +1157,7 @@ def _story_advance_scene():
             elif app_state == 'win_ending':
                 pygame.quit(); sys.exit()
             elif app_state == 'lose_ending':
-                app_state = 'game'
-                epic_win_triggered = False
-                player_money = 1000
-                difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
-                stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
-                current_bet = 10; current_bet_input = ""; last_bet = None
-                nueva_ronda()
+                app_state = 'main_menu'
 
 
 def _story_advance():
@@ -1382,11 +1376,11 @@ def spawn_particles(x, y, color, count=40):
 
 def reiniciar_partida():
     global player_money, stats, current_bet_input, current_bet, last_bet, epic_win_triggered
-    global difficulty_level, EPIC_WIN_THRESHOLD, rosa_secret_done
+    global rosa_secret_done
     player_money = 1000; stats = {'played':0,'won':0,'lost':0,'blackjacks':0}
     current_bet_input = ""; current_bet = 10; last_bet = None
     epic_win_triggered = False
-    difficulty_level = 0; EPIC_WIN_THRESHOLD = 10000; rosa_secret_done = False
+    rosa_secret_done = False
     nueva_ronda()
 
 def clip_text_right(text, font, max_w):
@@ -1524,13 +1518,13 @@ he_ai_winner = False
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
 he_ai_turn_active  = False   
-he_ai_turn_idx     = 0     
-he_ai_turn_phase   = 'announcing'  
+he_ai_turn_idx     = 0      
+he_ai_turn_phase   = 'announcing' 
 he_ai_turn_timer   = 0      
 he_ai_actions      = []     
 he_ai_folded       = [False, False, False, False]
 _HE_ANNOUNCE_MS    = 650     
-_HE_DECIDE_MS      = 900     
+_HE_DECIDE_MS      = 900
 
 def _he_ai_compute_action(ai_idx):
     """Decide what AI player ai_idx does. Returns action string and modifies pot/money."""
@@ -1555,7 +1549,7 @@ def _he_ai_compute_action(ai_idx):
         rank = -1
     r = random_module.random()
     call_amt = min(he_blind, money)
-    if rank >= 5:       
+    if rank >= 5:      
         if r < 0.80:
             raise_mult = random_module.randint(3, 7)
             amt = min(he_blind * raise_mult, money)
@@ -1584,7 +1578,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    else:              
+    else:               
         if r < 0.50:
             he_ai_folded[ai_idx] = True
             return "se retira"
