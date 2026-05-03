@@ -6,6 +6,37 @@ import math
 import threading
 import urllib.request
 import shutil
+import subprocess
+import platform as _platform_mod
+
+_SCRIPT_PATH = os.path.abspath(__file__)
+
+def _get_data_dir():
+    _sys = sys.platform
+    if _sys == 'darwin':
+        base = os.path.expanduser('~/Library/Application Support')
+    elif _sys == 'win32':
+        base = os.environ.get('APPDATA', os.path.expanduser('~'))
+    else:
+        base = os.path.expanduser('~/.local/share')
+    d = os.path.join(base, 'ElFarolRojo')
+    os.makedirs(d, exist_ok=True)
+    return d
+
+DATA_DIR = _get_data_dir()
+os.chdir(DATA_DIR)  
+
+def open_data_folder():
+    """Abre la carpeta de datos en el explorador del sistema."""
+    try:
+        if sys.platform == 'darwin':
+            subprocess.Popen(['open', DATA_DIR])
+        elif sys.platform == 'win32':
+            subprocess.Popen(['explorer', DATA_DIR])
+        else:
+            subprocess.Popen(['xdg-open', DATA_DIR])
+    except Exception as e:
+        print(f"[FOLDER] No se pudo abrir carpeta: {e}")
 
 pygame.init()
 pygame.mixer.init()
@@ -29,6 +60,7 @@ _IMAGE_FILES = {
     'rosita-dedo':  ('rosita-dedo.png',        'rosita-dedo.png'),
     'cuarto-oscuro':('cuarto-oscuro.png',      'cuarto-oscuro.png'),
     'rosita-fichas':('rosita-fichas.png',      'rosita-fichas.png'),
+    'mesa':          ('mesa.png',               'mesa.png'),
 }
 _image_cache = {}
 _image_downloading = set()
@@ -474,6 +506,58 @@ PLAYER_STACK_POS = (120, ALTO - 70)
 BANK_POS      = (ANCHO // 2, 40)
 EPIC_WIN_THRESHOLD = 10000
 DEALER_SETTLE_DELAY = 900
+
+DEALER_CARD_Y  = 140    
+PLAYER_CARD_Y  = 550    
+
+_CARD_X_ORIGIN = ANCHO // 2 - CARD_SPACING // 2 - CARD_W // 2  
+
+_gameboy_win_snd  = None
+_gameboy_lose_snd = None
+_gameboy_channel  = None
+
+def _make_gameboy_sound(notes_freqs, note_ms=85):
+    """Genera un jingle estilo GameBoy (onda cuadrada) sin numpy."""
+    import array as _arr
+    try:
+        mfreq, msize, mch = pygame.mixer.get_init()
+        maxval = (1 << (abs(msize) - 1)) - 1
+        tc = 'h' if abs(msize) >= 16 else 'b'
+        buf = _arr.array(tc)
+        for i, (freq, dur_ms) in enumerate(notes_freqs):
+            n = int(mfreq * dur_ms / 1000)
+            for s in range(n):
+                env = max(0.0, 1.0 - s / n)
+                period = mfreq / max(freq, 1)
+                phase = (s % max(1, int(period))) / max(1, period)
+                wave = maxval if phase < 0.5 else -maxval
+                samp = int(wave * 0.35 * env)
+                if mch == 2:
+                    buf.append(samp); buf.append(samp)
+                else:
+                    buf.append(samp)
+        return pygame.mixer.Sound(buffer=buf)
+    except Exception as e:
+        print(f"[GAMEBOY] Error: {e}"); return None
+
+def _init_gameboy_sounds():
+    global _gameboy_win_snd, _gameboy_lose_snd
+    win_notes  = [(523,90),(659,90),(784,90),(1047,200)]  
+    lose_notes = [(392,90),(330,90),(262,200)]             
+    _gameboy_win_snd  = _make_gameboy_sound(win_notes)
+    _gameboy_lose_snd = _make_gameboy_sound(lose_notes)
+
+threading.Thread(target=_init_gameboy_sounds, daemon=True).start()
+
+def _play_gameboy(win=True):
+    global _gameboy_channel
+    if music_muted: return
+    snd = _gameboy_win_snd if win else _gameboy_lose_snd
+    if snd is None: return
+    ch = pygame.mixer.find_channel(True)
+    if ch:
+        _gameboy_channel = ch
+        ch.play(snd)
 
 difficulty_level   = 0
 rosa_secret_done   = False
@@ -1978,7 +2062,7 @@ def _check_for_updates():
         remote_data = res.read()
         fd, tmp_path = tempfile.mkstemp(suffix=".py")
         with os.fdopen(fd,"wb") as f: f.write(remote_data)
-        local_path = os.path.abspath(__file__)
+        local_path = _SCRIPT_PATH
         sha_local  = _sha256(local_path)
         sha_remote = _sha256(tmp_path)
         if sha_remote is None:
@@ -2020,7 +2104,7 @@ def repartir(mano, y, oculta=False, start_pos=None):
         base_x = 120 + hand_idx * HAND_SEP
         x = base_x + len(mano) * CARD_SPACING
     else:
-        x = 200 + len(mano) * CARD_SPACING
+        x = _CARD_X_ORIGIN + len(mano) * CARD_SPACING
     carta = Carta(v, p, val, color, x, y, start_pos=start_pos)
     carta.oculta = oculta
     mano.append((v, p, val, color, carta))
@@ -2859,8 +2943,25 @@ def _render_main_menu(now):
         sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, (160, 190, 165) if hovered else (120, 140, 125))
         VENTANA.blit(sub_s, (bx + 92, by + 20 + lbl_s.get_height() + 4))
 
-    hint = FUENTE_INSTR.render("Pulsa 1 · 2  o  haz clic para seleccionar", True, (90, 80, 60))
+    hint = FUENTE_INSTR.render("Pulsa 1 · 2 · 3  o  haz clic para seleccionar", True, (90, 80, 60))
     VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (btn_h + gap) + 18))
+
+    folder_btn_w = 380; folder_btn_h = 46
+    folder_btn_x = (ANCHO - folder_btn_w) // 2
+    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (btn_h + gap) + 60
+    folder_rect  = pygame.Rect(folder_btn_x, folder_btn_y, folder_btn_w, folder_btn_h)
+    folder_hov   = folder_rect.collidepoint(mouse_pos)
+    fb_col = (45, 70, 55) if folder_hov else (25, 40, 32)
+    fb_s = pygame.Surface((folder_btn_w, folder_btn_h), pygame.SRCALPHA)
+    fb_s.fill((*fb_col, 220))
+    VENTANA.blit(fb_s, (folder_btn_x, folder_btn_y))
+    fb_border = DORADO if folder_hov else (55, 90, 65)
+    pygame.draw.rect(VENTANA, fb_border, folder_rect, 1, border_radius=8)
+    folder_lbl = FUENTE_MENU_SUB.render("📁  Abrir carpeta de datos del juego", True,
+                                         (230, 250, 235) if folder_hov else (160, 190, 165))
+    VENTANA.blit(folder_lbl, (folder_btn_x + (folder_btn_w - folder_lbl.get_width())//2,
+                               folder_btn_y + (folder_btn_h - folder_lbl.get_height())//2))
+    _render_main_menu._folder_rect = folder_rect
 
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
@@ -3042,7 +3143,103 @@ def splash_screen():
         RELOJ.tick(60)
 
 
+def loading_screen():
+    """Descarga todos los assets de GitHub mostrando progreso."""
+    os.makedirs(os.path.join('imagenes', 'cards'), exist_ok=True)
+    os.makedirs('music', exist_ok=True)
+    os.makedirs(os.path.join('music', 'sounds-storymode'), exist_ok=True)
+
+    all_files = []
+
+    for fname in ('mesa.png', 'logo.png'):
+        url = _IMAGE_BASE + fname
+        local = os.path.join('imagenes', fname)
+        all_files.append((url, local, fname))
+
+    for key, (url_file, local_file) in _IMAGE_FILES.items():
+        if key == 'mesa': continue
+        all_files.append((_IMAGE_BASE + url_file,
+                          os.path.join('imagenes', local_file),
+                          local_file))
+
+    _suits_map  = [('S','spades'),('H','hearts'),('D','diamonds'),('C','clubs')]
+    _values_map = [('A','ace'),('2','2'),('3','3'),('4','4'),('5','5'),('6','6'),
+                   ('7','7'),('8','8'),('9','9'),('10','10'),
+                   ('J','jack'),('Q','queen'),('K','king')]
+    for v_k, v_n in _values_map:
+        for s_k, s_n in _suits_map:
+            fname = f"{v_n}_of_{s_n}.png"
+            all_files.append((_CARDS_BASE_URL + fname,
+                               os.path.join('imagenes', 'cards', fname),
+                               f"cartas/{fname}"))
+    all_files.append((_CARDS_BASE_URL + "back.png",
+                       os.path.join('imagenes', 'cards', 'back.png'),
+                       "cartas/back.png"))
+
+    for key, (local_path, url) in {**_STORY_MUSIC_FILES, **_STORY_SFX_FILES}.items():
+        all_files.append((url, local_path, os.path.basename(local_path)))
+    all_files.append((_MUSIC_URL, _MUSIC_LOCAL, "coffee_time.mp3"))
+
+    to_download = [(u, l, n) for u, l, n in all_files if not os.path.exists(l)]
+
+    if not to_download:
+        return  
+
+    total = len(to_download)
+    FUENTE_LOAD  = pygame.font.SysFont("arial", 36, bold=True)
+    FUENTE_FILE  = pygame.font.SysFont("arial", 24)
+    FUENTE_PCT   = pygame.font.SysFont("arial", 28, bold=True)
+
+    for i, (url, local, name) in enumerate(to_download):
+        VENTANA.fill((4, 2, 10))
+
+        title = FUENTE_LOAD.render("Descargando paquetes necesarios de internet...", True, DORADO)
+        VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, ALTO//2 - 140))
+
+        status = FUENTE_FILE.render(f"[{i+1}/{total}]  {name}", True, (200, 210, 200))
+        VENTANA.blit(status, (ANCHO//2 - status.get_width()//2, ALTO//2 - 65))
+
+        bw = 700; bh = 26
+        bx = ANCHO//2 - bw//2; by = ALTO//2
+        pygame.draw.rect(VENTANA, (30, 30, 30), (bx, by, bw, bh), border_radius=10)
+        fill_w = int(bw * i / total) if total else 0
+        if fill_w > 0:
+            pygame.draw.rect(VENTANA, DORADO, (bx, by, fill_w, bh), border_radius=10)
+        pygame.draw.rect(VENTANA, (80, 65, 30), (bx, by, bw, bh), 2, border_radius=10)
+
+        pct_txt = FUENTE_PCT.render(f"{int(100 * i / total)}%", True, (200, 200, 200))
+        VENTANA.blit(pct_txt, (ANCHO//2 - pct_txt.get_width()//2, by + bh + 14))
+
+        flip_display()
+        pygame.event.pump()
+
+        if not os.path.exists(local):
+            try:
+                os.makedirs(os.path.dirname(local), exist_ok=True)
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=20) as resp:
+                    data = resp.read()
+                with open(local, 'wb') as f:
+                    f.write(data)
+            except Exception as e:
+                print(f"[LOADING] Error descargando {name}: {e}")
+
+    VENTANA.fill((4, 2, 10))
+    done = pygame.font.SysFont("arial", 48, bold=True).render("¡Listo!", True, (80, 220, 80))
+    VENTANA.blit(done, (ANCHO//2 - done.get_width()//2, ALTO//2 - 30))
+    bw = 700
+    pygame.draw.rect(VENTANA, DORADO, (ANCHO//2 - bw//2, ALTO//2 + 30, bw, 26), border_radius=10)
+    flip_display()
+    _deadline = pygame.time.get_ticks() + 1500
+    while _gameboy_win_snd is None and pygame.time.get_ticks() < _deadline:
+        pygame.time.delay(30)
+        pygame.event.pump()
+    _play_gameboy(win=True)
+    pygame.time.delay(700)
+
+
 _menu_fade_start = 0
+loading_screen()
 splash_screen()
 _menu_fade_start = pygame.time.get_ticks()
 
@@ -3109,6 +3306,9 @@ while True:
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
                         elif i == 2: _start_poker_mode()
+                folder_r = getattr(_render_main_menu, '_folder_rect', None)
+                if folder_r and folder_r.collidepoint(lpos):
+                    open_data_folder()
             continue
 
         if app_state == 'poker':
@@ -3293,13 +3493,13 @@ while True:
                             player_money -= bet_to_deduct; doubledown_flags[current_hand_index] = True
                             if per_hand_bets: per_hand_bets[current_hand_index] *= 2
                             else: per_hand_bets = [current_bet, current_bet]; per_hand_bets[current_hand_index] *= 2
-                            dest_y2 = 200+current_hand_index*70; repartir(hand, dest_y2)
+                            dest_y2 = PLAYER_CARD_Y+current_hand_index*70; repartir(hand, dest_y2)
                             if current_hand_index < len(jugador_hands)-1: current_hand_index += 1
                             else:
                                 state = 'dealer'; revelar_banca(now); dealer_thinking = False
                                 dealer_target = schedule_dealer_target(); next_action = now+600
                         else:
-                            player_money -= current_bet; current_bet *= 2; repartir(hand, 200)
+                            player_money -= current_bet; current_bet *= 2; repartir(hand, PLAYER_CARD_Y)
                             state = 'dealer'; revelar_banca(now); dealer_thinking = False
                             dealer_target = schedule_dealer_target(); next_action = now+600
 
@@ -3313,7 +3513,7 @@ while True:
                         per_hand_bets = [current_bet, current_bet]; doubledown_flags = [False, False]
                         state = 'player'
                         for i, h in enumerate(jugador_hands):
-                            base_x2 = 120+i*HAND_SEP; dest_y3 = 200+i*70
+                            base_x2 = 120+i*HAND_SEP; dest_y3 = PLAYER_CARD_Y+i*70
                             for idx2, ct2 in enumerate(h):
                                 c2 = ct2[4]; c2.dest_x = base_x2+idx2*CARD_SPACING; c2.dest_y = dest_y3
                                 c2.target_scale = 1.06 if i==current_hand_index else 1.0
@@ -3325,7 +3525,7 @@ while True:
 
                 if evento.key == pygame.K_SPACE:
                     if (now >= last_pedir_time+PEDIR_DELAY) and (not clearing):
-                        dest_y4 = 200+current_hand_index*70 if (split_active and jugador_hands) else 200
+                        dest_y4 = PLAYER_CARD_Y+current_hand_index*70 if (split_active and jugador_hands) else PLAYER_CARD_Y
                         repartir(get_current_hand(), dest_y4); last_pedir_time = now
 
                 if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
@@ -3392,20 +3592,30 @@ while True:
         continue
 
     style = TABLE_STYLES[TABLE_STYLE_IDX]
-    VENTANA.fill(style['color'])
+    _mesa_img = _image_cache.get('mesa')
+    if _mesa_img is not None:
+        mw, mh = _mesa_img.get_size()
+        scale_m = max(ANCHO / mw, ALTO / mh)
+        ms_w = int(mw * scale_m); ms_h = int(mh * scale_m)
+        mesa_scaled = pygame.transform.smoothscale(_mesa_img, (ms_w, ms_h))
+        mx = (ANCHO - ms_w) // 2; my = (ALTO - ms_h) // 2
+        VENTANA.blit(mesa_scaled, (mx, my))
+    else:
+        VENTANA.fill(style['color'])
+        get_story_image('mesa')  
 
     if DEALER_AVATAR:
         VENTANA.blit(DEALER_AVATAR, (ANCHO//2 - DEALER_AVATAR.get_width()//2, 0))
 
     if state == 'dealing' and (not clearing) and now >= next_deal and not paused:
         if dealing_step == 0:
-            repartir(jugador, 200, start_pos=DECK_POS)
+            repartir(jugador, PLAYER_CARD_Y, start_pos=DECK_POS)
         elif dealing_step == 1:
-            repartir(banca, 50, True, start_pos=DECK_POS)
+            repartir(banca, DEALER_CARD_Y, True, start_pos=DECK_POS)
         elif dealing_step == 2:
-            repartir(jugador, 200, start_pos=DECK_POS)
+            repartir(jugador, PLAYER_CARD_Y, start_pos=DECK_POS)
         elif dealing_step == 3:
-            repartir(banca, 50, True, start_pos=DECK_POS)
+            repartir(banca, DEALER_CARD_Y, True, start_pos=DECK_POS)
         elif dealing_step == 4:
             if banca:
                 if banca[0][0] == 'A':
@@ -3465,7 +3675,7 @@ while True:
                     state = 'round_end'; round_end_time = now
 
                 elif pb < dealer_target:
-                    repartir(banca, 50)
+                    repartir(banca, DEALER_CARD_Y)
                     dealer_thinking = True
                     next_action = now + DEALER_SETTLE_DELAY + random_module.randint(0, 600)
 
@@ -3511,7 +3721,7 @@ while True:
     if split_active and jugador_hands:
         for i, hand in enumerate(jugador_hands):
             hand_offset_x = 120 + i * HAND_SEP
-            offset_y = 200 + i*70
+            offset_y = PLAYER_CARD_Y + i*70
             is_active = (i == current_hand_index and state == 'player')
             target_for_hand = 1.06 if is_active else 1.0
             for idx, c in enumerate(hand):
@@ -3585,18 +3795,18 @@ while True:
 
     if any(c[4].oculta for c in banca):
         texto = " + ".join("?" if c[4].oculta else str(c[2]) for c in banca)
-        VENTANA.blit(FUENTE.render(f"Banca: {texto}", True, BLANCO), (50, 20))
+        VENTANA.blit(FUENTE.render(f"Banca: {texto}", True, BLANCO), (50, DEALER_CARD_Y - 30))
     else:
         banca_visible = calcular_visible(banca)
-        VENTANA.blit(FUENTE.render(f"Banca: {banca_visible}", True, BLANCO), (50, 20))
+        VENTANA.blit(FUENTE.render(f"Banca: {banca_visible}", True, BLANCO), (50, DEALER_CARD_Y - 30))
 
     if split_active and jugador_hands:
         left = f"Mano 1: {calcular(jugador_hands[0])}"
         right = f"Mano 2: {calcular(jugador_hands[1])}"
         surf = FUENTE.render(f"{left}    {right}", True, BLANCO)
-        VENTANA.blit(surf, (50, ALTO - 220))
+        VENTANA.blit(surf, (50, PLAYER_CARD_Y - 30))
     else:
-        VENTANA.blit(FUENTE.render(f"Jugador: {calcular(jugador)}", True, BLANCO), (50, 380))
+        VENTANA.blit(FUENTE.render(f"Jugador: {calcular(jugador)}", True, BLANCO), (50, PLAYER_CARD_Y - 30))
 
     if state == 'betting':
         instrucciones = ["Escribe tu apuesta y pulsa ENTER"]
@@ -3610,54 +3820,59 @@ while True:
     if insurance_offered and not insurance_taken and state == 'player':
         instrucciones = ["I: Tomar seguro  |  " + instrucciones[0]]
 
-    box_w = 860; padding = 12; line_h = 28
-    box_h = line_h * (len(instrucciones) + 4) + padding
-    reglas_x = (ANCHO - box_w) // 2
-    reglas_y = ALTO - box_h - 20
-
-    s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
-    s.fill((0, 0, 0, 180))
-    VENTANA.blit(s, (reglas_x, reglas_y))
-    pygame.draw.rect(VENTANA, NEGRO, (reglas_x, reglas_y, box_w, box_h), 2, border_radius=8)
-    y_off = reglas_y + padding
-
-    label_money = FUENTE_PEQUENA.render(f"Fichas: {player_money}", True, DORADO)
-    VENTANA.blit(label_money, (reglas_x + padding, y_off))
-
-    input_box_w = 220; input_box_h = 36
-    input_box_x = reglas_x + box_w - input_box_w - padding
-    input_box_y = y_off - 6
-    input_bg = pygame.Surface((input_box_w, input_box_h), pygame.SRCALPHA)
-    input_bg.fill((20, 20, 20, 230))
-    VENTANA.blit(input_bg, (input_box_x, input_box_y))
-    pygame.draw.rect(VENTANA, NEGRO, (input_box_x, input_box_y, input_box_w, input_box_h), 2, border_radius=6)
-
-    display_text = current_bet_input if state == 'betting' else str(current_bet)
-
-    txt_to_show = clip_text_right(display_text, FUENTE_PEQUENA, input_box_w - 16)
-    txt_surf = FUENTE_PEQUENA.render(txt_to_show, True, BLANCO)
-    VENTANA.blit(txt_surf, (input_box_x + 8, input_box_y + (input_box_h - txt_surf.get_height()) // 2))
-    lbl_ap = FUENTE_PEQUENA.render("Apuesta:", True, BLANCO)
-    VENTANA.blit(lbl_ap, (input_box_x - lbl_ap.get_width() - 12, input_box_y + (input_box_h - lbl_ap.get_height()) // 2))
-
-    y_off += line_h
     diff_labels = {0: 'Normal', 1: 'Difícil', 2: 'Muy Difícil', 3: 'EXTREMO'}
     diff_colors = {0: BLANCO, 1: (255, 200, 80), 2: (255, 140, 40), 3: (255, 80, 80)}
     diff_label  = diff_labels.get(difficulty_level, 'Normal')
     diff_color  = diff_colors.get(difficulty_level, BLANCO)
-    if app_state == 'blackjack':
-        hud_info = f"Máx apuesta: {BET_MAX}  |  Dificultad: {diff_label}"
-    else:
-        hud_info = f"Máx apuesta: {BET_MAX}  |  Meta: {EPIC_WIN_THRESHOLD} fichas  |  Dificultad: {diff_label}"
-    surf_chips = FUENTE_PEQUENA.render(hud_info, True, diff_color)
-    VENTANA.blit(surf_chips, (reglas_x + padding, y_off))
-    y_off += line_h
 
+    box_w   = ANCHO - 40; padding = 14; lh = 30
+    box_h   = lh * 3 + padding * 2
+    reglas_x = 20
+    reglas_y = ALTO - box_h - 16
+
+    s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    s.fill((0, 0, 0, 195))
+    VENTANA.blit(s, (reglas_x, reglas_y))
+    pygame.draw.rect(VENTANA, (60, 50, 20), (reglas_x, reglas_y, box_w, box_h), 2, border_radius=10)
+
+    y_off = reglas_y + padding
+
+    display_text = current_bet_input if state == 'betting' else str(current_bet)
+    txt_to_show  = clip_text_right(display_text, FUENTE_PEQUENA, 200)
+
+    col1 = FUENTE_PEQUENA.render(f"💰 Fichas: {player_money}", True, DORADO)
+    col2 = FUENTE_PEQUENA.render(f"🎰 Apuesta: {txt_to_show}", True, BLANCO)
+    if app_state == 'blackjack':
+        col3_txt = f"Máx: {BET_MAX}  ·  Dificultad: {diff_label}"
+    else:
+        col3_txt = f"Máx: {BET_MAX}  ·  Meta: {EPIC_WIN_THRESHOLD}  ·  Dificultad: {diff_label}"
+    col3 = FUENTE_PEQUENA.render(col3_txt, True, diff_color)
+
+    VENTANA.blit(col1, (reglas_x + padding, y_off))
+    col2_x = reglas_x + box_w // 3
+    VENTANA.blit(col2, (col2_x, y_off))
+    col3_x = reglas_x + box_w * 2 // 3
+    VENTANA.blit(col3, (col3_x, y_off))
+
+    if state == 'betting':
+        ib_w = 180; ib_h = 28
+        ib_x = col2_x + col2.get_width() + 8; ib_y = y_off - 2
+        ib_bg = pygame.Surface((ib_w, ib_h), pygame.SRCALPHA)
+        ib_bg.fill((30, 30, 30, 240))
+        VENTANA.blit(ib_bg, (ib_x, ib_y))
+        pygame.draw.rect(VENTANA, DORADO, (ib_x, ib_y, ib_w, ib_h), 2, border_radius=5)
+        ib_txt = clip_text_right(current_bet_input + ('|' if (now//400)%2==0 else ''), FUENTE_PEQUENA, ib_w-10)
+        ib_surf = FUENTE_PEQUENA.render(ib_txt, True, DORADO)
+        VENTANA.blit(ib_surf, (ib_x + 6, ib_y + (ib_h - ib_surf.get_height())//2))
+
+    y_off += lh
+
+    pygame.draw.line(VENTANA, (50, 42, 16), (reglas_x+8, y_off-4), (reglas_x+box_w-8, y_off-4), 1)
     for linea in instrucciones:
-        surf2 = FUENTE_INSTR.render(linea, True, BLANCO)
-        text_x = reglas_x + (box_w - surf2.get_width()) // 2
-        VENTANA.blit(surf2, (text_x, y_off))
-        y_off += 24
+        surf2 = FUENTE_INSTR.render(linea, True, (200, 210, 200))
+        tx2   = reglas_x + (box_w - surf2.get_width()) // 2
+        VENTANA.blit(surf2, (tx2, y_off))
+        y_off += lh - 4
 
     if mensaje:
         if "BLACKJACK" in mensaje.upper():
