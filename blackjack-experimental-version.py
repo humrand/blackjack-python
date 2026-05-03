@@ -143,11 +143,10 @@ _MUSIC_LOCAL = os.path.join("music", "coffee_time.mp3")
 _music_ready = False
 _music_volume = 0.18   
 music_muted  = False
-_music_context = None
 
 def _download_and_start_music():
     """Descarga la música en segundo plano y la arranca en bucle."""
-    global _music_ready, _music_context
+    global _music_ready
     os.makedirs("music", exist_ok=True)
     if not os.path.exists(_MUSIC_LOCAL):
         try:
@@ -160,10 +159,9 @@ def _download_and_start_music():
             print(f"[MUSIC] Error descargando música: {e}"); return
     try:
         pygame.mixer.music.load(_MUSIC_LOCAL)
-        pygame.mixer.music.set_volume(0.0 if music_muted else _music_volume)
-        pygame.mixer.music.play(-1)
+        pygame.mixer.music.set_volume(_music_volume)
+        pygame.mixer.music.play(-1) 
         _music_ready = True
-        _music_context = 'menu'
     except Exception as e:
         print(f"[MUSIC] Error cargando música: {e}")
 
@@ -217,7 +215,7 @@ def _story_download_file(local_path, url):
 
 def _play_story_track(key, volume=0.15, loop=True, fade_out_ms=1800):
     """Cambia la pista de fondo del modo historia con fade-out de la anterior."""
-    global _story_current_track, _music_context
+    global _story_current_track
     if _story_current_track == key:
         return
     _story_current_track = key
@@ -226,7 +224,6 @@ def _play_story_track(key, volume=0.15, loop=True, fade_out_ms=1800):
     local_path, url = _STORY_MUSIC_FILES[key]
 
     def _do_play():
-        global _music_context
         import time
         if not _story_download_file(local_path, url):
             return
@@ -236,7 +233,6 @@ def _play_story_track(key, volume=0.15, loop=True, fade_out_ms=1800):
             pygame.mixer.music.load(local_path)
             pygame.mixer.music.set_volume(0.0)
             pygame.mixer.music.play(-1 if loop else 0)
-            _music_context = 'story'
             if not music_muted:
                 steps = 25
                 for i in range(steps):
@@ -1803,6 +1799,7 @@ story_scene_idx   = 0
 story_line_idx    = 0
 epic_win_triggered = False
 main_menu_hovered = -1
+main_menu_hover_anim = [0.0, 0.0, 0.0]
 
 story_choice_active  = False      
 story_choice_options = []          
@@ -2899,62 +2896,10 @@ FUENTE_MENU_TITLE = pygame.font.SysFont("arial", 92, bold=True)
 FUENTE_MENU_OPT   = pygame.font.SysFont("arial", 44, bold=True)
 FUENTE_MENU_SUB   = pygame.font.SysFont("arial", 24)
 
-def _load_emoji_font(size):
-    """Carga una fuente con soporte razonable para emojis y símbolos."""
-    candidates = [
-        "Noto Color Emoji",
-        "Segoe UI Emoji",
-        "Apple Color Emoji",
-        "Noto Emoji",
-        "Noto Sans Symbols2",
-        "DejaVu Sans",
-    ]
-    for name in candidates:
-        try:
-            path = pygame.font.match_font(name)
-            if path:
-                return pygame.font.Font(path, size)
-        except Exception:
-            pass
-    return pygame.font.SysFont("arial", size, bold=True)
-
-FUENTE_EMOJI = _load_emoji_font(28)
-
-_MENU_BTN_BASE_W = 860
-_MENU_BTN_H = 110
-_MENU_BTN_GAP = 24
-_MENU_BTN_START_Y = 380
-_MENU_BTN_POKER_EXTRA_W = 28
-_MENU_HOVER_TARGET = 1.045
-_menu_btn_scales = [1.0 for _ in MENU_OPTIONS]
-main_menu_button_rects = []
-
-def _main_menu_rect(i):
-    w = _MENU_BTN_BASE_W + (_MENU_BTN_POKER_EXTRA_W if i == 2 else 0)
-    x = (ANCHO - w) // 2
-    y = _MENU_BTN_START_Y + i * (_MENU_BTN_H + _MENU_BTN_GAP)
-    return pygame.Rect(x, y, w, _MENU_BTN_H)
-
-def _ensure_main_menu_music():
-    """Reproduce Coffee Time siempre que el usuario esté en el menú principal."""
-    global _music_context
-    try:
-        if _music_context != 'menu' or not pygame.mixer.music.get_busy():
-            if os.path.exists(_MUSIC_LOCAL):
-                pygame.mixer.music.load(_MUSIC_LOCAL)
-                pygame.mixer.music.set_volume(0.0 if music_muted else _music_volume)
-                pygame.mixer.music.play(-1)
-                _music_context = 'menu'
-            else:
-                threading.Thread(target=_download_and_start_music, daemon=True).start()
-    except Exception as e:
-        print(f"[MUSIC] No se pudo asegurar la música del menú: {e}")
-
 
 def _render_main_menu(now):
     """Draw the main menu screen."""
-    global main_menu_hovered, main_menu_button_rects
-    _ensure_main_menu_music()
+    global main_menu_hovered
     VENTANA.fill((6, 4, 14))
     draw_rain(VENTANA, now, alpha=55)
 
@@ -2969,69 +2914,54 @@ def _render_main_menu(now):
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
     main_menu_hovered = -1
-    main_menu_button_rects = []
-    btn_start_y = _MENU_BTN_START_Y
+    btn_start_y = 380
+    btn_h = 110
+    btn_w = 860
+    gap = 24
 
     for i, opt in enumerate(MENU_OPTIONS):
-        base_rect = _main_menu_rect(i)
-        hovered = base_rect.collidepoint(mouse_pos)
+        bx = (ANCHO - btn_w) // 2
+        by = btn_start_y + i * (btn_h + gap)
+        rect = pygame.Rect(bx, by, btn_w, btn_h)
+        hovered = rect.collidepoint(mouse_pos)
         if hovered:
             main_menu_hovered = i
 
-        target = _MENU_HOVER_TARGET if hovered else 1.0
-        _menu_btn_scales[i] += (target - _menu_btn_scales[i]) * 0.18
-        scale = _menu_btn_scales[i]
-
-        draw_w = max(1, int(base_rect.width * scale))
-        draw_h = max(1, int(base_rect.height * scale))
-        draw_x = base_rect.centerx - draw_w // 2
-        draw_y = base_rect.centery - draw_h // 2 - (3 if hovered else 0)
-        draw_rect = pygame.Rect(draw_x, draw_y, draw_w, draw_h)
-        main_menu_button_rects.append(draw_rect)
-
-        bg_alpha = 220 if hovered else 160
+        bg_alpha = 210 if hovered else 160
         bg_col = (55, 95, 68) if hovered else (22, 36, 26)
-        bg_s = pygame.Surface((draw_w, draw_h), pygame.SRCALPHA)
+        bg_s = pygame.Surface((btn_w, btn_h), pygame.SRCALPHA)
         bg_s.fill((*bg_col, bg_alpha))
-        VENTANA.blit(bg_s, (draw_x, draw_y))
+        VENTANA.blit(bg_s, (bx, by))
         border_col = DORADO if hovered else (70, 110, 80)
-        pygame.draw.rect(VENTANA, border_col, draw_rect, 2, border_radius=10)
+        pygame.draw.rect(VENTANA, border_col, rect, 2, border_radius=10)
 
         num_s = FUENTE_MENU_OPT.render(f"[{i+1}]", True, DORADO)
-        num_y = draw_y + (draw_h - num_s.get_height()) // 2
-        VENTANA.blit(num_s, (draw_x + 24, num_y))
+        VENTANA.blit(num_s, (bx + 24, by + (btn_h - num_s.get_height()) // 2))
 
         lbl_col = (220, 255, 225) if hovered else BLANCO
         lbl_s = FUENTE_MENU_OPT.render(opt['label'], True, lbl_col)
-        lbl_y = draw_y + 18
-        VENTANA.blit(lbl_s, (draw_x + 90, lbl_y))
+        VENTANA.blit(lbl_s, (bx + 90, by + 20))
         sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, (160, 190, 165) if hovered else (120, 140, 125))
-        VENTANA.blit(sub_s, (draw_x + 92, lbl_y + lbl_s.get_height() + 4))
+        VENTANA.blit(sub_s, (bx + 92, by + 20 + lbl_s.get_height() + 4))
 
     hint = FUENTE_INSTR.render("Pulsa 1 · 2 · 3  o  haz clic para seleccionar", True, (90, 80, 60))
-    VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 18))
+    VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (btn_h + gap) + 18))
 
-    folder_btn_w = 380
-    folder_btn_h = 46
+    folder_btn_w = 380; folder_btn_h = 46
     folder_btn_x = (ANCHO - folder_btn_w) // 2
-    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 60
-    folder_rect = pygame.Rect(folder_btn_x, folder_btn_y, folder_btn_w, folder_btn_h)
-    folder_hov = folder_rect.collidepoint(mouse_pos)
+    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (btn_h + gap) + 60
+    folder_rect  = pygame.Rect(folder_btn_x, folder_btn_y, folder_btn_w, folder_btn_h)
+    folder_hov   = folder_rect.collidepoint(mouse_pos)
     fb_col = (45, 70, 55) if folder_hov else (25, 40, 32)
     fb_s = pygame.Surface((folder_btn_w, folder_btn_h), pygame.SRCALPHA)
     fb_s.fill((*fb_col, 220))
     VENTANA.blit(fb_s, (folder_btn_x, folder_btn_y))
     fb_border = DORADO if folder_hov else (55, 90, 65)
     pygame.draw.rect(VENTANA, fb_border, folder_rect, 1, border_radius=8)
-
-    icon_col = (230, 250, 235) if folder_hov else (160, 190, 165)
-    icon_surf = FUENTE_EMOJI.render("📁", True, icon_col)
-    text_surf = FUENTE_MENU_SUB.render("Abrir carpeta de datos del juego", True, icon_col)
-    total_w = icon_surf.get_width() + 10 + text_surf.get_width()
-    ix = folder_btn_x + (folder_btn_w - total_w) // 2
-    iy = folder_btn_y + (folder_btn_h - max(icon_surf.get_height(), text_surf.get_height())) // 2
-    VENTANA.blit(icon_surf, (ix, iy))
-    VENTANA.blit(text_surf, (ix + icon_surf.get_width() + 10, iy + (icon_surf.get_height() - text_surf.get_height()) // 2))
+    folder_lbl = FUENTE_MENU_SUB.render("📁  Abrir carpeta de datos del juego", True,
+                                         (230, 250, 235) if folder_hov else (160, 190, 165))
+    VENTANA.blit(folder_lbl, (folder_btn_x + (folder_btn_w - folder_lbl.get_width())//2,
+                               folder_btn_y + (folder_btn_h - folder_lbl.get_height())//2))
     _render_main_menu._folder_rect = folder_rect
 
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
@@ -3047,7 +2977,6 @@ def _render_main_menu(now):
 
 
 _pause_started_at = 0
-main_menu_button_rects = [_main_menu_rect(i) for i in range(len(MENU_OPTIONS))]
 
 def _resume_game():
     """Reanuda el juego compensando todos los timers por el tiempo en pausa."""
@@ -3088,8 +3017,8 @@ def _render_pause_menu(now):
     BY1 = BY0 + BTN_H + GAP       
 
     pause_opts = [
-        ("[1]  Continuar", BY0, False),
-        ("[2]  Menú Principal", BY1, True),
+        ("Continuar", BY0, False),
+        ("Menú Principal", BY1, True),
     ]
     for label, by, goes_menu in pause_opts:
         rect = pygame.Rect(BX, by, BTN_W, BTN_H)
@@ -3107,7 +3036,7 @@ def _render_pause_menu(now):
         VENTANA.blit(lbl, (BX + (BTN_W - lbl.get_width()) // 2,
                             by + (BTN_H - lbl.get_height()) // 2))
 
-    hint = FUENTE_INSTR.render("ESC para reanudar  ·  1 / 2 o clic para elegir", True, (90, 80, 60))
+    hint = FUENTE_INSTR.render("ESC para reanudar  ·  clic para elegir", True, (90, 80, 60))
     VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, BY1 + BTN_H + 22))
 
 
@@ -3370,8 +3299,11 @@ while True:
                 elif evento.key == pygame.K_3: _start_poker_mode()
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
-                for i, rect in enumerate(main_menu_button_rects):
-                    if rect.collidepoint(lpos):
+                btn_w = 860; btn_h = 110; gap = 24; btn_start_y = 380
+                for i in range(len(MENU_OPTIONS)):
+                    bx = (ANCHO - btn_w) // 2
+                    by = btn_start_y + i * (btn_h + gap)
+                    if pygame.Rect(bx, by, btn_w, btn_h).collidepoint(lpos):
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
                         elif i == 2: _start_poker_mode()
