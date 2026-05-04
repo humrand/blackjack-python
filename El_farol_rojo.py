@@ -42,7 +42,7 @@ pygame.init()
 pygame.mixer.init()
 
 VERSION = "1.2.0"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack.py"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 
 _IMAGE_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/"
 _IMAGE_FILES = {
