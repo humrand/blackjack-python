@@ -1122,7 +1122,7 @@ def draw_choice_box(surf, options, now):
     header = FUENTE_NAME.render("¿Qué dices?", True, sc)
     surf.blit(header, (PAD_X, BOX_Y + 12))
 
-    hint = FUENTE_INSTR.render("[ pulsa 1 / 2 / 3 / 4  o  haz clic ]", True, (100, 90, 70))
+    hint = FUENTE_INSTR.render("[ haz clic para elegir ]", True, (100, 90, 70))
     surf.blit(hint, (ANCHO - hint.get_width() - PAD_X, BOX_Y + 18))
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
@@ -1141,12 +1141,9 @@ def draw_choice_box(surf, options, now):
         border_col = DORADO if hovered else (75, 115, 85)
         pygame.draw.rect(surf, border_col, btn_rect, 1, border_radius=7)
 
-        num_s = FUENTE_PEQUENA.render(f"[{i + 1}]", True, DORADO)
-        surf.blit(num_s, (PAD_X + 14, btn_y + (BTN_H - num_s.get_height()) // 2))
-
         txt_col = (210, 255, 220) if hovered else BLANCO
         txt     = FUENTE_STORY.render(opt['label'], True, txt_col)
-        surf.blit(txt, (PAD_X + 62, btn_y + (BTN_H - txt.get_height()) // 2))
+        surf.blit(txt, (PAD_X + 22, btn_y + (BTN_H - txt.get_height()) // 2))
 
         btn_rects.append(btn_rect)
         btn_y += BTN_H + GAP
@@ -2899,15 +2896,37 @@ FUENTE_MENU_TITLE = pygame.font.SysFont("arial", 92, bold=True)
 FUENTE_MENU_OPT   = pygame.font.SysFont("arial", 44, bold=True)
 FUENTE_MENU_SUB   = pygame.font.SysFont("arial", 24)
 
+def _download_noto_emoji():
+    """Descarga NotoEmoji-Regular.ttf al directorio fonts/ si no existe."""
+    font_dir  = os.path.join(DATA_DIR, "fonts")
+    font_path = os.path.join(font_dir, "NotoEmoji-Regular.ttf")
+    if os.path.exists(font_path):
+        return font_path
+    url = ("https://github.com/googlefonts/noto-emoji/raw/main/fonts/"
+           "NotoEmoji-Regular.ttf")
+    try:
+        os.makedirs(font_dir, exist_ok=True)
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            data = resp.read()
+        with open(font_path, "wb") as f:
+            f.write(data)
+        return font_path
+    except Exception as e:
+        print(f"[EMOJI FONT] No se pudo descargar NotoEmoji: {e}")
+        return None
+
 def _load_emoji_font(size):
-    """Carga una fuente con soporte razonable para emojis y símbolos."""
+    """Carga NotoEmoji descargada o busca una fuente del sistema con emojis."""
+    font_path = os.path.join(DATA_DIR, "fonts", "NotoEmoji-Regular.ttf")
+    if os.path.exists(font_path):
+        try:
+            return pygame.font.Font(font_path, size)
+        except Exception:
+            pass
     candidates = [
-        "Noto Color Emoji",
-        "Segoe UI Emoji",
-        "Apple Color Emoji",
-        "Noto Emoji",
-        "Noto Sans Symbols2",
-        "DejaVu Sans",
+        "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji",
+        "Noto Emoji", "Noto Sans Symbols2", "DejaVu Sans",
     ]
     for name in candidates:
         try:
@@ -2918,7 +2937,23 @@ def _load_emoji_font(size):
             pass
     return pygame.font.SysFont("arial", size, bold=True)
 
+threading.Thread(target=_download_noto_emoji, daemon=True).start()
+
 FUENTE_EMOJI = _load_emoji_font(28)
+
+_emoji_font_checked = False
+def _get_emoji_font():
+    """Devuelve FUENTE_EMOJI, recargándola si NotoEmoji ya se ha descargado."""
+    global FUENTE_EMOJI, _emoji_font_checked
+    if not _emoji_font_checked:
+        font_path = os.path.join(DATA_DIR, "fonts", "NotoEmoji-Regular.ttf")
+        if os.path.exists(font_path):
+            try:
+                FUENTE_EMOJI = pygame.font.Font(font_path, 28)
+            except Exception:
+                pass
+            _emoji_font_checked = True
+    return FUENTE_EMOJI
 
 _MENU_BTN_BASE_W = 860
 _MENU_BTN_H = 110
@@ -2997,18 +3032,14 @@ def _render_main_menu(now):
         border_col = DORADO if hovered else (70, 110, 80)
         pygame.draw.rect(VENTANA, border_col, draw_rect, 2, border_radius=10)
 
-        num_s = FUENTE_MENU_OPT.render(f"[{i+1}]", True, DORADO)
-        num_y = draw_y + (draw_h - num_s.get_height()) // 2
-        VENTANA.blit(num_s, (draw_x + 24, num_y))
-
         lbl_col = (220, 255, 225) if hovered else BLANCO
         lbl_s = FUENTE_MENU_OPT.render(opt['label'], True, lbl_col)
         lbl_y = draw_y + 18
-        VENTANA.blit(lbl_s, (draw_x + 90, lbl_y))
+        VENTANA.blit(lbl_s, (draw_x + 36, lbl_y))
         sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, (160, 190, 165) if hovered else (120, 140, 125))
-        VENTANA.blit(sub_s, (draw_x + 92, lbl_y + lbl_s.get_height() + 4))
+        VENTANA.blit(sub_s, (draw_x + 38, lbl_y + lbl_s.get_height() + 4))
 
-    hint = FUENTE_INSTR.render("Pulsa 1 · 2 · 3  o  haz clic para seleccionar", True, (90, 80, 60))
+    hint = FUENTE_INSTR.render("Haz clic para seleccionar", True, (90, 80, 60))
     VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 18))
 
     folder_btn_w = 380
@@ -3025,7 +3056,7 @@ def _render_main_menu(now):
     pygame.draw.rect(VENTANA, fb_border, folder_rect, 1, border_radius=8)
 
     icon_col = (230, 250, 235) if folder_hov else (160, 190, 165)
-    icon_surf = FUENTE_EMOJI.render("📁", True, icon_col)
+    icon_surf = _get_emoji_font().render("📁", True, icon_col)
     text_surf = FUENTE_MENU_SUB.render("Abrir carpeta de datos del juego", True, icon_col)
     total_w = icon_surf.get_width() + 10 + text_surf.get_width()
     ix = folder_btn_x + (folder_btn_w - total_w) // 2
@@ -3088,8 +3119,8 @@ def _render_pause_menu(now):
     BY1 = BY0 + BTN_H + GAP       
 
     pause_opts = [
-        ("[1]  Continuar", BY0, False),
-        ("[2]  Menú Principal", BY1, True),
+        ("Continuar", BY0, False),
+        ("Menú Principal", BY1, True),
     ]
     for label, by, goes_menu in pause_opts:
         rect = pygame.Rect(BX, by, BTN_W, BTN_H)
@@ -3107,7 +3138,7 @@ def _render_pause_menu(now):
         VENTANA.blit(lbl, (BX + (BTN_W - lbl.get_width()) // 2,
                             by + (BTN_H - lbl.get_height()) // 2))
 
-    hint = FUENTE_INSTR.render("ESC para reanudar  ·  1 / 2 o clic para elegir", True, (90, 80, 60))
+    hint = FUENTE_INSTR.render("ESC para reanudar  ·  haz clic para elegir", True, (90, 80, 60))
     VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, BY1 + BTN_H + 22))
 
 
@@ -4053,7 +4084,7 @@ while True:
     pygame.draw.rect(VENTANA, mute_bg, MUTE_BTN, border_radius=6)
     pygame.draw.rect(VENTANA, NEGRO, MUTE_BTN, 1, border_radius=6)
     try:
-        mute_surf = FUENTE_PEQUENA.render(mute_label, True, BLANCO)
+        mute_surf = _get_emoji_font().render(mute_label, True, BLANCO)
     except Exception:
         mute_surf = FUENTE_PEQUENA.render("M" if not music_muted else "X", True, BLANCO)
     VENTANA.blit(mute_surf, (MUTE_BTN.centerx-mute_surf.get_width()//2,
