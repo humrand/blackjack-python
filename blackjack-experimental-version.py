@@ -2275,15 +2275,13 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
-# --- Animación secuencial de reparto pre-flop ---
-he_preflop_deal_step     = 0    # 0-9: paso actual del reparto
-he_preflop_deal_timer    = 0    # cuándo dar la siguiente carta
-he_preflop_deal_interval = 220  # ms entre cada carta
+he_preflop_deal_step     = 0    
+he_preflop_deal_timer    = 0    
+he_preflop_deal_interval = 220  
 
-# --- Animación secuencial del flop (3 cartas, 500 ms entre cada una) ---
 he_flop_deal_step  = 0
 he_flop_deal_timer = 0
-HE_FLOP_INTERVAL   = 500       # ms entre cada carta comunitaria del flop
+HE_FLOP_INTERVAL   = 500     
 
 he_ai_turn_active       = False
 he_ai_turn_idx          = 0
@@ -2522,14 +2520,12 @@ def he_start_hand(now):
     global he_ai_raised_this_round, he_ai_raise_amount
     he_ai_raised_this_round = False; he_ai_raise_amount = 0
 
-    # Inicializar listas vacías para cartas — se irán llenando en el update
     he_player_cards = []
     he_ai_cards = [[], [], [], []]
     he_dealer_cards = []
 
     he_pot = he_blind * 6
     he_street_bet = 0
-    # Arrancar animación secuencial de reparto
     he_preflop_deal_step  = 0
     he_preflop_deal_timer = now
     he_state = 'dealing_preflop'
