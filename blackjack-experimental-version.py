@@ -2275,6 +2275,16 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
+# --- Animación secuencial de reparto pre-flop ---
+he_preflop_deal_step     = 0    # 0-9: paso actual del reparto
+he_preflop_deal_timer    = 0    # cuándo dar la siguiente carta
+he_preflop_deal_interval = 220  # ms entre cada carta
+
+# --- Animación secuencial del flop (3 cartas, 500 ms entre cada una) ---
+he_flop_deal_step  = 0
+he_flop_deal_timer = 0
+HE_FLOP_INTERVAL   = 500       # ms entre cada carta comunitaria del flop
+
 he_ai_turn_active       = False
 he_ai_turn_idx          = 0
 he_ai_turn_phase        = 'announcing'  
@@ -2490,13 +2500,17 @@ def he_reiniciar():
     he_ai_actions = []; he_ai_folded = [False, False, False, False]
     global he_ai_raised_this_round, he_ai_raise_amount
     he_ai_raised_this_round = False; he_ai_raise_amount = 0
+    global he_preflop_deal_step, he_preflop_deal_timer, he_flop_deal_step, he_flop_deal_timer
+    he_preflop_deal_step = 0; he_preflop_deal_timer = 0
+    he_flop_deal_step = 0; he_flop_deal_timer = 0
 
 def he_start_hand(now):
-    """Deal pre-flop: 2 to player, 2 to dealer (face down), 2 to each AI player (face down), post blinds."""
+    """Inicia el reparto secuencial pre-flop: una carta a cada jugador por turno."""
     global he_state, he_pot, he_street_bet, he_deck
     global he_player_cards, he_dealer_cards, he_community_cards
     global he_mensaje, he_player_hand_name, he_dealer_hand_name, he_winner
     global he_in_raise, he_raise_input, he_ai_cards, he_ai_hand_names, he_ai_winner
+    global he_preflop_deal_step, he_preflop_deal_timer
     he_deck = crear_baraja()
     he_community_cards = []
     he_mensaje = ""; he_player_hand_name = ""; he_dealer_hand_name = ""; he_winner = ""
@@ -2507,20 +2521,52 @@ def he_start_hand(now):
     he_ai_turn_active = False; he_ai_actions = []
     global he_ai_raised_this_round, he_ai_raise_amount
     he_ai_raised_this_round = False; he_ai_raise_amount = 0
-    px = [_he_card_x(i, 2) for i in range(2)]
-    dx = [_he_card_x(i, 2) for i in range(2)]
-    he_player_cards = [_he_deal_card(he_deck, px[i], HE_PLAYER_Y) for i in range(2)]
+
+    # Inicializar listas vacías para cartas — se irán llenando en el update
+    he_player_cards = []
+    he_ai_cards = [[], [], [], []]
     he_dealer_cards = []
-    he_ai_cards = []
-    for ai_i, (ax, ay) in enumerate(HE_AI_POSITIONS):
-        ai_hand = [
-            _he_deal_card(he_deck, ax,                ay, face_down=True),
-            _he_deal_card(he_deck, ax + HE_AI_CARD_GAP, ay, face_down=True),
-        ]
-        he_ai_cards.append(ai_hand)
+
     he_pot = he_blind * 6
-    he_street_bet = 0   
-    he_state = 'pre_flop'
+    he_street_bet = 0
+    # Arrancar animación secuencial de reparto
+    he_preflop_deal_step  = 0
+    he_preflop_deal_timer = now
+    he_state = 'dealing_preflop'
+
+
+def _he_update_preflop_deal(now):
+    """Reparte una carta por jugador en orden, dos rondas completas (10 pasos total)."""
+    global he_preflop_deal_step, he_preflop_deal_timer, he_state
+    global he_player_cards, he_ai_cards
+
+    if now - he_preflop_deal_timer < he_preflop_deal_interval:
+        return  # aún no toca la siguiente carta
+
+    step = he_preflop_deal_step
+    # Orden: AI0, AI1, AI2, AI3, Jugador  ×2 rondas  = 10 pasos (0-9)
+    if step < 10:
+        ronda = step // 5       # 0 = primera carta, 1 = segunda carta
+        pos   = step % 5        # 0-3 = AI, 4 = jugador
+
+        if pos < 4:
+            ai_i = pos
+            ax, ay = HE_AI_POSITIONS[ai_i]
+            x_dest = ax if ronda == 0 else ax + HE_AI_CARD_GAP
+            carta = _he_deal_card(he_deck, x_dest, ay, face_down=True)
+            he_ai_cards[ai_i].append(carta)
+        else:
+            # Carta al jugador humano
+            px = _he_card_x(ronda, 2)
+            carta = _he_deal_card(he_deck, px, HE_PLAYER_Y)
+            he_player_cards.append(carta)
+
+        he_preflop_deal_step  += 1
+        he_preflop_deal_timer  = now
+
+    if he_preflop_deal_step >= 10:
+        # Reparto completo → entrar en fase pre_flop
+        he_state = 'pre_flop'
 
 def _he_dealer_act(raise_amount=0):
     """Simple dealer bot: always calls any raise."""
@@ -2529,11 +2575,29 @@ def _he_dealer_act(raise_amount=0):
         he_pot += raise_amount  
 
 def he_do_flop(now):
-    global he_community_cards, he_state
-    for i in range(3):
+    """Inicia el reparto animado del flop (3 cartas con 500 ms entre cada una)."""
+    global he_state, he_flop_deal_step, he_flop_deal_timer
+    he_flop_deal_step  = 0
+    he_flop_deal_timer = now
+    he_state = 'dealing_flop'
+
+
+def _he_update_flop_deal(now):
+    """Reparte las 3 cartas del flop de una en una, con HE_FLOP_INTERVAL ms de separación."""
+    global he_community_cards, he_state, he_flop_deal_step, he_flop_deal_timer
+
+    if now - he_flop_deal_timer < HE_FLOP_INTERVAL:
+        return  # aún no toca
+
+    if he_flop_deal_step < 3:
+        i  = he_flop_deal_step
         cx = _he_card_x(i, 5)
         he_community_cards.append(_he_deal_card(he_deck, cx, HE_COMMUNITY_Y))
-    he_state = 'flop'
+        he_flop_deal_step  += 1
+        he_flop_deal_timer  = now
+
+    if he_flop_deal_step >= 3:
+        he_state = 'flop'
 
 def he_do_turn(now):
     global he_community_cards, he_state
@@ -2802,12 +2866,23 @@ def _render_poker(now):
         hint = FUENTE_INSTR.render("ENTER para repartir · Todos postean la ciega · Máx "+str(BET_MAX_HOLDEM), True, (160,160,160))
         VENTANA.blit(hint, (bx + (box_w - hint.get_width())//2, y_o + lh*2 + 4))
 
-    elif he_state in ('pre_flop', 'flop', 'turn', 'river'):
-        street_labels = {'pre_flop': 'PRE-FLOP', 'flop': 'FLOP', 'turn': 'TURN', 'river': 'RIVER'}
+    elif he_state in ('pre_flop', 'flop', 'turn', 'river', 'dealing_preflop', 'dealing_flop'):
+        street_labels = {'pre_flop': 'PRE-FLOP', 'flop': 'FLOP', 'turn': 'TURN', 'river': 'RIVER',
+                         'dealing_preflop': 'PRE-FLOP', 'dealing_flop': 'FLOP'}
         sl = FUENTE_PEQUENA.render(street_labels.get(he_state,''), True, (220, 200, 120))
         VENTANA.blit(sl, (bx + pad, y_o + lh))
 
-        if he_ai_turn_active:
+        if he_state in ('dealing_preflop', 'dealing_flop'):
+            dealing_txt = "Repartiendo cartas..." if he_state == 'dealing_preflop' else "Repartiendo flop..."
+            d_surf = FUENTE_MSG.render(dealing_txt, True, (200, 220, 160))
+            d_bg = pygame.Surface((d_surf.get_width() + 40, d_surf.get_height() + 16), pygame.SRCALPHA)
+            d_bg.fill((0, 0, 0, 200))
+            dx2 = ANCHO // 2 - d_bg.get_width() // 2
+            dy2 = by - d_bg.get_height() - 12
+            VENTANA.blit(d_bg, (dx2, dy2))
+            pygame.draw.rect(VENTANA, DORADO, (dx2, dy2, d_bg.get_width(), d_bg.get_height()), 2, border_radius=10)
+            VENTANA.blit(d_surf, (dx2 + 20, dy2 + 8))
+        elif he_ai_turn_active:
             cur_name = HE_AI_NAMES[he_ai_turn_idx] if he_ai_turn_idx < len(HE_AI_NAMES) else ""
             if he_ai_turn_phase == 'announcing':
                 turn_txt = f"▶  Le toca a  {cur_name}"
@@ -3665,6 +3740,12 @@ while True:
 
     if app_state == 'poker' and he_ai_turn_active:
         _he_update_ai_turns(now)
+
+    if app_state == 'poker' and he_state == 'dealing_preflop':
+        _he_update_preflop_deal(now)
+
+    if app_state == 'poker' and he_state == 'dealing_flop':
+        _he_update_flop_deal(now)
 
     if app_state == 'poker':
         _render_poker(now)
