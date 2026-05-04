@@ -2902,8 +2902,7 @@ def _download_noto_emoji():
     font_path = os.path.join(font_dir, "NotoEmoji-Regular.ttf")
     if os.path.exists(font_path):
         return font_path
-    url = ("https://github.com/googlefonts/noto-emoji/raw/main/fonts/"
-           "NotoEmoji-Regular.ttf")
+    url = "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/fonts/NotoEmoji-Regular.ttf"
     try:
         os.makedirs(font_dir, exist_ok=True)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
@@ -2939,7 +2938,7 @@ def _load_emoji_font(size):
 
 threading.Thread(target=_download_noto_emoji, daemon=True).start()
 
-FUENTE_EMOJI = _load_emoji_font(28)
+FUENTE_EMOJI = _load_emoji_font(18)
 
 _emoji_font_checked = False
 def _get_emoji_font():
@@ -2949,7 +2948,7 @@ def _get_emoji_font():
         font_path = os.path.join(DATA_DIR, "fonts", "NotoEmoji-Regular.ttf")
         if os.path.exists(font_path):
             try:
-                FUENTE_EMOJI = pygame.font.Font(font_path, 28)
+                FUENTE_EMOJI = pygame.font.Font(font_path, 18)
             except Exception:
                 pass
             _emoji_font_checked = True
@@ -3353,7 +3352,7 @@ while True:
 
     if update_status == 'restarting' and update_restart_time != 0:
         if now >= update_restart_time + 2000:
-            pygame.quit(); os.execv(sys.executable, [sys.executable]+sys.argv)
+            pygame.quit(); os.execv(sys.executable, [sys.executable, _SCRIPT_PATH])
 
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
