@@ -2897,37 +2897,34 @@ FUENTE_MENU_OPT   = pygame.font.SysFont("arial", 44, bold=True)
 FUENTE_MENU_SUB   = pygame.font.SysFont("arial", 24)
 
 def _download_noto_emoji():
-    """Descarga NotoEmoji-Regular.ttf al directorio fonts/ si no existe."""
+    """Descarga NotoColorEmoji.ttf si no existe (URL oficial del README del repo)."""
     font_dir  = os.path.join(DATA_DIR, "fonts")
-    font_path = os.path.join(font_dir, "NotoEmoji-Regular.ttf")
+    font_path = os.path.join(font_dir, "NotoColorEmoji.ttf")
     if os.path.exists(font_path):
         return font_path
-    url = "https://cdn.jsdelivr.net/gh/googlefonts/noto-emoji@main/fonts/NotoEmoji-Regular.ttf"
+    url = "https://github.com/googlefonts/noto-emoji/raw/main/fonts/NotoColorEmoji.ttf"
     try:
         os.makedirs(font_dir, exist_ok=True)
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=30) as resp:
             data = resp.read()
         with open(font_path, "wb") as f:
             f.write(data)
         return font_path
     except Exception as e:
-        print(f"[EMOJI FONT] No se pudo descargar NotoEmoji: {e}")
+        print(f"[EMOJI FONT] No se pudo descargar NotoColorEmoji: {e}")
         return None
 
 def _load_emoji_font(size):
-    """Carga NotoEmoji descargada o busca una fuente del sistema con emojis."""
-    font_path = os.path.join(DATA_DIR, "fonts", "NotoEmoji-Regular.ttf")
+    """Carga NotoColorEmoji descargada o busca una del sistema."""
+    font_path = os.path.join(DATA_DIR, "fonts", "NotoColorEmoji.ttf")
     if os.path.exists(font_path):
         try:
             return pygame.font.Font(font_path, size)
         except Exception:
             pass
-    candidates = [
-        "Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji",
-        "Noto Emoji", "Noto Sans Symbols2", "DejaVu Sans",
-    ]
-    for name in candidates:
+    for name in ["Noto Color Emoji", "Segoe UI Emoji", "Apple Color Emoji",
+                 "Noto Emoji", "Noto Sans Symbols2", "DejaVu Sans"]:
         try:
             path = pygame.font.match_font(name)
             if path:
@@ -2938,17 +2935,17 @@ def _load_emoji_font(size):
 
 threading.Thread(target=_download_noto_emoji, daemon=True).start()
 
-FUENTE_EMOJI = _load_emoji_font(18)
+FUENTE_EMOJI = _load_emoji_font(22)
 
 _emoji_font_checked = False
 def _get_emoji_font():
-    """Devuelve FUENTE_EMOJI, recargándola si NotoEmoji ya se ha descargado."""
+    """Recarga FUENTE_EMOJI si NotoColorEmoji ya se descargó."""
     global FUENTE_EMOJI, _emoji_font_checked
     if not _emoji_font_checked:
-        font_path = os.path.join(DATA_DIR, "fonts", "NotoEmoji-Regular.ttf")
-        if os.path.exists(font_path):
+        fp = os.path.join(DATA_DIR, "fonts", "NotoColorEmoji.ttf")
+        if os.path.exists(fp):
             try:
-                FUENTE_EMOJI = pygame.font.Font(font_path, 18)
+                FUENTE_EMOJI = pygame.font.Font(fp, 22)
             except Exception:
                 pass
             _emoji_font_checked = True
@@ -4076,16 +4073,16 @@ while True:
     mute_hovered = MUTE_BTN.collidepoint(mouse_pos)
     if music_muted:
         mute_bg = (120, 30, 30) if not mute_hovered else (160, 50, 50)
-        mute_label = "🔇"
+        mute_label = "\u266a\u2715"
     else:
         mute_bg = (40, 80, 40) if not mute_hovered else (60, 120, 60)
-        mute_label = "🔊"
+        mute_label = "\u266a"
     pygame.draw.rect(VENTANA, mute_bg, MUTE_BTN, border_radius=6)
     pygame.draw.rect(VENTANA, NEGRO, MUTE_BTN, 1, border_radius=6)
     try:
-        mute_surf = _get_emoji_font().render(mute_label, True, BLANCO)
+        mute_surf = FUENTE_PEQUENA.render(mute_label, True, BLANCO)
     except Exception:
-        mute_surf = FUENTE_PEQUENA.render("M" if not music_muted else "X", True, BLANCO)
+        mute_surf = FUENTE_PEQUENA.render("M" if music_muted else "\u266a", True, BLANCO)
     VENTANA.blit(mute_surf, (MUTE_BTN.centerx-mute_surf.get_width()//2,
                               MUTE_BTN.centery-mute_surf.get_height()//2))
 
