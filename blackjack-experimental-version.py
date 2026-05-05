@@ -44,6 +44,7 @@ pygame.mixer.init()
 VERSION = "0.3.0"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=blackjack-experimental-version.py&per_page=1"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/blackjack-experimental-version.py"
 _COMMIT_SHA_FILE = os.path.join(_get_data_dir(), '.last_commit_sha')
 
 _IMAGE_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/"
@@ -2059,17 +2060,18 @@ def _check_for_updates():
     import tempfile, time, json
     tmp_path = None
     try:
+
+        api_url = GITHUB_API_URL + f"&_ts={int(time.time())}"
         api_req = urllib.request.Request(
-            GITHUB_API_URL,
+            api_url,
             headers={
-                "User-Agent": "blackjack-updater/1.0",
-                "Accept":     "application/vnd.github.v3+json",
+                "User-Agent":    "blackjack-updater/1.0",
+                "Accept":        "application/vnd.github.v3+json",
                 "Cache-Control": "no-cache, no-store",
-                "Pragma":     "no-cache",
+                "Pragma":        "no-cache",
             }
         )
-        api_res   = urllib.request.urlopen(api_req, timeout=12)
-        commits   = json.loads(api_res.read())
+        commits    = json.loads(urllib.request.urlopen(api_req, timeout=12).read())
         if not commits:
             update_status = "error"; update_msg = "Sin respuesta de GitHub API"
             update_notif_time = pygame.time.get_ticks(); return
@@ -2087,10 +2089,10 @@ def _check_for_updates():
             update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
             update_notif_time = pygame.time.get_ticks(); return
 
-        raw_url = GITHUB_RAW_URL + f"?sha={latest_sha[:8]}"   
+        raw_url = GITHUB_RAW_BASE.format(sha=latest_sha)
         raw_req = urllib.request.Request(
             raw_url,
-            headers={"Cache-Control": "no-cache", "Pragma": "no-cache", "User-Agent": "Mozilla/5.0"}
+            headers={"User-Agent": "Mozilla/5.0", "Cache-Control": "no-cache"}
         )
         remote_data = urllib.request.urlopen(raw_req, timeout=20).read()
 
@@ -2104,10 +2106,9 @@ def _check_for_updates():
         if sha_remote is None:
             update_status = "error"; update_msg = "No se pudo calcular hash remoto"
         elif sha_local == sha_remote:
-            if latest_sha:
-                try:
-                    with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
-                except Exception: pass
+            try:
+                with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
+            except Exception: pass
             update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
         else:
             try:
@@ -2116,20 +2117,22 @@ def _check_for_updates():
                     _src = f.read()
                 _ast.parse(_src)
             except SyntaxError as _se:
-                update_status = "error"; update_msg = f"Actualiz. con error sintaxis: línea {_se.lineno}"
+                update_status = "error"
+                update_msg = f"Actualiz. con error sintaxis: línea {_se.lineno}"
             except Exception as _e:
-                update_status = "error"; update_msg = f"No se pudo verificar actualiz.: {str(_e)[:35]}"
+                update_status = "error"
+                update_msg = f"No se pudo verificar actualiz.: {str(_e)[:35]}"
             else:
                 try:
                     shutil.copy2(tmp_path, local_path)
-                    if latest_sha:
-                        try:
-                            with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
-                        except Exception: pass
+                    try:
+                        with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
+                    except Exception: pass
                     update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
                     update_restart_time = pygame.time.get_ticks()
                 except Exception as e:
-                    update_status = "error"; update_msg = f"No se pudo escribir: {str(e)[:40]}"
+                    update_status = "error"
+                    update_msg = f"No se pudo escribir: {str(e)[:40]}"
     except Exception as e:
         update_status = "error"; update_msg = f"Error: {str(e)[:55]}"
     finally:
@@ -2338,7 +2341,7 @@ he_ai_raised_this_round = False
 he_ai_raise_amount      = 0      
 _HE_ANNOUNCE_MS         = 650
 
-he_deal_queue      = []  
+he_deal_queue      = []   
 he_deal_next_time  = 0    
 he_dealing         = False  
 _HE_DECIDE_MS           = 900
@@ -2614,7 +2617,7 @@ def he_start_hand(now):
     he_pot = he_blind * 6
     he_street_bet = 0
     he_dealing = True
-    he_deal_next_time = now + 80   
+    he_deal_next_time = now + 80  
     he_state = 'dealing_preflop'
 
 def _he_dealer_act(raise_amount=0):
