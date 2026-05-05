@@ -41,7 +41,7 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 
 _IMAGE_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/"
