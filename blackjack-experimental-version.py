@@ -1798,27 +1798,6 @@ game_mode         = 'story'
 story_scenes_data = INTRO_SCENES
 story_scene_idx   = 0
 story_line_idx    = 0
-
-    return [
-        {
-            'bg': 'table', 'chars': [('victor', ANCHO//2+210, 730)], 'counter': False,
-            'scene_image': 'victor5',
-            'lines': table_lines,
-        },
-        {
-            'bg': 'street', 'chars': [], 'counter': False,
-            'scene_image': 'segurata-pierdes',
-            'lines': street_lines,
-        },
-    ]
-
-
-app_state         = 'main_menu'
-game_mode         = 'story'     
-story_scenes_data = INTRO_SCENES
-story_scene_idx   = 0
-story_line_idx    = 0
-epic_win_triggered = False
 epic_win_triggered = False
 main_menu_hovered = -1
 
@@ -2092,12 +2071,23 @@ def _check_for_updates():
         elif sha_local == sha_remote:
             update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
         else:
+            # Verificar sintaxis antes de aplicar la actualización
             try:
-                shutil.copy2(tmp_path, local_path)
-                update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
-                update_restart_time = pygame.time.get_ticks()
-            except Exception as e:
-                update_status = "error"; update_msg = f"No se pudo escribir: {str(e)[:40]}"
+                import ast as _ast
+                with open(tmp_path, 'r', encoding='utf-8', errors='replace') as f:
+                    _src = f.read()
+                _ast.parse(_src)
+            except SyntaxError as _se:
+                update_status = "error"; update_msg = f"Actualiz. con error sintaxis: línea {_se.lineno}"
+            except Exception as _e:
+                update_status = "error"; update_msg = f"No se pudo verificar actualiz.: {str(_e)[:35]}"
+            else:
+                try:
+                    shutil.copy2(tmp_path, local_path)
+                    update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
+                    update_restart_time = pygame.time.get_ticks()
+                except Exception as e:
+                    update_status = "error"; update_msg = f"No se pudo escribir: {str(e)[:40]}"
     except Exception as e:
         update_status = "error"; update_msg = f"Error: {str(e)[:55]}"
     finally:
@@ -2306,9 +2296,10 @@ he_ai_raised_this_round = False
 he_ai_raise_amount      = 0      
 _HE_ANNOUNCE_MS         = 650
 
-he_deal_queue      = []   
-he_deal_next_time  = 0    
-he_dealing         = False  
+# --- Cola de reparto secuencial ---
+he_deal_queue      = []   # lista de callables pendientes
+he_deal_next_time  = 0    # ticks para el próximo reparto
+he_dealing         = False  # True mientras se está repartiendo
 _HE_DECIDE_MS           = 900
 
 def _he_ai_compute_action(ai_idx):
@@ -2424,6 +2415,7 @@ def _he_process_deal_queue(now):
     global he_deal_queue, he_deal_next_time, he_dealing, he_state
     if not he_dealing or not he_deal_queue:
         if he_dealing and not he_deal_queue:
+            # Cola vacía → pasar al estado definitivo
             he_dealing = False
             if he_state == 'dealing_preflop':
                 he_state = 'pre_flop'
@@ -2434,9 +2426,11 @@ def _he_process_deal_queue(now):
         action = he_deal_queue.pop(0)
         action()
         if he_deal_queue:
+            # Delay entre cartas: 500 ms para el flop, 130 ms para el reparto inicial
             delay = 500 if he_state == 'dealing_flop' else 130
             he_deal_next_time = now + delay
         else:
+            # Última carta de la cola
             he_dealing = False
             if he_state == 'dealing_preflop':
                 he_state = 'pre_flop'
@@ -2561,17 +2555,21 @@ def he_start_hand(now):
     global he_ai_raised_this_round, he_ai_raise_amount
     he_ai_raised_this_round = False; he_ai_raise_amount = 0
 
+    # Manos vacías hasta que llegue cada carta
     he_player_cards = []
     he_dealer_cards = []
     he_ai_cards = [[], [], [], []]
 
     px = [_he_card_x(i, 2) for i in range(2)]
 
+    # Construir cola: 2 vueltas × (jugador + 4 AIs) = 10 cartas en orden
     deal_steps = []
     for round_i in range(2):
+        # Carta al jugador humano
         def _deal_player(ri=round_i, _px=px):
             he_player_cards.append(_he_deal_card(he_deck, _px[ri], HE_PLAYER_Y))
         deal_steps.append(_deal_player)
+        # Carta a cada AI en orden
         for ai_i, (ax, ay) in enumerate(HE_AI_POSITIONS):
             x_pos = ax + (HE_AI_CARD_GAP if round_i == 1 else 0)
             def _deal_ai(ai=ai_i, axx=x_pos, ayy=ay):
@@ -2582,7 +2580,7 @@ def he_start_hand(now):
     he_pot = he_blind * 6
     he_street_bet = 0
     he_dealing = True
-    he_deal_next_time = now + 80   
+    he_deal_next_time = now + 80   # pequeño delay antes de la primera carta
     he_state = 'dealing_preflop'
 
 def _he_dealer_act(raise_amount=0):
@@ -3501,6 +3499,7 @@ while True:
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_r:
                     he_reiniciar(); continue
+                # Ignorar inputs durante animación de reparto
                 if he_state in ('dealing_preflop', 'dealing_flop'):
                     continue
                 if he_state == 'betting':
