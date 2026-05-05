@@ -41,8 +41,11 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "1.2.0"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
+VERSION = "1.2.1"
+GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
+GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=blackjack-experimental-version.py&per_page=1"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/blackjack-experimental-version.py"
+_COMMIT_SHA_FILE = os.path.join(_get_data_dir(), '.last_commit_sha')
 
 _IMAGE_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/"
 _IMAGE_FILES = {
@@ -2054,29 +2057,82 @@ def _sha256(path):
 
 def _check_for_updates():
     global update_status, update_msg, update_notif_time, update_restart_time
-    import tempfile, time
+    import tempfile, time, json
     tmp_path = None
     try:
-        url = GITHUB_RAW_URL + f"?nocache={int(time.time())}"
-        req = urllib.request.Request(url, headers={"Cache-Control":"no-cache","Pragma":"no-cache"})
-        res = urllib.request.urlopen(req, timeout=15)
-        remote_data = res.read()
+
+        api_url = GITHUB_API_URL + f"&_ts={int(time.time())}"
+        api_req = urllib.request.Request(
+            api_url,
+            headers={
+                "User-Agent":    "blackjack-updater/1.0",
+                "Accept":        "application/vnd.github.v3+json",
+                "Cache-Control": "no-cache, no-store",
+                "Pragma":        "no-cache",
+            }
+        )
+        commits    = json.loads(urllib.request.urlopen(api_req, timeout=12).read())
+        if not commits:
+            update_status = "error"; update_msg = "Sin respuesta de GitHub API"
+            update_notif_time = pygame.time.get_ticks(); return
+        latest_sha = commits[0].get('sha', '')
+
+        saved_sha = ''
+        if os.path.exists(_COMMIT_SHA_FILE):
+            try:
+                with open(_COMMIT_SHA_FILE, 'r') as f:
+                    saved_sha = f.read().strip()
+            except Exception:
+                pass
+
+        if latest_sha and latest_sha == saved_sha:
+            update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
+            update_notif_time = pygame.time.get_ticks(); return
+
+        raw_url = GITHUB_RAW_BASE.format(sha=latest_sha)
+        raw_req = urllib.request.Request(
+            raw_url,
+            headers={"User-Agent": "Mozilla/5.0", "Cache-Control": "no-cache"}
+        )
+        remote_data = urllib.request.urlopen(raw_req, timeout=20).read()
+
         fd, tmp_path = tempfile.mkstemp(suffix=".py")
-        with os.fdopen(fd,"wb") as f: f.write(remote_data)
+        with os.fdopen(fd, "wb") as f: f.write(remote_data)
+
         local_path = _SCRIPT_PATH
         sha_local  = _sha256(local_path)
         sha_remote = _sha256(tmp_path)
+
         if sha_remote is None:
             update_status = "error"; update_msg = "No se pudo calcular hash remoto"
         elif sha_local == sha_remote:
+            try:
+                with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
+            except Exception: pass
             update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
         else:
             try:
-                shutil.copy2(tmp_path, local_path)
-                update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
-                update_restart_time = pygame.time.get_ticks()
-            except Exception as e:
-                update_status = "error"; update_msg = f"No se pudo escribir: {str(e)[:40]}"
+                import ast as _ast
+                with open(tmp_path, 'r', encoding='utf-8', errors='replace') as f:
+                    _src = f.read()
+                _ast.parse(_src)
+            except SyntaxError as _se:
+                update_status = "error"
+                update_msg = f"Actualiz. con error sintaxis: línea {_se.lineno}"
+            except Exception as _e:
+                update_status = "error"
+                update_msg = f"No se pudo verificar actualiz.: {str(_e)[:35]}"
+            else:
+                try:
+                    shutil.copy2(tmp_path, local_path)
+                    try:
+                        with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
+                    except Exception: pass
+                    update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
+                    update_restart_time = pygame.time.get_ticks()
+                except Exception as e:
+                    update_status = "error"
+                    update_msg = f"No se pudo escribir: {str(e)[:40]}"
     except Exception as e:
         update_status = "error"; update_msg = f"Error: {str(e)[:55]}"
     finally:
@@ -2275,14 +2331,6 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
-he_preflop_deal_step     = 0    
-he_preflop_deal_timer    = 0    
-he_preflop_deal_interval = 220  
-
-he_flop_deal_step  = 0
-he_flop_deal_timer = 0
-HE_FLOP_INTERVAL   = 500     
-
 he_ai_turn_active       = False
 he_ai_turn_idx          = 0
 he_ai_turn_phase        = 'announcing'  
@@ -2292,6 +2340,10 @@ he_ai_folded            = [False, False, False, False]
 he_ai_raised_this_round = False   
 he_ai_raise_amount      = 0      
 _HE_ANNOUNCE_MS         = 650
+
+he_deal_queue      = []   
+he_deal_next_time  = 0    
+he_dealing         = False  
 _HE_DECIDE_MS           = 900
 
 def _he_ai_compute_action(ai_idx):
@@ -2402,6 +2454,31 @@ def _he_update_ai_turns(now):
                 he_ai_turn_timer = now
 
 
+def _he_process_deal_queue(now):
+    """Procesa la cola de reparto secuencial. Llamar cada frame."""
+    global he_deal_queue, he_deal_next_time, he_dealing, he_state
+    if not he_dealing or not he_deal_queue:
+        if he_dealing and not he_deal_queue:
+            he_dealing = False
+            if he_state == 'dealing_preflop':
+                he_state = 'pre_flop'
+            elif he_state == 'dealing_flop':
+                he_state = 'flop'
+        return
+    if now >= he_deal_next_time:
+        action = he_deal_queue.pop(0)
+        action()
+        if he_deal_queue:
+            delay = 500 if he_state == 'dealing_flop' else 130
+            he_deal_next_time = now + delay
+        else:
+            he_dealing = False
+            if he_state == 'dealing_preflop':
+                he_state = 'pre_flop'
+            elif he_state == 'dealing_flop':
+                he_state = 'flop'
+
+
 def _he_card_x(i, total, card_gap=None):
     g = card_gap or HE_CARD_GAP
     total_w = total * CARD_W + (total - 1) * (g - CARD_W)
@@ -2498,17 +2575,16 @@ def he_reiniciar():
     he_ai_actions = []; he_ai_folded = [False, False, False, False]
     global he_ai_raised_this_round, he_ai_raise_amount
     he_ai_raised_this_round = False; he_ai_raise_amount = 0
-    global he_preflop_deal_step, he_preflop_deal_timer, he_flop_deal_step, he_flop_deal_timer
-    he_preflop_deal_step = 0; he_preflop_deal_timer = 0
-    he_flop_deal_step = 0; he_flop_deal_timer = 0
+    global he_deal_queue, he_deal_next_time, he_dealing
+    he_deal_queue = []; he_deal_next_time = 0; he_dealing = False
 
 def he_start_hand(now):
-    """Inicia el reparto secuencial pre-flop: una carta a cada jugador por turno."""
+    """Deal pre-flop de forma secuencial: 1 carta a cada jugador en orden, luego la 2ª vuelta."""
     global he_state, he_pot, he_street_bet, he_deck
     global he_player_cards, he_dealer_cards, he_community_cards
     global he_mensaje, he_player_hand_name, he_dealer_hand_name, he_winner
     global he_in_raise, he_raise_input, he_ai_cards, he_ai_hand_names, he_ai_winner
-    global he_preflop_deal_step, he_preflop_deal_timer
+    global he_deal_queue, he_deal_next_time, he_dealing
     he_deck = crear_baraja()
     he_community_cards = []
     he_mensaje = ""; he_player_hand_name = ""; he_dealer_hand_name = ""; he_winner = ""
@@ -2521,48 +2597,28 @@ def he_start_hand(now):
     he_ai_raised_this_round = False; he_ai_raise_amount = 0
 
     he_player_cards = []
-    he_ai_cards = [[], [], [], []]
     he_dealer_cards = []
+    he_ai_cards = [[], [], [], []]
 
+    px = [_he_card_x(i, 2) for i in range(2)]
+
+    deal_steps = []
+    for round_i in range(2):
+        def _deal_player(ri=round_i, _px=px):
+            he_player_cards.append(_he_deal_card(he_deck, _px[ri], HE_PLAYER_Y))
+        deal_steps.append(_deal_player)
+        for ai_i, (ax, ay) in enumerate(HE_AI_POSITIONS):
+            x_pos = ax + (HE_AI_CARD_GAP if round_i == 1 else 0)
+            def _deal_ai(ai=ai_i, axx=x_pos, ayy=ay):
+                he_ai_cards[ai].append(_he_deal_card(he_deck, axx, ayy, face_down=True))
+            deal_steps.append(_deal_ai)
+
+    he_deal_queue = deal_steps
     he_pot = he_blind * 6
     he_street_bet = 0
-    he_preflop_deal_step  = 0
-    he_preflop_deal_timer = now
+    he_dealing = True
+    he_deal_next_time = now + 80  
     he_state = 'dealing_preflop'
-
-
-def _he_update_preflop_deal(now):
-    """Reparte una carta por jugador en orden, dos rondas completas (10 pasos total)."""
-    global he_preflop_deal_step, he_preflop_deal_timer, he_state
-    global he_player_cards, he_ai_cards
-
-    if now - he_preflop_deal_timer < he_preflop_deal_interval:
-        return  # aún no toca la siguiente carta
-
-    step = he_preflop_deal_step
-    # Orden: AI0, AI1, AI2, AI3, Jugador  ×2 rondas  = 10 pasos (0-9)
-    if step < 10:
-        ronda = step // 5       # 0 = primera carta, 1 = segunda carta
-        pos   = step % 5        # 0-3 = AI, 4 = jugador
-
-        if pos < 4:
-            ai_i = pos
-            ax, ay = HE_AI_POSITIONS[ai_i]
-            x_dest = ax if ronda == 0 else ax + HE_AI_CARD_GAP
-            carta = _he_deal_card(he_deck, x_dest, ay, face_down=True)
-            he_ai_cards[ai_i].append(carta)
-        else:
-            # Carta al jugador humano
-            px = _he_card_x(ronda, 2)
-            carta = _he_deal_card(he_deck, px, HE_PLAYER_Y)
-            he_player_cards.append(carta)
-
-        he_preflop_deal_step  += 1
-        he_preflop_deal_timer  = now
-
-    if he_preflop_deal_step >= 10:
-        # Reparto completo → entrar en fase pre_flop
-        he_state = 'pre_flop'
 
 def _he_dealer_act(raise_amount=0):
     """Simple dealer bot: always calls any raise."""
@@ -2571,29 +2627,18 @@ def _he_dealer_act(raise_amount=0):
         he_pot += raise_amount  
 
 def he_do_flop(now):
-    """Inicia el reparto animado del flop (3 cartas con 500 ms entre cada una)."""
-    global he_state, he_flop_deal_step, he_flop_deal_timer
-    he_flop_deal_step  = 0
-    he_flop_deal_timer = now
-    he_state = 'dealing_flop'
-
-
-def _he_update_flop_deal(now):
-    """Reparte las 3 cartas del flop de una en una, con HE_FLOP_INTERVAL ms de separación."""
-    global he_community_cards, he_state, he_flop_deal_step, he_flop_deal_timer
-
-    if now - he_flop_deal_timer < HE_FLOP_INTERVAL:
-        return  # aún no toca
-
-    if he_flop_deal_step < 3:
-        i  = he_flop_deal_step
+    global he_community_cards, he_state
+    global he_deal_queue, he_deal_next_time, he_dealing
+    deal_steps = []
+    for i in range(3):
         cx = _he_card_x(i, 5)
-        he_community_cards.append(_he_deal_card(he_deck, cx, HE_COMMUNITY_Y))
-        he_flop_deal_step  += 1
-        he_flop_deal_timer  = now
-
-    if he_flop_deal_step >= 3:
-        he_state = 'flop'
+        def _deal_flop_card(cx=cx):
+            he_community_cards.append(_he_deal_card(he_deck, cx, HE_COMMUNITY_Y))
+        deal_steps.append(_deal_flop_card)
+    he_deal_queue = deal_steps
+    he_dealing = True
+    he_deal_next_time = now + 80
+    he_state = 'dealing_flop'
 
 def he_do_turn(now):
     global he_community_cards, he_state
@@ -2862,23 +2907,17 @@ def _render_poker(now):
         hint = FUENTE_INSTR.render("ENTER para repartir · Todos postean la ciega · Máx "+str(BET_MAX_HOLDEM), True, (160,160,160))
         VENTANA.blit(hint, (bx + (box_w - hint.get_width())//2, y_o + lh*2 + 4))
 
-    elif he_state in ('pre_flop', 'flop', 'turn', 'river', 'dealing_preflop', 'dealing_flop'):
-        street_labels = {'pre_flop': 'PRE-FLOP', 'flop': 'FLOP', 'turn': 'TURN', 'river': 'RIVER',
-                         'dealing_preflop': 'PRE-FLOP', 'dealing_flop': 'FLOP'}
+    elif he_state in ('dealing_preflop', 'dealing_flop'):
+        dots = '.' * ((now // 300) % 4)
+        deal_s = FUENTE_PEQUENA.render("Repartiendo" + dots, True, (220, 200, 120))
+        VENTANA.blit(deal_s, (bx + (box_w - deal_s.get_width()) // 2, y_o + lh))
+
+    elif he_state in ('pre_flop', 'flop', 'turn', 'river'):
+        street_labels = {'pre_flop': 'PRE-FLOP', 'flop': 'FLOP', 'turn': 'TURN', 'river': 'RIVER'}
         sl = FUENTE_PEQUENA.render(street_labels.get(he_state,''), True, (220, 200, 120))
         VENTANA.blit(sl, (bx + pad, y_o + lh))
 
-        if he_state in ('dealing_preflop', 'dealing_flop'):
-            dealing_txt = "Repartiendo cartas..." if he_state == 'dealing_preflop' else "Repartiendo flop..."
-            d_surf = FUENTE_MSG.render(dealing_txt, True, (200, 220, 160))
-            d_bg = pygame.Surface((d_surf.get_width() + 40, d_surf.get_height() + 16), pygame.SRCALPHA)
-            d_bg.fill((0, 0, 0, 200))
-            dx2 = ANCHO // 2 - d_bg.get_width() // 2
-            dy2 = by - d_bg.get_height() - 12
-            VENTANA.blit(d_bg, (dx2, dy2))
-            pygame.draw.rect(VENTANA, DORADO, (dx2, dy2, d_bg.get_width(), d_bg.get_height()), 2, border_radius=10)
-            VENTANA.blit(d_surf, (dx2 + 20, dy2 + 8))
-        elif he_ai_turn_active:
+        if he_ai_turn_active:
             cur_name = HE_AI_NAMES[he_ai_turn_idx] if he_ai_turn_idx < len(HE_AI_NAMES) else ""
             if he_ai_turn_phase == 'announcing':
                 turn_txt = f"▶  Le toca a  {cur_name}"
@@ -3497,6 +3536,8 @@ while True:
             if evento.type == pygame.KEYDOWN:
                 if evento.key == pygame.K_r:
                     he_reiniciar(); continue
+                if he_state in ('dealing_preflop', 'dealing_flop'):
+                    continue
                 if he_state == 'betting':
                     if evento.key == pygame.K_BACKSPACE:
                         he_blind_input = he_blind_input[:-1]
@@ -3737,11 +3778,8 @@ while True:
     if app_state == 'poker' and he_ai_turn_active:
         _he_update_ai_turns(now)
 
-    if app_state == 'poker' and he_state == 'dealing_preflop':
-        _he_update_preflop_deal(now)
-
-    if app_state == 'poker' and he_state == 'dealing_flop':
-        _he_update_flop_deal(now)
+    if app_state == 'poker' and he_dealing:
+        _he_process_deal_queue(now)
 
     if app_state == 'poker':
         _render_poker(now)
