@@ -458,7 +458,7 @@ def draw_story_image(key, surf):
     surf.blit(scaled, (x, y))
 
 
-ANCHO, ALTO = 1920, 960
+ANCHO, ALTO = 1920, 1080
 
 _dinfo = pygame.display.Info()
 SCREEN_W = _dinfo.current_w
