@@ -463,20 +463,18 @@ ANCHO, ALTO = 1920, 960
 _dinfo = pygame.display.Info()
 SCREEN_W = _dinfo.current_w
 SCREEN_H = _dinfo.current_h
-VENTANA_REAL = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.FULLSCREEN)
+VENTANA_REAL = pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Blackjack – El Farol Rojo")
 
 VENTANA = pygame.Surface((ANCHO, ALTO))
 
 
 def to_logical(pos):
-    sx, sy = pos
-    return (int(sx * ANCHO / SCREEN_W), int(sy * ALTO / SCREEN_H))
+    return (int(pos[0]), int(pos[1]))
 
 
 def flip_display():
-    scaled = pygame.transform.scale(VENTANA, (SCREEN_W, SCREEN_H))
-    VENTANA_REAL.blit(scaled, (0, 0))
+    VENTANA_REAL.blit(VENTANA, (0, 0))
     pygame.display.flip()
 
 
@@ -3331,7 +3329,7 @@ def splash_screen():
     except Exception as e:
         print(f"[SPLASH] No se pudo cargar logo-kevin: {e}")
 
-    GAP          = 80                    
+    GAP          = 80                     
     max_h        = int(ALTO * 0.55)
     max_w_each   = int(ANCHO * 0.38)
 
