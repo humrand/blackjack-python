@@ -443,19 +443,26 @@ def preload_images(*keys):
     for k in keys:
         get_story_image(k)
 
+_story_scaled_cache = {}
+
 def draw_story_image(key, surf):
     """Dibuja la imagen de escena a pantalla completa."""
     img = get_story_image(key)
     if img is None:
         return
-    iw, ih = img.get_size()
-    scale  = max(ANCHO / iw, ALTO / ih)
-    new_w  = int(iw * scale)
-    new_h  = int(ih * scale)
-    scaled = pygame.transform.smoothscale(img, (new_w, new_h))
-    x = (ANCHO - new_w) // 2
-    y = (ALTO  - new_h) // 2
-    surf.blit(scaled, (x, y))
+    cache_key = (key, ANCHO, ALTO)
+    cached = _story_scaled_cache.get(cache_key)
+    if cached is None:
+        iw, ih = img.get_size()
+        scale  = max(ANCHO / iw, ALTO / ih)
+        new_w  = int(iw * scale)
+        new_h  = int(ih * scale)
+        scaled = pygame.transform.smoothscale(img, (new_w, new_h))
+        x = (ANCHO - new_w) // 2
+        y = (ALTO  - new_h) // 2
+        cached = (scaled, x, y)
+        _story_scaled_cache[cache_key] = cached
+    surf.blit(cached[0], (cached[1], cached[2]))
 
 
 ANCHO, ALTO = 1920, 1080
@@ -594,16 +601,25 @@ _RRNG = random_module.Random(7331)
 _RAIN = [(_RRNG.randint(0, ANCHO), _RRNG.randint(0, ALTO),
           _RRNG.uniform(200, 460), _RRNG.randint(12, 34))
          for _ in range(140)]
+_RAIN_SURF_CACHE = {}
+
+def _get_rain_surf(length, alpha):
+    key = (int(length), int(alpha))
+    surf = _RAIN_SURF_CACHE.get(key)
+    if surf is None:
+        surf = pygame.Surface((2, int(length)), pygame.SRCALPHA)
+        surf.fill((160, 195, 235, int(alpha)))
+        _RAIN_SURF_CACHE[key] = surf
+    return surf
 
 
 def draw_rain(surf, now, alpha=100):
     t = now / 1000.0
+    alpha = int(alpha)
     for bx, by, sp, ln in _RAIN:
         y = (by + t * sp) % (ALTO + 60)
         x = int(bx + y * 0.17) % ANCHO
-        s = pygame.Surface((2, ln), pygame.SRCALPHA)
-        s.fill((160, 195, 235, alpha))
-        surf.blit(s, (x, int(y)))
+        surf.blit(_get_rain_surf(ln, alpha), (x, int(y)))
 
 
 class Carta:
@@ -621,8 +637,10 @@ class Carta:
         self.front = None; self.back = None; self.flip_target_back = False
         self.scale = 1.0; self.target_scale = 1.0; self.scale_speed = 0.22
         self.hover_glow = 0.0
-        self._front_from_img = False  
-        self._back_from_img  = False  
+        self._front_from_img = False
+        self._back_from_img = False
+        self._scaled_cache = {}
+        self._flip_cache = {}
         self._create_faces()
 
     def _create_faces(self):
@@ -648,8 +666,7 @@ class Carta:
                 sym_surf = SYMBOL_FONT.render(SUIT_CHAR.get(self.palo,'?'), True, self.color)
             surf.blit(sym_surf, ((self.w-sym_surf.get_width())//2, (self.h-sym_surf.get_height())//2-6))
         except Exception:
-            simple = FUENTE_GRANDE.render(self.valor, True, self.color) if self.valor in FACE_SYMBOL_MAP \
-                     else FUENTE_PEQUENA.render(self.palo, True, self.color)
+            simple = FUENTE_GRANDE.render(self.valor, True, self.color) if self.valor in FACE_SYMBOL_MAP                      else FUENTE_PEQUENA.render(self.palo, True, self.color)
             surf.blit(simple, ((self.w-simple.get_width())//2, (self.h-simple.get_height())//2))
         return surf
 
@@ -665,6 +682,19 @@ class Carta:
             for j in range(12, self.h-12, 24):
                 pygame.draw.circle(surf, (220,70,70), (i,j), 5)
         return surf
+
+    def _scaled_face(self, face_name, surf):
+        key = (face_name, int(round(self.scale * 1000)))
+        cached = self._scaled_cache.get(key)
+        if cached is None:
+            nw = max(1, int(self.w * self.scale))
+            nh = max(1, int(self.h * self.scale))
+            if nw == self.w and nh == self.h:
+                cached = surf
+            else:
+                cached = pygame.transform.smoothscale(surf, (nw, nh))
+            self._scaled_cache[key] = cached
+        return cached
 
     def start_flip(self, now, to_back=False):
         if not self.flipping:
@@ -700,8 +730,8 @@ class Carta:
         rx, ry = int(self.x), int(self.y)
         if not self.flipping:
             surf_to_blit = self.back if self.oculta else self.front
-            nw = max(1, int(self.w * self.scale)); nh = max(1, int(self.h * self.scale))
-            scaled = pygame.transform.smoothscale(surf_to_blit, (nw, nh))
+            scaled = self._scaled_face('back' if self.oculta else 'front', surf_to_blit)
+            nw, nh = scaled.get_size()
             bx = rx-(nw-self.w)//2; by = ry-(nh-self.h)//2
             if self.hover_glow > 0.02:
                 alpha = int(self.hover_glow * 180)
@@ -711,24 +741,34 @@ class Carta:
                 VENTANA.blit(glow_surf, (bx-4, by-4))
             VENTANA.blit(scaled, (bx, by))
             return
+
         progreso = (now - self.flip_start) / self.flip_duration
         if progreso >= 1:
             self.flipping = False; self.oculta = bool(self.flip_target_back)
             surf_to_blit = self.back if self.oculta else self.front
-            nw = max(1, int(self.w*self.scale)); nh = max(1, int(self.h*self.scale))
-            scaled = pygame.transform.smoothscale(surf_to_blit, (nw, nh))
-            VENTANA.blit(scaled, (rx-(nw-self.w)//2, ry-(nh-self.h)//2)); return
+            scaled = self._scaled_face('back' if self.oculta else 'front', surf_to_blit)
+            nw, nh = scaled.get_size()
+            VENTANA.blit(scaled, (rx-(nw-self.w)//2, ry-(nh-self.h)//2))
+            return
+
         if self.flip_target_back:
             escala = (1-progreso*2) if progreso < 0.5 else ((progreso-0.5)*2)
             surf = self.front if progreso < 0.5 else self.back
+            face_name = 'front' if progreso < 0.5 else 'back'
         else:
             escala = (1-progreso*2) if progreso < 0.5 else ((progreso-0.5)*2)
             surf = self.back if progreso < 0.5 else self.front
-        ancho = max(1, int(self.w*escala)); h_final = max(1, int(self.h*self.scale))
-        scaled = pygame.transform.smoothscale(surf, (ancho, h_final))
+            face_name = 'back' if progreso < 0.5 else 'front'
+
+        ancho = max(1, int(self.w * escala))
+        h_final = max(1, int(self.h * self.scale))
+        scale_key = (face_name, ancho, h_final)
+        scaled = self._flip_cache.get(scale_key)
+        if scaled is None:
+            scaled = pygame.transform.smoothscale(surf, (ancho, h_final))
+            self._flip_cache[scale_key] = scaled
         x_blit = rx + (self.w-ancho)//2 - ((int(self.w*self.scale)-self.w)//2)
         VENTANA.blit(scaled, (x_blit, ry-(h_final-self.h)//2))
-
 
 def get_chip_style(value):
     v = int(value)
@@ -3861,12 +3901,17 @@ while True:
     style = TABLE_STYLES[TABLE_STYLE_IDX]
     _mesa_img = _image_cache.get('mesa')
     if _mesa_img is not None:
-        mw, mh = _mesa_img.get_size()
-        scale_m = max(ANCHO / mw, ALTO / mh)
-        ms_w = int(mw * scale_m); ms_h = int(mh * scale_m)
-        mesa_scaled = pygame.transform.smoothscale(_mesa_img, (ms_w, ms_h))
-        mx = (ANCHO - ms_w) // 2; my = (ALTO - ms_h) // 2
-        VENTANA.blit(mesa_scaled, (mx, my))
+        mesa_key = ('mesa', ANCHO, ALTO)
+        cached = _story_scaled_cache.get(mesa_key)
+        if cached is None:
+            mw, mh = _mesa_img.get_size()
+            scale_m = max(ANCHO / mw, ALTO / mh)
+            ms_w = int(mw * scale_m); ms_h = int(mh * scale_m)
+            mesa_scaled = pygame.transform.smoothscale(_mesa_img, (ms_w, ms_h))
+            mx = (ANCHO - ms_w) // 2; my = (ALTO - ms_h) // 2
+            cached = (mesa_scaled, mx, my)
+            _story_scaled_cache[mesa_key] = cached
+        VENTANA.blit(cached[0], (cached[1], cached[2]))
     else:
         VENTANA.fill(style['color'])
         get_story_image('mesa')  
