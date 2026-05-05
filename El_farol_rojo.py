@@ -41,7 +41,7 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "1.3.2"
+VERSION = "1.3.3"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
@@ -3448,86 +3448,175 @@ def splash_screen():
         RELOJ.tick(60)
 
 
+def _loading_error_dialog(failed_name):
+    """Muestra un diálogo de error de descarga con 3 opciones.
+    Devuelve: 'continue', 'retry' o 'quit'."""
+    FUENTE_ERR_TITLE = pygame.font.SysFont("arial", 38, bold=True)
+    FUENTE_ERR_SUB   = pygame.font.SysFont("arial", 24)
+    FUENTE_BTN       = pygame.font.SysFont("arial", 26, bold=True)
+
+    BTN_CONTINUE = pygame.Rect(ANCHO//2 - 380, ALTO//2 + 30,  740, 58)
+    BTN_RETRY    = pygame.Rect(ANCHO//2 - 180, ALTO//2 + 104, 360, 58)
+    BTN_QUIT     = pygame.Rect(ANCHO//2 - 180, ALTO//2 + 176, 360, 58)
+
+    clock_err = pygame.time.Clock()
+    while True:
+        mouse_pos = to_logical(pygame.mouse.get_pos())
+
+        for ev in pygame.event.get():
+            if ev.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            if ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
+                pos = to_logical(ev.pos)
+                if BTN_CONTINUE.collidepoint(pos):
+                    return 'continue'
+                if BTN_RETRY.collidepoint(pos):
+                    return 'retry'
+                if BTN_QUIT.collidepoint(pos):
+                    return 'quit'
+
+        overlay = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 200))
+        VENTANA.blit(overlay, (0, 0))
+
+        box_w, box_h = 860, 320
+        box_x = ANCHO//2 - box_w//2
+        box_y = ALTO//2  - box_h//2 - 20
+        pygame.draw.rect(VENTANA, (22, 12, 8),  (box_x, box_y, box_w, box_h), border_radius=14)
+        pygame.draw.rect(VENTANA, (160, 40, 30),(box_x, box_y, box_w, box_h), 3, border_radius=14)
+
+        title_s = FUENTE_ERR_TITLE.render("⚠  Error de descarga", True, (230, 80, 60))
+        VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, box_y + 22))
+
+        sub_s = FUENTE_ERR_SUB.render(f"No se pudo descargar: {failed_name}", True, (200, 185, 170))
+        VENTANA.blit(sub_s, (ANCHO//2 - sub_s.get_width()//2, box_y + 74))
+        sub2  = FUENTE_ERR_SUB.render("Comprueba tu conexión a internet e inténtalo de nuevo.", True, (160, 150, 140))
+        VENTANA.blit(sub2, (ANCHO//2 - sub2.get_width()//2, box_y + 104))
+
+        c_hov = BTN_CONTINUE.collidepoint(mouse_pos)
+        c_col = (80, 55, 20) if c_hov else (55, 38, 12)
+        pygame.draw.rect(VENTANA, c_col, BTN_CONTINUE, border_radius=10)
+        pygame.draw.rect(VENTANA, DORADO, BTN_CONTINUE, 2, border_radius=10)
+        c_txt = FUENTE_BTN.render("Continuar  (puede arruinar la experiencia)", True, DORADO)
+        VENTANA.blit(c_txt, (BTN_CONTINUE.centerx - c_txt.get_width()//2,
+                              BTN_CONTINUE.centery - c_txt.get_height()//2))
+
+        r_hov = BTN_RETRY.collidepoint(mouse_pos)
+        r_col = (20, 70, 140) if r_hov else (14, 48, 100)
+        pygame.draw.rect(VENTANA, r_col, BTN_RETRY, border_radius=10)
+        pygame.draw.rect(VENTANA, (100, 160, 240), BTN_RETRY, 2, border_radius=10)
+        r_txt = FUENTE_BTN.render("Reintentar", True, (180, 220, 255))
+        VENTANA.blit(r_txt, (BTN_RETRY.centerx - r_txt.get_width()//2,
+                              BTN_RETRY.centery - r_txt.get_height()//2))
+
+        q_hov = BTN_QUIT.collidepoint(mouse_pos)
+        q_col = (100, 18, 18) if q_hov else (68, 12, 12)
+        pygame.draw.rect(VENTANA, q_col, BTN_QUIT, border_radius=10)
+        pygame.draw.rect(VENTANA, (200, 50, 50), BTN_QUIT, 2, border_radius=10)
+        q_txt = FUENTE_BTN.render("Cerrar juego", True, (255, 140, 140))
+        VENTANA.blit(q_txt, (BTN_QUIT.centerx - q_txt.get_width()//2,
+                              BTN_QUIT.centery - q_txt.get_height()//2))
+
+        flip_display()
+        clock_err.tick(60)
+
+
 def loading_screen():
     """Descarga todos los assets de GitHub mostrando progreso."""
     os.makedirs(os.path.join('imagenes', 'cards'), exist_ok=True)
     os.makedirs('music', exist_ok=True)
     os.makedirs(os.path.join('music', 'sounds-storymode'), exist_ok=True)
 
-    all_files = []
+    def _build_file_list():
+        all_files = []
+        for fname in ('mesa.png', 'logo.png'):
+            url = _IMAGE_BASE + fname
+            local = os.path.join('imagenes', fname)
+            all_files.append((url, local, fname))
+        for key, (url_file, local_file) in _IMAGE_FILES.items():
+            if key == 'mesa': continue
+            all_files.append((_IMAGE_BASE + url_file,
+                              os.path.join('imagenes', local_file),
+                              local_file))
+        _suits_map  = [('S','spades'),('H','hearts'),('D','diamonds'),('C','clubs')]
+        _values_map = [('A','ace'),('2','2'),('3','3'),('4','4'),('5','5'),('6','6'),
+                       ('7','7'),('8','8'),('9','9'),('10','10'),
+                       ('J','jack'),('Q','queen'),('K','king')]
+        for v_k, v_n in _values_map:
+            for s_k, s_n in _suits_map:
+                fname = f"{v_n}_of_{s_n}.png"
+                all_files.append((_CARDS_BASE_URL + fname,
+                                   os.path.join('imagenes', 'cards', fname),
+                                   f"cartas/{fname}"))
+        all_files.append((_CARDS_BASE_URL + "back.png",
+                           os.path.join('imagenes', 'cards', 'back.png'),
+                           "cartas/back.png"))
+        for key, (local_path, url) in {**_STORY_MUSIC_FILES, **_STORY_SFX_FILES}.items():
+            all_files.append((url, local_path, os.path.basename(local_path)))
+        all_files.append((_MUSIC_URL, _MUSIC_LOCAL, "coffee_time.mp3"))
+        return all_files
 
-    for fname in ('mesa.png', 'logo.png'):
-        url = _IMAGE_BASE + fname
-        local = os.path.join('imagenes', fname)
-        all_files.append((url, local, fname))
-
-    for key, (url_file, local_file) in _IMAGE_FILES.items():
-        if key == 'mesa': continue
-        all_files.append((_IMAGE_BASE + url_file,
-                          os.path.join('imagenes', local_file),
-                          local_file))
-
-    _suits_map  = [('S','spades'),('H','hearts'),('D','diamonds'),('C','clubs')]
-    _values_map = [('A','ace'),('2','2'),('3','3'),('4','4'),('5','5'),('6','6'),
-                   ('7','7'),('8','8'),('9','9'),('10','10'),
-                   ('J','jack'),('Q','queen'),('K','king')]
-    for v_k, v_n in _values_map:
-        for s_k, s_n in _suits_map:
-            fname = f"{v_n}_of_{s_n}.png"
-            all_files.append((_CARDS_BASE_URL + fname,
-                               os.path.join('imagenes', 'cards', fname),
-                               f"cartas/{fname}"))
-    all_files.append((_CARDS_BASE_URL + "back.png",
-                       os.path.join('imagenes', 'cards', 'back.png'),
-                       "cartas/back.png"))
-
-    for key, (local_path, url) in {**_STORY_MUSIC_FILES, **_STORY_SFX_FILES}.items():
-        all_files.append((url, local_path, os.path.basename(local_path)))
-    all_files.append((_MUSIC_URL, _MUSIC_LOCAL, "coffee_time.mp3"))
-
-    to_download = [(u, l, n) for u, l, n in all_files if not os.path.exists(l)]
-
-    if not to_download:
-        return  
-
-    total = len(to_download)
     FUENTE_LOAD  = pygame.font.SysFont("arial", 36, bold=True)
     FUENTE_FILE  = pygame.font.SysFont("arial", 24)
     FUENTE_PCT   = pygame.font.SysFont("arial", 28, bold=True)
 
-    for i, (url, local, name) in enumerate(to_download):
-        VENTANA.fill((4, 2, 10))
+    while True:   
+        all_files   = _build_file_list()
+        to_download = [(u, l, n) for u, l, n in all_files if not os.path.exists(l)]
 
-        title = FUENTE_LOAD.render("Descargando paquetes necesarios de internet...", True, DORADO)
-        VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, ALTO//2 - 140))
+        if not to_download:
+            break   
 
-        status = FUENTE_FILE.render(f"[{i+1}/{total}]  {name}", True, (200, 210, 200))
-        VENTANA.blit(status, (ANCHO//2 - status.get_width()//2, ALTO//2 - 65))
+        total      = len(to_download)
+        retry_all  = False
 
-        bw = 700; bh = 26
-        bx = ANCHO//2 - bw//2; by = ALTO//2
-        pygame.draw.rect(VENTANA, (30, 30, 30), (bx, by, bw, bh), border_radius=10)
-        fill_w = int(bw * i / total) if total else 0
-        if fill_w > 0:
-            pygame.draw.rect(VENTANA, DORADO, (bx, by, fill_w, bh), border_radius=10)
-        pygame.draw.rect(VENTANA, (80, 65, 30), (bx, by, bw, bh), 2, border_radius=10)
+        for i, (url, local, name) in enumerate(to_download):
+            VENTANA.fill((4, 2, 10))
 
-        pct_txt = FUENTE_PCT.render(f"{int(100 * i / total)}%", True, (200, 200, 200))
-        VENTANA.blit(pct_txt, (ANCHO//2 - pct_txt.get_width()//2, by + bh + 14))
+            title = FUENTE_LOAD.render("Descargando paquetes necesarios de internet...", True, DORADO)
+            VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, ALTO//2 - 140))
 
-        flip_display()
-        pygame.event.pump()
+            status = FUENTE_FILE.render(f"[{i+1}/{total}]  {name}", True, (200, 210, 200))
+            VENTANA.blit(status, (ANCHO//2 - status.get_width()//2, ALTO//2 - 65))
 
-        if not os.path.exists(local):
-            try:
-                os.makedirs(os.path.dirname(local), exist_ok=True)
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=20) as resp:
-                    data = resp.read()
-                with open(local, 'wb') as f:
-                    f.write(data)
-            except Exception as e:
-                print(f"[LOADING] Error descargando {name}: {e}")
+            bw = 700; bh = 26
+            bx = ANCHO//2 - bw//2; by = ALTO//2
+            pygame.draw.rect(VENTANA, (30, 30, 30), (bx, by, bw, bh), border_radius=10)
+            fill_w = int(bw * i / total) if total else 0
+            if fill_w > 0:
+                pygame.draw.rect(VENTANA, DORADO, (bx, by, fill_w, bh), border_radius=10)
+            pygame.draw.rect(VENTANA, (80, 65, 30), (bx, by, bw, bh), 2, border_radius=10)
+
+            pct_txt = FUENTE_PCT.render(f"{int(100 * i / total)}%", True, (200, 200, 200))
+            VENTANA.blit(pct_txt, (ANCHO//2 - pct_txt.get_width()//2, by + bh + 14))
+
+            flip_display()
+            pygame.event.pump()
+
+            if not os.path.exists(local):
+                download_ok = False
+                try:
+                    os.makedirs(os.path.dirname(local), exist_ok=True)
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req, timeout=20) as resp:
+                        data = resp.read()
+                    with open(local, 'wb') as f:
+                        f.write(data)
+                    download_ok = True
+                except Exception as e:
+                    print(f"[LOADING] Error descargando {name}: {e}")
+
+                if not download_ok:
+                    decision = _loading_error_dialog(name)
+                    if decision == 'quit':
+                        pygame.quit(); sys.exit()
+                    elif decision == 'retry':
+                        retry_all = True
+                        break   
+
+        if retry_all:
+            continue  
+        break          
 
     VENTANA.fill((4, 2, 10))
     done = pygame.font.SysFont("arial", 48, bold=True).render("¡Listo!", True, (80, 220, 80))
