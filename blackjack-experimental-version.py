@@ -3175,7 +3175,6 @@ def _render_main_menu(now):
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
 
-    # Notificación de actualizaciones en el menú principal
     if update_status is not None:
         elapsed_notif = now - update_notif_time
         is_permanent  = update_status in ('checking', 'restarting')
@@ -3325,7 +3324,6 @@ def splash_screen():
         print(f"[SPLASH] No se pudo cargar el logo: {e}")
         return
 
-    # Cargar logo-kevin (opcional, no bloquea si falla)
     logo_kevin = None
     try:
         if os.path.exists(_LOGO_KEVIN_LOCAL):
@@ -3333,8 +3331,7 @@ def splash_screen():
     except Exception as e:
         print(f"[SPLASH] No se pudo cargar logo-kevin: {e}")
 
-    # Escalar logos para que encajen juntos centrados
-    GAP          = 80                     # separación horizontal entre logos
+    GAP          = 80                    
     max_h        = int(ALTO * 0.55)
     max_w_each   = int(ANCHO * 0.38)
 
@@ -3573,6 +3570,11 @@ while True:
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
                         elif i == 2: _start_poker_mode()
+                        elif i == 3:
+                            if update_status != 'checking':
+                                update_status = 'checking'; update_msg = "Comprobando..."
+                                update_notif_time = pygame.time.get_ticks()
+                                threading.Thread(target=_check_for_updates, daemon=True).start()
                 folder_r = getattr(_render_main_menu, '_folder_rect', None)
                 if folder_r and folder_r.collidepoint(lpos):
                     open_data_folder()
@@ -3657,11 +3659,6 @@ while True:
                     app_state = 'main_menu'; continue
                 if REINICIAR_BTN.collidepoint(lpos):
                     bj_reiniciar(); continue
-                if DOTS_BTN.collidepoint(lpos):
-                    if update_status != 'checking':
-                        update_status = 'checking'; update_msg = "Comprobando..."
-                        update_notif_time = pygame.time.get_ticks()
-                        threading.Thread(target=_check_for_updates, daemon=True).start()
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
                 bj_reiniciar(); continue
 
@@ -4238,13 +4235,6 @@ while True:
             VENTANA.blit(ov, (0, 0))
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
-    btn_hovered = DOTS_BTN.collidepoint(mouse_pos)
-    btn_color = (80,80,80) if not btn_hovered else (120,120,120)
-    pygame.draw.rect(VENTANA, btn_color, DOTS_BTN, border_radius=6)
-    pygame.draw.rect(VENTANA, NEGRO, DOTS_BTN, 1, border_radius=6)
-    dots_surf = FUENTE_PEQUENA.render("...", True, BLANCO)
-    VENTANA.blit(dots_surf, (DOTS_BTN.centerx-dots_surf.get_width()//2,
-                              DOTS_BTN.centery-dots_surf.get_height()//2))
 
     mute_hovered = MUTE_BTN.collidepoint(mouse_pos)
     if music_muted:
@@ -4280,7 +4270,7 @@ while True:
                               (40,40,40)  if update_status=='checking'   else (150,30,30)
             notif_surf = FUENTE_PEQUENA.render(display_msg, True, BLANCO)
             nw = notif_surf.get_width()+24; nh = notif_surf.get_height()+14
-            nx = ANCHO-nw-10; ny = DOTS_BTN.bottom+6
+            nx = ANCHO-nw-10; ny = MUTE_BTN.bottom+6
             bg = pygame.Surface((nw, nh), pygame.SRCALPHA)
             bg.fill((*notif_color, alpha_notif))
             VENTANA.blit(bg, (nx, ny))
