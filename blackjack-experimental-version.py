@@ -2997,9 +2997,10 @@ def _start_poker_mode():
 
 
 MENU_OPTIONS = [
-    {'label': 'Modo Historia',     'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
-    {'label': 'BlackJack',         'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
-    {'label': 'Texas Hold\'em',    'sub': 'Poker Texas Hold\'em · Ciegas, flop, turn y river · Empieza con 3.000 fichas'},
+    {'label': 'Modo Historia',           'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
+    {'label': 'BlackJack',               'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
+    {'label': 'Texas Hold\'em',          'sub': 'Poker Texas Hold\'em · Ciegas, flop, turn y river · Empieza con 3.000 fichas'},
+    {'label': 'Buscar actualizaciones',  'sub': 'Comprueba si hay una nueva versión disponible en GitHub'},
 ]
 
 FUENTE_MENU_TITLE = pygame.font.SysFont("arial", 92, bold=True)
@@ -3174,6 +3175,32 @@ def _render_main_menu(now):
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
 
+    # Notificación de actualizaciones en el menú principal
+    if update_status is not None:
+        elapsed_notif = now - update_notif_time
+        is_permanent  = update_status in ('checking', 'restarting')
+        show_notif    = is_permanent or (elapsed_notif < 6000)
+        if show_notif:
+            alpha_notif = 230
+            if not is_permanent and elapsed_notif > 4500:
+                alpha_notif = max(0, int(230 * (1 - (elapsed_notif - 4500) / 1500)))
+            if update_status == 'restarting':
+                notif_color = (20, 100, 200)
+                secs_left   = max(0, 2 - (now - update_restart_time) // 1000)
+                display_msg = f"¡Actualizado! Reiniciando en {secs_left}s..."
+            else:
+                display_msg = update_msg
+                notif_color = (30, 120, 50) if update_status == 'up_to_date' else \
+                              (40, 40, 40)  if update_status == 'checking'   else (150, 30, 30)
+            notif_surf = FUENTE_PEQUENA.render(display_msg, True, BLANCO)
+            nw = notif_surf.get_width() + 24; nh = notif_surf.get_height() + 14
+            nx = ANCHO - nw - 14; ny = ALTO - nh - 36
+            bg = pygame.Surface((nw, nh), pygame.SRCALPHA)
+            bg.fill((*notif_color, alpha_notif))
+            VENTANA.blit(bg, (nx, ny))
+            pygame.draw.rect(VENTANA, NEGRO, (nx, ny, nw, nh), 1, border_radius=6)
+            VENTANA.blit(notif_surf, (nx + 12, ny + 7))
+
     _MENU_FADE_MS = 900
     elapsed_fade = now - _menu_fade_start
     if elapsed_fade < _MENU_FADE_MS:
@@ -3275,20 +3302,22 @@ def _start_infinite_mode():
 
 def splash_screen():
     """Muestra el logo del juego con fade-in y fade-out antes de entrar al menú."""
-    _LOGO_URL   = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/logo.png"
-    _LOGO_LOCAL = os.path.join("imagenes", "logo.png")
+    _LOGO_URL        = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/logo.png"
+    _LOGO_LOCAL      = os.path.join("imagenes", "logo.png")
+    _LOGO_KEVIN_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/logo-kevin.jpg"
+    _LOGO_KEVIN_LOCAL= os.path.join("imagenes", "logo-kevin.jpg")
 
     _ensure_imagenes_dir()
-    if not os.path.exists(_LOGO_LOCAL):
-        try:
-            req = urllib.request.Request(_LOGO_URL, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = resp.read()
-            with open(_LOGO_LOCAL, 'wb') as f:
-                f.write(data)
-        except Exception as e:
-            print(f"[SPLASH] No se pudo descargar el logo: {e}")
-            return   
+    for _url, _local in ((_LOGO_URL, _LOGO_LOCAL), (_LOGO_KEVIN_URL, _LOGO_KEVIN_LOCAL)):
+        if not os.path.exists(_local):
+            try:
+                req = urllib.request.Request(_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = resp.read()
+                with open(_local, 'wb') as f:
+                    f.write(data)
+            except Exception as e:
+                print(f"[SPLASH] No se pudo descargar {os.path.basename(_local)}: {e}")
 
     try:
         logo = pygame.image.load(_LOGO_LOCAL).convert_alpha()
@@ -3296,14 +3325,41 @@ def splash_screen():
         print(f"[SPLASH] No se pudo cargar el logo: {e}")
         return
 
-    lw, lh   = logo.get_size()
-    max_h    = int(ALTO * 0.60)
-    max_w    = int(ANCHO * 0.60)
-    scale    = min(max_w / lw, max_h / lh, 1.0)
-    logo     = pygame.transform.smoothscale(logo, (int(lw * scale), int(lh * scale)))
-    lw, lh   = logo.get_size()
-    logo_x   = ANCHO // 2 - lw // 2
-    logo_y   = ALTO  // 2 - lh // 2
+    # Cargar logo-kevin (opcional, no bloquea si falla)
+    logo_kevin = None
+    try:
+        if os.path.exists(_LOGO_KEVIN_LOCAL):
+            logo_kevin = pygame.image.load(_LOGO_KEVIN_LOCAL).convert_alpha()
+    except Exception as e:
+        print(f"[SPLASH] No se pudo cargar logo-kevin: {e}")
+
+    # Escalar logos para que encajen juntos centrados
+    GAP          = 80                     # separación horizontal entre logos
+    max_h        = int(ALTO * 0.55)
+    max_w_each   = int(ANCHO * 0.38)
+
+    lw, lh = logo.get_size()
+    scale  = min(max_w_each / lw, max_h / lh, 1.0)
+    logo   = pygame.transform.smoothscale(logo, (int(lw * scale), int(lh * scale)))
+    lw, lh = logo.get_size()
+
+    if logo_kevin is not None:
+        kw, kh = logo_kevin.get_size()
+        kscale = min(max_w_each / kw, max_h / kh, 1.0)
+        logo_kevin = pygame.transform.smoothscale(logo_kevin, (int(kw * kscale), int(kh * kscale)))
+        kw, kh = logo_kevin.get_size()
+
+        total_w  = lw + GAP + kw
+        base_x   = ANCHO // 2 - total_w // 2
+        logo_x   = base_x
+        logo_y   = ALTO  // 2 - lh // 2
+        kevin_x  = base_x + lw + GAP
+        kevin_y  = ALTO  // 2 - kh // 2
+        hint_y   = ALTO  // 2 + max(lh, kh) // 2 + 30
+    else:
+        logo_x   = ANCHO // 2 - lw // 2
+        logo_y   = ALTO  // 2 - lh // 2
+        hint_y   = logo_y + lh + 30
 
     FADE_IN   = 700
     HOLD      = 2000
@@ -3336,13 +3392,18 @@ def splash_screen():
         logo_copy.set_alpha(alpha)
         VENTANA.blit(logo_copy, (logo_x, logo_y))
 
+        if logo_kevin is not None:
+            kevin_copy = logo_kevin.copy()
+            kevin_copy.set_alpha(alpha)
+            VENTANA.blit(kevin_copy, (kevin_x, kevin_y))
+
         if FADE_IN < elapsed < FADE_IN + HOLD:
             blink = (elapsed // 500) % 2 == 0
             if blink:
                 hint = FUENTE_PEQUENA.render("hecho por Humrandbm y Dreame282", True, DORADO)
                 hint_alpha = int(200 * (elapsed - FADE_IN) / HOLD)
                 hint.set_alpha(hint_alpha)
-                VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, logo_y + lh + 30))
+                VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, hint_y))
 
         flip_display()
 
