@@ -41,7 +41,7 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "1.2.1"
+VERSION = "0.4.0"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
@@ -443,40 +443,45 @@ def preload_images(*keys):
     for k in keys:
         get_story_image(k)
 
+_story_scaled_cache = {}
+
 def draw_story_image(key, surf):
     """Dibuja la imagen de escena a pantalla completa."""
     img = get_story_image(key)
     if img is None:
         return
-    iw, ih = img.get_size()
-    scale  = max(ANCHO / iw, ALTO / ih)
-    new_w  = int(iw * scale)
-    new_h  = int(ih * scale)
-    scaled = pygame.transform.smoothscale(img, (new_w, new_h))
-    x = (ANCHO - new_w) // 2
-    y = (ALTO  - new_h) // 2
-    surf.blit(scaled, (x, y))
+    cache_key = (key, ANCHO, ALTO)
+    cached = _story_scaled_cache.get(cache_key)
+    if cached is None:
+        iw, ih = img.get_size()
+        scale  = max(ANCHO / iw, ALTO / ih)
+        new_w  = int(iw * scale)
+        new_h  = int(ih * scale)
+        scaled = pygame.transform.smoothscale(img, (new_w, new_h))
+        x = (ANCHO - new_w) // 2
+        y = (ALTO  - new_h) // 2
+        cached = (scaled, x, y)
+        _story_scaled_cache[cache_key] = cached
+    surf.blit(cached[0], (cached[1], cached[2]))
 
 
-ANCHO, ALTO = 1920, 960
+ANCHO, ALTO = 1920, 1080
 
 _dinfo = pygame.display.Info()
 SCREEN_W = _dinfo.current_w
 SCREEN_H = _dinfo.current_h
-VENTANA_REAL = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.FULLSCREEN)
+VENTANA_REAL = pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("Blackjack – El Farol Rojo")
 
 VENTANA = pygame.Surface((ANCHO, ALTO))
 
 
 def to_logical(pos):
-    sx, sy = pos
-    return (int(sx * ANCHO / SCREEN_W), int(sy * ALTO / SCREEN_H))
+    return (int(pos[0]), int(pos[1]))
 
 
 def flip_display():
-    scaled = pygame.transform.scale(VENTANA, (SCREEN_W, SCREEN_H))
-    VENTANA_REAL.blit(scaled, (0, 0))
+    VENTANA_REAL.blit(VENTANA, (0, 0))
     pygame.display.flip()
 
 
@@ -596,16 +601,25 @@ _RRNG = random_module.Random(7331)
 _RAIN = [(_RRNG.randint(0, ANCHO), _RRNG.randint(0, ALTO),
           _RRNG.uniform(200, 460), _RRNG.randint(12, 34))
          for _ in range(140)]
+_RAIN_SURF_CACHE = {}
+
+def _get_rain_surf(length, alpha):
+    key = (int(length), int(alpha))
+    surf = _RAIN_SURF_CACHE.get(key)
+    if surf is None:
+        surf = pygame.Surface((2, int(length)), pygame.SRCALPHA)
+        surf.fill((160, 195, 235, int(alpha)))
+        _RAIN_SURF_CACHE[key] = surf
+    return surf
 
 
 def draw_rain(surf, now, alpha=100):
     t = now / 1000.0
+    alpha = int(alpha)
     for bx, by, sp, ln in _RAIN:
         y = (by + t * sp) % (ALTO + 60)
         x = int(bx + y * 0.17) % ANCHO
-        s = pygame.Surface((2, ln), pygame.SRCALPHA)
-        s.fill((160, 195, 235, alpha))
-        surf.blit(s, (x, int(y)))
+        surf.blit(_get_rain_surf(ln, alpha), (x, int(y)))
 
 
 class Carta:
@@ -623,8 +637,10 @@ class Carta:
         self.front = None; self.back = None; self.flip_target_back = False
         self.scale = 1.0; self.target_scale = 1.0; self.scale_speed = 0.22
         self.hover_glow = 0.0
-        self._front_from_img = False  
-        self._back_from_img  = False  
+        self._front_from_img = False
+        self._back_from_img = False
+        self._scaled_cache = {}
+        self._flip_cache = {}
         self._create_faces()
 
     def _create_faces(self):
@@ -650,8 +666,7 @@ class Carta:
                 sym_surf = SYMBOL_FONT.render(SUIT_CHAR.get(self.palo,'?'), True, self.color)
             surf.blit(sym_surf, ((self.w-sym_surf.get_width())//2, (self.h-sym_surf.get_height())//2-6))
         except Exception:
-            simple = FUENTE_GRANDE.render(self.valor, True, self.color) if self.valor in FACE_SYMBOL_MAP \
-                     else FUENTE_PEQUENA.render(self.palo, True, self.color)
+            simple = FUENTE_GRANDE.render(self.valor, True, self.color) if self.valor in FACE_SYMBOL_MAP                      else FUENTE_PEQUENA.render(self.palo, True, self.color)
             surf.blit(simple, ((self.w-simple.get_width())//2, (self.h-simple.get_height())//2))
         return surf
 
@@ -667,6 +682,19 @@ class Carta:
             for j in range(12, self.h-12, 24):
                 pygame.draw.circle(surf, (220,70,70), (i,j), 5)
         return surf
+
+    def _scaled_face(self, face_name, surf):
+        key = (face_name, int(round(self.scale * 1000)))
+        cached = self._scaled_cache.get(key)
+        if cached is None:
+            nw = max(1, int(self.w * self.scale))
+            nh = max(1, int(self.h * self.scale))
+            if nw == self.w and nh == self.h:
+                cached = surf
+            else:
+                cached = pygame.transform.smoothscale(surf, (nw, nh))
+            self._scaled_cache[key] = cached
+        return cached
 
     def start_flip(self, now, to_back=False):
         if not self.flipping:
@@ -702,8 +730,8 @@ class Carta:
         rx, ry = int(self.x), int(self.y)
         if not self.flipping:
             surf_to_blit = self.back if self.oculta else self.front
-            nw = max(1, int(self.w * self.scale)); nh = max(1, int(self.h * self.scale))
-            scaled = pygame.transform.smoothscale(surf_to_blit, (nw, nh))
+            scaled = self._scaled_face('back' if self.oculta else 'front', surf_to_blit)
+            nw, nh = scaled.get_size()
             bx = rx-(nw-self.w)//2; by = ry-(nh-self.h)//2
             if self.hover_glow > 0.02:
                 alpha = int(self.hover_glow * 180)
@@ -713,24 +741,34 @@ class Carta:
                 VENTANA.blit(glow_surf, (bx-4, by-4))
             VENTANA.blit(scaled, (bx, by))
             return
+
         progreso = (now - self.flip_start) / self.flip_duration
         if progreso >= 1:
             self.flipping = False; self.oculta = bool(self.flip_target_back)
             surf_to_blit = self.back if self.oculta else self.front
-            nw = max(1, int(self.w*self.scale)); nh = max(1, int(self.h*self.scale))
-            scaled = pygame.transform.smoothscale(surf_to_blit, (nw, nh))
-            VENTANA.blit(scaled, (rx-(nw-self.w)//2, ry-(nh-self.h)//2)); return
+            scaled = self._scaled_face('back' if self.oculta else 'front', surf_to_blit)
+            nw, nh = scaled.get_size()
+            VENTANA.blit(scaled, (rx-(nw-self.w)//2, ry-(nh-self.h)//2))
+            return
+
         if self.flip_target_back:
             escala = (1-progreso*2) if progreso < 0.5 else ((progreso-0.5)*2)
             surf = self.front if progreso < 0.5 else self.back
+            face_name = 'front' if progreso < 0.5 else 'back'
         else:
             escala = (1-progreso*2) if progreso < 0.5 else ((progreso-0.5)*2)
             surf = self.back if progreso < 0.5 else self.front
-        ancho = max(1, int(self.w*escala)); h_final = max(1, int(self.h*self.scale))
-        scaled = pygame.transform.smoothscale(surf, (ancho, h_final))
+            face_name = 'back' if progreso < 0.5 else 'front'
+
+        ancho = max(1, int(self.w * escala))
+        h_final = max(1, int(self.h * self.scale))
+        scale_key = (face_name, ancho, h_final)
+        scaled = self._flip_cache.get(scale_key)
+        if scaled is None:
+            scaled = pygame.transform.smoothscale(surf, (ancho, h_final))
+            self._flip_cache[scale_key] = scaled
         x_blit = rx + (self.w-ancho)//2 - ((int(self.w*self.scale)-self.w)//2)
         VENTANA.blit(scaled, (x_blit, ry-(h_final-self.h)//2))
-
 
 def get_chip_style(value):
     v = int(value)
@@ -2997,9 +3035,10 @@ def _start_poker_mode():
 
 
 MENU_OPTIONS = [
-    {'label': 'Modo Historia',     'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
-    {'label': 'BlackJack',         'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
-    {'label': 'Texas Hold\'em',    'sub': 'Poker Texas Hold\'em · Ciegas, flop, turn y river · Empieza con 3.000 fichas'},
+    {'label': 'Modo Historia',           'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
+    {'label': 'BlackJack',               'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
+    {'label': 'Texas Hold\'em',          'sub': 'Poker Texas Hold\'em · Ciegas, flop, turn y river · Empieza con 3.000 fichas'},
+    {'label': 'Buscar actualizaciones',  'sub': 'Comprueba si hay una nueva versión disponible en GitHub'},
 ]
 
 FUENTE_MENU_TITLE = pygame.font.SysFont("arial", 92, bold=True)
@@ -3174,6 +3213,31 @@ def _render_main_menu(now):
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
 
+    if update_status is not None:
+        elapsed_notif = now - update_notif_time
+        is_permanent  = update_status in ('checking', 'restarting')
+        show_notif    = is_permanent or (elapsed_notif < 6000)
+        if show_notif:
+            alpha_notif = 230
+            if not is_permanent and elapsed_notif > 4500:
+                alpha_notif = max(0, int(230 * (1 - (elapsed_notif - 4500) / 1500)))
+            if update_status == 'restarting':
+                notif_color = (20, 100, 200)
+                secs_left   = max(0, 2 - (now - update_restart_time) // 1000)
+                display_msg = f"¡Actualizado! Reiniciando en {secs_left}s..."
+            else:
+                display_msg = update_msg
+                notif_color = (30, 120, 50) if update_status == 'up_to_date' else \
+                              (40, 40, 40)  if update_status == 'checking'   else (150, 30, 30)
+            notif_surf = FUENTE_PEQUENA.render(display_msg, True, BLANCO)
+            nw = notif_surf.get_width() + 24; nh = notif_surf.get_height() + 14
+            nx = ANCHO - nw - 14; ny = ALTO - nh - 36
+            bg = pygame.Surface((nw, nh), pygame.SRCALPHA)
+            bg.fill((*notif_color, alpha_notif))
+            VENTANA.blit(bg, (nx, ny))
+            pygame.draw.rect(VENTANA, NEGRO, (nx, ny, nw, nh), 1, border_radius=6)
+            VENTANA.blit(notif_surf, (nx + 12, ny + 7))
+
     _MENU_FADE_MS = 900
     elapsed_fade = now - _menu_fade_start
     if elapsed_fade < _MENU_FADE_MS:
@@ -3275,20 +3339,22 @@ def _start_infinite_mode():
 
 def splash_screen():
     """Muestra el logo del juego con fade-in y fade-out antes de entrar al menú."""
-    _LOGO_URL   = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/logo.png"
-    _LOGO_LOCAL = os.path.join("imagenes", "logo.png")
+    _LOGO_URL        = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/logo.png"
+    _LOGO_LOCAL      = os.path.join("imagenes", "logo.png")
+    _LOGO_KEVIN_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/logo-kevin.jpg"
+    _LOGO_KEVIN_LOCAL= os.path.join("imagenes", "logo-kevin.jpg")
 
     _ensure_imagenes_dir()
-    if not os.path.exists(_LOGO_LOCAL):
-        try:
-            req = urllib.request.Request(_LOGO_URL, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                data = resp.read()
-            with open(_LOGO_LOCAL, 'wb') as f:
-                f.write(data)
-        except Exception as e:
-            print(f"[SPLASH] No se pudo descargar el logo: {e}")
-            return   
+    for _url, _local in ((_LOGO_URL, _LOGO_LOCAL), (_LOGO_KEVIN_URL, _LOGO_KEVIN_LOCAL)):
+        if not os.path.exists(_local):
+            try:
+                req = urllib.request.Request(_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = resp.read()
+                with open(_local, 'wb') as f:
+                    f.write(data)
+            except Exception as e:
+                print(f"[SPLASH] No se pudo descargar {os.path.basename(_local)}: {e}")
 
     try:
         logo = pygame.image.load(_LOGO_LOCAL).convert_alpha()
@@ -3296,14 +3362,39 @@ def splash_screen():
         print(f"[SPLASH] No se pudo cargar el logo: {e}")
         return
 
-    lw, lh   = logo.get_size()
-    max_h    = int(ALTO * 0.60)
-    max_w    = int(ANCHO * 0.60)
-    scale    = min(max_w / lw, max_h / lh, 1.0)
-    logo     = pygame.transform.smoothscale(logo, (int(lw * scale), int(lh * scale)))
-    lw, lh   = logo.get_size()
-    logo_x   = ANCHO // 2 - lw // 2
-    logo_y   = ALTO  // 2 - lh // 2
+    logo_kevin = None
+    try:
+        if os.path.exists(_LOGO_KEVIN_LOCAL):
+            logo_kevin = pygame.image.load(_LOGO_KEVIN_LOCAL).convert_alpha()
+    except Exception as e:
+        print(f"[SPLASH] No se pudo cargar logo-kevin: {e}")
+
+    GAP          = 80                     
+    max_h        = int(ALTO * 0.55)
+    max_w_each   = int(ANCHO * 0.38)
+
+    lw, lh = logo.get_size()
+    scale  = min(max_w_each / lw, max_h / lh, 1.0)
+    logo   = pygame.transform.smoothscale(logo, (int(lw * scale), int(lh * scale)))
+    lw, lh = logo.get_size()
+
+    if logo_kevin is not None:
+        kw, kh = logo_kevin.get_size()
+        kscale = min(max_w_each / kw, max_h / kh, 1.0)
+        logo_kevin = pygame.transform.smoothscale(logo_kevin, (int(kw * kscale), int(kh * kscale)))
+        kw, kh = logo_kevin.get_size()
+
+        total_w  = lw + GAP + kw
+        base_x   = ANCHO // 2 - total_w // 2
+        logo_x   = base_x
+        logo_y   = ALTO  // 2 - lh // 2
+        kevin_x  = base_x + lw + GAP
+        kevin_y  = ALTO  // 2 - kh // 2
+        hint_y   = ALTO  // 2 + max(lh, kh) // 2 + 30
+    else:
+        logo_x   = ANCHO // 2 - lw // 2
+        logo_y   = ALTO  // 2 - lh // 2
+        hint_y   = logo_y + lh + 30
 
     FADE_IN   = 700
     HOLD      = 2000
@@ -3336,13 +3427,18 @@ def splash_screen():
         logo_copy.set_alpha(alpha)
         VENTANA.blit(logo_copy, (logo_x, logo_y))
 
+        if logo_kevin is not None:
+            kevin_copy = logo_kevin.copy()
+            kevin_copy.set_alpha(alpha)
+            VENTANA.blit(kevin_copy, (kevin_x, kevin_y))
+
         if FADE_IN < elapsed < FADE_IN + HOLD:
             blink = (elapsed // 500) % 2 == 0
             if blink:
                 hint = FUENTE_PEQUENA.render("hecho por Humrandbm y Dreame282", True, DORADO)
                 hint_alpha = int(200 * (elapsed - FADE_IN) / HOLD)
                 hint.set_alpha(hint_alpha)
-                VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, logo_y + lh + 30))
+                VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, hint_y))
 
         flip_display()
 
@@ -3512,6 +3608,11 @@ while True:
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
                         elif i == 2: _start_poker_mode()
+                        elif i == 3:
+                            if update_status != 'checking':
+                                update_status = 'checking'; update_msg = "Comprobando..."
+                                update_notif_time = pygame.time.get_ticks()
+                                threading.Thread(target=_check_for_updates, daemon=True).start()
                 folder_r = getattr(_render_main_menu, '_folder_rect', None)
                 if folder_r and folder_r.collidepoint(lpos):
                     open_data_folder()
@@ -3596,11 +3697,6 @@ while True:
                     app_state = 'main_menu'; continue
                 if REINICIAR_BTN.collidepoint(lpos):
                     bj_reiniciar(); continue
-                if DOTS_BTN.collidepoint(lpos):
-                    if update_status != 'checking':
-                        update_status = 'checking'; update_msg = "Comprobando..."
-                        update_notif_time = pygame.time.get_ticks()
-                        threading.Thread(target=_check_for_updates, daemon=True).start()
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
                 bj_reiniciar(); continue
 
@@ -3805,12 +3901,17 @@ while True:
     style = TABLE_STYLES[TABLE_STYLE_IDX]
     _mesa_img = _image_cache.get('mesa')
     if _mesa_img is not None:
-        mw, mh = _mesa_img.get_size()
-        scale_m = max(ANCHO / mw, ALTO / mh)
-        ms_w = int(mw * scale_m); ms_h = int(mh * scale_m)
-        mesa_scaled = pygame.transform.smoothscale(_mesa_img, (ms_w, ms_h))
-        mx = (ANCHO - ms_w) // 2; my = (ALTO - ms_h) // 2
-        VENTANA.blit(mesa_scaled, (mx, my))
+        mesa_key = ('mesa', ANCHO, ALTO)
+        cached = _story_scaled_cache.get(mesa_key)
+        if cached is None:
+            mw, mh = _mesa_img.get_size()
+            scale_m = max(ANCHO / mw, ALTO / mh)
+            ms_w = int(mw * scale_m); ms_h = int(mh * scale_m)
+            mesa_scaled = pygame.transform.smoothscale(_mesa_img, (ms_w, ms_h))
+            mx = (ANCHO - ms_w) // 2; my = (ALTO - ms_h) // 2
+            cached = (mesa_scaled, mx, my)
+            _story_scaled_cache[mesa_key] = cached
+        VENTANA.blit(cached[0], (cached[1], cached[2]))
     else:
         VENTANA.fill(style['color'])
         get_story_image('mesa')  
@@ -4177,13 +4278,6 @@ while True:
             VENTANA.blit(ov, (0, 0))
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
-    btn_hovered = DOTS_BTN.collidepoint(mouse_pos)
-    btn_color = (80,80,80) if not btn_hovered else (120,120,120)
-    pygame.draw.rect(VENTANA, btn_color, DOTS_BTN, border_radius=6)
-    pygame.draw.rect(VENTANA, NEGRO, DOTS_BTN, 1, border_radius=6)
-    dots_surf = FUENTE_PEQUENA.render("...", True, BLANCO)
-    VENTANA.blit(dots_surf, (DOTS_BTN.centerx-dots_surf.get_width()//2,
-                              DOTS_BTN.centery-dots_surf.get_height()//2))
 
     mute_hovered = MUTE_BTN.collidepoint(mouse_pos)
     if music_muted:
@@ -4219,7 +4313,7 @@ while True:
                               (40,40,40)  if update_status=='checking'   else (150,30,30)
             notif_surf = FUENTE_PEQUENA.render(display_msg, True, BLANCO)
             nw = notif_surf.get_width()+24; nh = notif_surf.get_height()+14
-            nx = ANCHO-nw-10; ny = DOTS_BTN.bottom+6
+            nx = ANCHO-nw-10; ny = MUTE_BTN.bottom+6
             bg = pygame.Surface((nw, nh), pygame.SRCALPHA)
             bg.fill((*notif_color, alpha_notif))
             VENTANA.blit(bg, (nx, ny))
