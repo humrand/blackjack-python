@@ -41,7 +41,7 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "0.4debug.0"
+VERSION = "0.3.0"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=blackjack-experimental-version.py&per_page=1"
 _COMMIT_SHA_FILE = os.path.join(_get_data_dir(), '.last_commit_sha')
