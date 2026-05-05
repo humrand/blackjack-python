@@ -42,9 +42,9 @@ pygame.init()
 pygame.mixer.init()
 
 VERSION = "1.2.1"
-GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/blackjack-experimental-version.py"
-GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=blackjack-experimental-version.py&per_page=1"
-GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/blackjack-experimental-version.py"
+GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
+GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
+GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
 _COMMIT_SHA_FILE = os.path.join(_get_data_dir(), '.last_commit_sha')
 
 _IMAGE_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/main/imagenes/"
