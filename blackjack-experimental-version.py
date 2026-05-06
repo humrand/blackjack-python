@@ -2369,6 +2369,188 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
+_HE_AI_MODEL_LOCAL = os.path.join('test', 'he_ai_model.json')
+_HE_AI_MODEL_URL   = "https://raw.githubusercontent.com/humrand/blackjack-python/main/test/he_ai_model.json"
+_he_ai_model = None
+_he_ai_model_ready = False
+
+def _download_text_file(local_path, url, timeout=25):
+    """Descarga un archivo de texto si no existe."""
+    if os.path.exists(local_path):
+        return True
+    try:
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = resp.read()
+        with open(local_path, 'wb') as f:
+            f.write(data)
+        return True
+    except Exception as e:
+        print(f"[JSON] Error descargando {os.path.basename(local_path)}: {e}")
+        return False
+
+def _load_he_ai_model():
+    """Carga el modelo JSON del poker una sola vez."""
+    global _he_ai_model, _he_ai_model_ready
+    if _he_ai_model_ready:
+        return _he_ai_model
+    _he_ai_model_ready = True
+
+    _download_text_file(_HE_AI_MODEL_LOCAL, _HE_AI_MODEL_URL, timeout=25)
+    try:
+        import json as _json
+        with open(_HE_AI_MODEL_LOCAL, 'r', encoding='utf-8') as f:
+            _he_ai_model = _json.load(f)
+    except Exception as e:
+        print(f"[JSON] No se pudo cargar he_ai_model.json: {e}")
+        _he_ai_model = None
+    return _he_ai_model
+
+def _he_ai_current_stage():
+    if he_state == 'pre_flop':
+        return 'preflop'
+    if he_state == 'flop':
+        return 'flop'
+    if he_state == 'turn':
+        return 'turn'
+    if he_state == 'river':
+        return 'river'
+    return he_state
+
+def _he_ai_strength_rank(ai_idx):
+    ai_hand = he_ai_cards[ai_idx] if ai_idx < len(he_ai_cards) else []
+    if not ai_hand:
+        return -1
+    cards = [(e[0], e[1], e[2], e[3]) for e in ai_hand]
+    if he_community_cards:
+        cards += [(e[0], e[1], e[2], e[3]) for e in he_community_cards]
+    score, _ = evaluate_holdem_hand(cards)
+    return score[0] if score else -1
+
+def _he_ai_apply_call(ai_idx, money, call_amt):
+    global he_pot, he_ai_money
+    paid = min(call_amt, money)
+    if paid > 0:
+        he_pot += paid
+        he_ai_money[ai_idx] -= paid
+    return paid
+
+def _he_ai_apply_raise(ai_idx, money, amount):
+    global he_pot, he_ai_money, he_ai_raised_this_round, he_ai_raise_amount
+    amt = min(amount, money)
+    if amt > 0:
+        he_pot += amt
+        he_ai_money[ai_idx] -= amt
+        he_ai_raised_this_round = True
+        he_ai_raise_amount = max(he_ai_raise_amount, amt)
+    return amt
+
+def _he_ai_pick_from_model(ai_idx):
+    """Intenta decidir la acción del AI usando el JSON externo."""
+    model = _load_he_ai_model()
+    if model is None:
+        return None
+
+    stage = _he_ai_current_stage()
+    rank = _he_ai_strength_rank(ai_idx)
+    money = he_ai_money[ai_idx] if ai_idx < len(he_ai_money) else 0
+    call_amt = min(he_blind, money)
+
+    def _apply_rule(rule):
+        if not isinstance(rule, dict):
+            return None
+        action = str(rule.get('action', '')).lower().strip()
+        if action in ('fold', 'retire', 'se retira'):
+            he_ai_folded[ai_idx] = True
+            return rule.get('text', 'se retira')
+        if action in ('call', 'iguala', 'check'):
+            _he_ai_apply_call(ai_idx, money, call_amt)
+            return rule.get('text', 'iguala')
+        if action in ('raise', 'sube', 'farolea y sube'):
+            mult = rule.get('raise_mult', rule.get('mult', 1))
+            try:
+                mult = max(1, int(mult))
+            except Exception:
+                mult = 1
+            amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
+            prefix = rule.get('text_prefix', 'sube')
+            return f"{prefix} {amt}".strip() if amt else None
+        return None
+
+    def _match_rank_rule(node):
+        if not isinstance(node, dict):
+            return None
+        for bucket in ('by_rank', 'ranks', 'rank_map'):
+            buckets = node.get(bucket)
+            if isinstance(buckets, dict):
+                for key in (str(rank), rank, str(max(0, rank))):
+                    if key in buckets:
+                        res = _apply_rule(buckets[key]) if isinstance(buckets[key], dict) else buckets[key]
+                        if res is not None:
+                            return res
+        return None
+
+    if isinstance(model, list):
+        for rule in model:
+            if not isinstance(rule, dict):
+                continue
+            min_rank = rule.get('min_rank', rule.get('rank_min', -999))
+            max_rank = rule.get('max_rank', rule.get('rank_max', 999))
+            if min_rank <= rank <= max_rank:
+                res = _apply_rule(rule)
+                if res is not None:
+                    return res
+        return None
+
+    if not isinstance(model, dict):
+        return None
+
+    for key in (stage, he_state, 'default', 'general'):
+        node = model.get(key)
+        if node is None:
+            continue
+
+        if isinstance(node, list):
+            for rule in node:
+                res = _apply_rule(rule)
+                if res is not None:
+                    return res
+
+        if isinstance(node, dict):
+            res = _match_rank_rule(node)
+            if res is not None:
+                return res
+
+            if any(k in node for k in ('fold_prob', 'call_prob', 'raise_prob', 'raise_mult')):
+                import random as _rnd
+                r = _rnd.random()
+                fold_p = float(node.get('fold_prob', 0.0) or 0.0)
+                call_p = float(node.get('call_prob', 0.0) or 0.0)
+                raise_p = float(node.get('raise_prob', 0.0) or 0.0)
+                if r < fold_p:
+                    he_ai_folded[ai_idx] = True
+                    return node.get('fold_text', 'se retira')
+                if r < fold_p + raise_p:
+                    mult = node.get('raise_mult', 1)
+                    try:
+                        mult = max(1, int(mult))
+                    except Exception:
+                        mult = 1
+                    amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
+                    return f"{node.get('raise_text_prefix', 'sube')} {amt}".strip() if amt else None
+                if r < fold_p + raise_p + call_p:
+                    _he_ai_apply_call(ai_idx, money, call_amt)
+                    return node.get('call_text', 'iguala')
+
+            action = str(node.get('action', '')).lower().strip()
+            if action:
+                res = _apply_rule(node)
+                if res is not None:
+                    return res
+
+    return None
+
 he_ai_turn_active       = False
 he_ai_turn_idx          = 0
 he_ai_turn_phase        = 'announcing'  
@@ -2385,7 +2567,11 @@ he_dealing         = False
 _HE_DECIDE_MS           = 900
 
 def _he_ai_compute_action(ai_idx):
-    """Decide what AI player ai_idx does. Returns action string and modifies pot/money."""
+    """Decide what AI player ai_idx does, prefiriendo el modelo JSON externo."""
+    model_action = _he_ai_pick_from_model(ai_idx)
+    if model_action is not None:
+        return model_action
+
     global he_pot, he_ai_money, he_ai_folded, he_ai_raised_this_round, he_ai_raise_amount
     if he_ai_folded[ai_idx]:
         return "ya retirado"
@@ -2416,21 +2602,21 @@ def _he_ai_compute_action(ai_idx):
         he_ai_raise_amount = max(he_ai_raise_amount, amt)
         return amt
 
-    if rank >= 5:       
+    if rank >= 5:
         if r < 0.80:
             amt = do_raise(3, 7)
             return f"SUBE {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 3:     
+    elif rank >= 3:
         if r < 0.50:
             amt = do_raise(2, 4)
             return f"sube {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 0:      
+    elif rank >= 0:
         if r < 0.22:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -2440,7 +2626,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    else:               
+    else:
         if r < 0.50:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -3526,6 +3712,7 @@ def loading_screen():
     os.makedirs(os.path.join('imagenes', 'cards'), exist_ok=True)
     os.makedirs('music', exist_ok=True)
     os.makedirs(os.path.join('music', 'sounds-storymode'), exist_ok=True)
+    os.makedirs('test', exist_ok=True)
 
     def _build_file_list():
         all_files = []
@@ -3554,6 +3741,7 @@ def loading_screen():
         for key, (local_path, url) in {**_STORY_MUSIC_FILES, **_STORY_SFX_FILES}.items():
             all_files.append((url, local_path, os.path.basename(local_path)))
         all_files.append((_MUSIC_URL, _MUSIC_LOCAL, "coffee_time.mp3"))
+        all_files.append((_HE_AI_MODEL_URL, _HE_AI_MODEL_LOCAL, "he_ai_model.json"))
         return all_files
 
     FUENTE_LOAD  = pygame.font.SysFont("arial", 36, bold=True)
