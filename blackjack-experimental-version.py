@@ -4738,3 +4738,4 @@ while True:
         _render_pause_menu(now)
 
     flip_display()
+    
