@@ -3357,9 +3357,11 @@ def _render_main_menu(now):
     main_menu_button_rects = []
     btn_start_y = _MENU_BTN_START_Y
 
+    menu_locked = _hard_reset_confirm
+
     for i, opt in enumerate(MENU_OPTIONS):
         base_rect = _main_menu_rect(i)
-        hovered = base_rect.collidepoint(mouse_pos)
+        hovered = base_rect.collidepoint(mouse_pos) and not menu_locked
         if hovered:
             main_menu_hovered = i
 
@@ -3374,40 +3376,54 @@ def _render_main_menu(now):
         draw_rect = pygame.Rect(draw_x, draw_y, draw_w, draw_h)
         main_menu_button_rects.append(draw_rect)
 
-        bg_alpha = 220 if hovered else 160
-        bg_col = (55, 95, 68) if hovered else (22, 36, 26)
+        if menu_locked:
+            bg_alpha = 120
+            bg_col = (26, 28, 30)
+            border_col = (90, 90, 95)
+            lbl_col = (170, 170, 175)
+            sub_col = (115, 115, 120)
+        else:
+            bg_alpha = 220 if hovered else 160
+            bg_col = (55, 95, 68) if hovered else (22, 36, 26)
+            border_col = DORADO if hovered else (70, 110, 80)
+            lbl_col = (220, 255, 225) if hovered else BLANCO
+            sub_col = (160, 190, 165) if hovered else (120, 140, 125)
+
         bg_s = pygame.Surface((draw_w, draw_h), pygame.SRCALPHA)
         bg_s.fill((*bg_col, bg_alpha))
         VENTANA.blit(bg_s, (draw_x, draw_y))
-        border_col = DORADO if hovered else (70, 110, 80)
         pygame.draw.rect(VENTANA, border_col, draw_rect, 2, border_radius=10)
 
-        lbl_col = (220, 255, 225) if hovered else BLANCO
         lbl_s = FUENTE_MENU_OPT.render(opt['label'], True, lbl_col)
         lbl_y = draw_y + 18
         VENTANA.blit(lbl_s, (draw_x + 36, lbl_y))
-        sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, (160, 190, 165) if hovered else (120, 140, 125))
+        sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, sub_col)
         VENTANA.blit(sub_s, (draw_x + 38, lbl_y + lbl_s.get_height() + 4))
 
-    hint = FUENTE_INSTR.render("Haz clic para seleccionar", True, (90, 80, 60))
+    hint = FUENTE_INSTR.render("Haz clic para seleccionar", True, (90, 80, 60) if not menu_locked else (70, 70, 75))
     VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 18))
 
-    folder_btn_w = 380
-    folder_btn_h = 46
+    folder_btn_w = 470
+    folder_btn_h = 50
     folder_btn_x = (ANCHO - folder_btn_w) // 2
-    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 60
+    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 58
     folder_rect = pygame.Rect(folder_btn_x, folder_btn_y, folder_btn_w, folder_btn_h)
-    folder_hov = folder_rect.collidepoint(mouse_pos)
-    fb_col = (45, 70, 55) if folder_hov else (25, 40, 32)
+    folder_hov = folder_rect.collidepoint(mouse_pos) and not menu_locked
+    fb_col = (45, 70, 55) if folder_hov else ((28, 32, 30) if menu_locked else (25, 40, 32))
     fb_s = pygame.Surface((folder_btn_w, folder_btn_h), pygame.SRCALPHA)
-    fb_s.fill((*fb_col, 220))
+    fb_s.fill((*fb_col, 220 if not menu_locked else 140))
     VENTANA.blit(fb_s, (folder_btn_x, folder_btn_y))
-    fb_border = DORADO if folder_hov else (55, 90, 65)
+    fb_border = DORADO if folder_hov else ((90, 90, 95) if menu_locked else (55, 90, 65))
     pygame.draw.rect(VENTANA, fb_border, folder_rect, 1, border_radius=8)
 
-    icon_col = (230, 250, 235) if folder_hov else (160, 190, 165)
+    folder_text_font = pygame.font.SysFont("arial", 21, bold=True)
+    icon_col = (230, 250, 235) if folder_hov else ((155, 155, 160) if menu_locked else (160, 190, 165))
     icon_surf = _get_emoji_font().render("📁", True, icon_col)
-    text_surf = FUENTE_MENU_SUB.render("Abrir carpeta de datos del juego", True, icon_col)
+    icon_surf = pygame.transform.smoothscale(
+        icon_surf,
+        (max(1, int(icon_surf.get_width() * 0.72)), max(1, int(icon_surf.get_height() * 0.72)))
+    )
+    text_surf = folder_text_font.render("Abrir carpeta de datos del juego", True, icon_col)
     total_w = icon_surf.get_width() + 10 + text_surf.get_width()
     ix = folder_btn_x + (folder_btn_w - total_w) // 2
     iy = folder_btn_y + (folder_btn_h - max(icon_surf.get_height(), text_surf.get_height())) // 2
@@ -3415,21 +3431,26 @@ def _render_main_menu(now):
     VENTANA.blit(text_surf, (ix + icon_surf.get_width() + 10, iy + (icon_surf.get_height() - text_surf.get_height()) // 2))
     _render_main_menu._folder_rect = folder_rect
 
-    reset_btn_w = 380
-    reset_btn_h = 46
+    reset_btn_w = 470
+    reset_btn_h = 50
     reset_btn_x = (ANCHO - reset_btn_w) // 2
     reset_btn_y = folder_btn_y + folder_btn_h + 14
     reset_rect  = pygame.Rect(reset_btn_x, reset_btn_y, reset_btn_w, reset_btn_h)
-    reset_hov   = reset_rect.collidepoint(mouse_pos) and not _hard_reset_confirm
-    rb_col      = (90, 28, 28) if reset_hov else (40, 12, 12)
+    reset_hov   = reset_rect.collidepoint(mouse_pos) and not menu_locked
+    rb_col      = (90, 28, 28) if reset_hov else ((28, 14, 14) if menu_locked else (40, 12, 12))
     rb_s        = pygame.Surface((reset_btn_w, reset_btn_h), pygame.SRCALPHA)
-    rb_s.fill((*rb_col, 210))
+    rb_s.fill((*rb_col, 210 if not menu_locked else 140))
     VENTANA.blit(rb_s, (reset_btn_x, reset_btn_y))
-    rb_border   = (220, 70, 70) if reset_hov else (100, 35, 35)
+    rb_border   = (220, 70, 70) if reset_hov else ((110, 85, 85) if menu_locked else (100, 35, 35))
     pygame.draw.rect(VENTANA, rb_border, reset_rect, 1, border_radius=8)
-    icon_col_r  = (255, 190, 190) if reset_hov else (165, 90, 90)
-    reset_icon  = _get_emoji_font().render("\u26a0", True, icon_col_r)
-    reset_text  = FUENTE_MENU_SUB.render("Hard Reset \u00b7 Borrar datos y reiniciar", True, icon_col_r)
+    reset_text_font = pygame.font.SysFont("arial", 20, bold=True)
+    icon_col_r  = (255, 190, 190) if reset_hov else ((145, 110, 110) if menu_locked else (165, 90, 90))
+    reset_icon  = _get_emoji_font().render("⚠", True, icon_col_r)
+    reset_icon  = pygame.transform.smoothscale(
+        reset_icon,
+        (max(1, int(reset_icon.get_width() * 0.70)), max(1, int(reset_icon.get_height() * 0.70)))
+    )
+    reset_text  = reset_text_font.render("Hard Reset · Borrar datos y reiniciar", True, icon_col_r)
     total_rw    = reset_icon.get_width() + 10 + reset_text.get_width()
     rix = reset_btn_x + (reset_btn_w - total_rw) // 2
     riy = reset_btn_y + (reset_btn_h - max(reset_icon.get_height(), reset_text.get_height())) // 2
@@ -3437,7 +3458,6 @@ def _render_main_menu(now):
     VENTANA.blit(reset_text, (rix + reset_icon.get_width() + 10,
                                riy + (reset_icon.get_height() - reset_text.get_height()) // 2))
     _render_main_menu._hard_reset_rect = reset_rect
-
     if _hard_reset_confirm:
         ov2 = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
         ov2.fill((0, 0, 0, 185))
@@ -3954,13 +3974,25 @@ while True:
 
         if app_state == 'main_menu':
             if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_ESCAPE and _hard_reset_confirm:
-                    _hard_reset_confirm = False
-                elif evento.key == pygame.K_1: _start_story_mode()
+                if _hard_reset_confirm:
+                    if evento.key == pygame.K_ESCAPE:
+                        _hard_reset_confirm = False
+                    continue
+                if evento.key == pygame.K_1: _start_story_mode()
                 elif evento.key == pygame.K_2: _start_infinite_mode()
                 elif evento.key == pygame.K_3: _start_poker_mode()
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
+
+                if _hard_reset_confirm:
+                    confirm_r2 = getattr(_render_main_menu, '_confirm_rect', None)
+                    cancel_r2  = getattr(_render_main_menu, '_cancel_rect',  None)
+                    if confirm_r2 and confirm_r2.collidepoint(lpos):
+                        _do_hard_reset()
+                    elif cancel_r2 and cancel_r2.collidepoint(lpos):
+                        _hard_reset_confirm = False
+                    continue
+
                 for i, rect in enumerate(main_menu_button_rects):
                     if rect.collidepoint(lpos):
                         _hard_reset_confirm = False
@@ -3976,17 +4008,9 @@ while True:
                 if folder_r and folder_r.collidepoint(lpos):
                     open_data_folder()
                 reset_r = getattr(_render_main_menu, '_hard_reset_rect', None)
-                if reset_r and reset_r.collidepoint(lpos) and not _hard_reset_confirm:
+                if reset_r and reset_r.collidepoint(lpos):
                     _hard_reset_confirm = True
-                if _hard_reset_confirm:
-                    confirm_r2 = getattr(_render_main_menu, '_confirm_rect', None)
-                    cancel_r2  = getattr(_render_main_menu, '_cancel_rect',  None)
-                    if confirm_r2 and confirm_r2.collidepoint(lpos):
-                        _do_hard_reset()
-                    if cancel_r2 and cancel_r2.collidepoint(lpos):
-                        _hard_reset_confirm = False
             continue
-
         if app_state == 'poker':
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                 if he_in_raise:
