@@ -3401,12 +3401,12 @@ def _render_main_menu(now):
         VENTANA.blit(sub_s, (draw_x + 38, lbl_y + lbl_s.get_height() + 4))
 
     hint = FUENTE_INSTR.render("Haz clic para seleccionar", True, (90, 80, 60) if not menu_locked else (70, 70, 75))
-    VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 18))
+    VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) - 4))
 
     folder_btn_w = 470
     folder_btn_h = 50
     folder_btn_x = (ANCHO - folder_btn_w) // 2
-    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 58
+    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 30
     folder_rect = pygame.Rect(folder_btn_x, folder_btn_y, folder_btn_w, folder_btn_h)
     folder_hov = folder_rect.collidepoint(mouse_pos) and not menu_locked
     fb_col = (45, 70, 55) if folder_hov else ((28, 32, 30) if menu_locked else (25, 40, 32))
@@ -3435,7 +3435,7 @@ def _render_main_menu(now):
     reset_btn_w = 470
     reset_btn_h = 50
     reset_btn_x = (ANCHO - reset_btn_w) // 2
-    reset_btn_y = folder_btn_y + folder_btn_h + 14
+    reset_btn_y = folder_btn_y + folder_btn_h + 12
     reset_rect  = pygame.Rect(reset_btn_x, reset_btn_y, reset_btn_w, reset_btn_h)
     reset_hov   = reset_rect.collidepoint(mouse_pos) and not menu_locked
     rb_col      = (90, 28, 28) if reset_hov else ((28, 14, 14) if menu_locked else (40, 12, 12))
