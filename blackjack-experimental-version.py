@@ -3421,14 +3421,15 @@ def _render_main_menu(now):
     icon_surf = _get_emoji_font().render("📁", True, icon_col)
     icon_surf = pygame.transform.smoothscale(
         icon_surf,
-        (max(1, int(icon_surf.get_width() * 0.72)), max(1, int(icon_surf.get_height() * 0.72)))
+        (max(1, int(icon_surf.get_width() * 0.60)), max(1, int(icon_surf.get_height() * 0.60)))
     )
     text_surf = folder_text_font.render("Abrir carpeta de datos del juego", True, icon_col)
-    total_w = icon_surf.get_width() + 10 + text_surf.get_width()
-    ix = folder_btn_x + (folder_btn_w - total_w) // 2
-    iy = folder_btn_y + (folder_btn_h - max(icon_surf.get_height(), text_surf.get_height())) // 2
+    ix = folder_btn_x + 18
+    iy = folder_btn_y + (folder_btn_h - icon_surf.get_height()) // 2 - 1
+    tx = ix + icon_surf.get_width() + 12
+    ty = folder_btn_y + (folder_btn_h - text_surf.get_height()) // 2 + 1
     VENTANA.blit(icon_surf, (ix, iy))
-    VENTANA.blit(text_surf, (ix + icon_surf.get_width() + 10, iy + (icon_surf.get_height() - text_surf.get_height()) // 2))
+    VENTANA.blit(text_surf, (tx, ty))
     _render_main_menu._folder_rect = folder_rect
 
     reset_btn_w = 470
@@ -3448,15 +3449,15 @@ def _render_main_menu(now):
     reset_icon  = _get_emoji_font().render("⚠", True, icon_col_r)
     reset_icon  = pygame.transform.smoothscale(
         reset_icon,
-        (max(1, int(reset_icon.get_width() * 0.70)), max(1, int(reset_icon.get_height() * 0.70)))
+        (max(1, int(reset_icon.get_width() * 0.58)), max(1, int(reset_icon.get_height() * 0.58)))
     )
     reset_text  = reset_text_font.render("Hard Reset · Borrar datos y reiniciar", True, icon_col_r)
-    total_rw    = reset_icon.get_width() + 10 + reset_text.get_width()
-    rix = reset_btn_x + (reset_btn_w - total_rw) // 2
-    riy = reset_btn_y + (reset_btn_h - max(reset_icon.get_height(), reset_text.get_height())) // 2
+    rix = reset_btn_x + 18
+    riy = reset_btn_y + (reset_btn_h - reset_icon.get_height()) // 2 - 1
+    rtx = rix + reset_icon.get_width() + 12
+    rty = reset_btn_y + (reset_btn_h - reset_text.get_height()) // 2 + 1
     VENTANA.blit(reset_icon, (rix, riy))
-    VENTANA.blit(reset_text, (rix + reset_icon.get_width() + 10,
-                               riy + (reset_icon.get_height() - reset_text.get_height()) // 2))
+    VENTANA.blit(reset_text, (rtx, rty))
     _render_main_menu._hard_reset_rect = reset_rect
     if _hard_reset_confirm:
         ov2 = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
@@ -4738,4 +4739,3 @@ while True:
         _render_pause_menu(now)
 
     flip_display()
-    
