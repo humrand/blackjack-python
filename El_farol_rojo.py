@@ -41,7 +41,7 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "1.3.3"
+VERSION = "1.4.3"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
@@ -2369,6 +2369,188 @@ he_ai_winner = False
 
 he_raise_btn = pygame.Rect(0, 0, 230, 38)  
 
+_HE_AI_MODEL_LOCAL = os.path.join('test', 'he_ai_model.json')
+_HE_AI_MODEL_URL   = "https://raw.githubusercontent.com/humrand/blackjack-python/main/test/he_ai_model.json"
+_he_ai_model = None
+_he_ai_model_ready = False
+
+def _download_text_file(local_path, url, timeout=25):
+    """Descarga un archivo de texto si no existe."""
+    if os.path.exists(local_path):
+        return True
+    try:
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = resp.read()
+        with open(local_path, 'wb') as f:
+            f.write(data)
+        return True
+    except Exception as e:
+        print(f"[JSON] Error descargando {os.path.basename(local_path)}: {e}")
+        return False
+
+def _load_he_ai_model():
+    """Carga el modelo JSON del poker una sola vez."""
+    global _he_ai_model, _he_ai_model_ready
+    if _he_ai_model_ready:
+        return _he_ai_model
+    _he_ai_model_ready = True
+
+    _download_text_file(_HE_AI_MODEL_LOCAL, _HE_AI_MODEL_URL, timeout=25)
+    try:
+        import json as _json
+        with open(_HE_AI_MODEL_LOCAL, 'r', encoding='utf-8') as f:
+            _he_ai_model = _json.load(f)
+    except Exception as e:
+        print(f"[JSON] No se pudo cargar he_ai_model.json: {e}")
+        _he_ai_model = None
+    return _he_ai_model
+
+def _he_ai_current_stage():
+    if he_state == 'pre_flop':
+        return 'preflop'
+    if he_state == 'flop':
+        return 'flop'
+    if he_state == 'turn':
+        return 'turn'
+    if he_state == 'river':
+        return 'river'
+    return he_state
+
+def _he_ai_strength_rank(ai_idx):
+    ai_hand = he_ai_cards[ai_idx] if ai_idx < len(he_ai_cards) else []
+    if not ai_hand:
+        return -1
+    cards = [(e[0], e[1], e[2], e[3]) for e in ai_hand]
+    if he_community_cards:
+        cards += [(e[0], e[1], e[2], e[3]) for e in he_community_cards]
+    score, _ = evaluate_holdem_hand(cards)
+    return score[0] if score else -1
+
+def _he_ai_apply_call(ai_idx, money, call_amt):
+    global he_pot, he_ai_money
+    paid = min(call_amt, money)
+    if paid > 0:
+        he_pot += paid
+        he_ai_money[ai_idx] -= paid
+    return paid
+
+def _he_ai_apply_raise(ai_idx, money, amount):
+    global he_pot, he_ai_money, he_ai_raised_this_round, he_ai_raise_amount
+    amt = min(amount, money)
+    if amt > 0:
+        he_pot += amt
+        he_ai_money[ai_idx] -= amt
+        he_ai_raised_this_round = True
+        he_ai_raise_amount = max(he_ai_raise_amount, amt)
+    return amt
+
+def _he_ai_pick_from_model(ai_idx):
+    """Intenta decidir la acción del AI usando el JSON externo."""
+    model = _load_he_ai_model()
+    if model is None:
+        return None
+
+    stage = _he_ai_current_stage()
+    rank = _he_ai_strength_rank(ai_idx)
+    money = he_ai_money[ai_idx] if ai_idx < len(he_ai_money) else 0
+    call_amt = min(he_blind, money)
+
+    def _apply_rule(rule):
+        if not isinstance(rule, dict):
+            return None
+        action = str(rule.get('action', '')).lower().strip()
+        if action in ('fold', 'retire', 'se retira'):
+            he_ai_folded[ai_idx] = True
+            return rule.get('text', 'se retira')
+        if action in ('call', 'iguala', 'check'):
+            _he_ai_apply_call(ai_idx, money, call_amt)
+            return rule.get('text', 'iguala')
+        if action in ('raise', 'sube', 'farolea y sube'):
+            mult = rule.get('raise_mult', rule.get('mult', 1))
+            try:
+                mult = max(1, int(mult))
+            except Exception:
+                mult = 1
+            amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
+            prefix = rule.get('text_prefix', 'sube')
+            return f"{prefix} {amt}".strip() if amt else None
+        return None
+
+    def _match_rank_rule(node):
+        if not isinstance(node, dict):
+            return None
+        for bucket in ('by_rank', 'ranks', 'rank_map'):
+            buckets = node.get(bucket)
+            if isinstance(buckets, dict):
+                for key in (str(rank), rank, str(max(0, rank))):
+                    if key in buckets:
+                        res = _apply_rule(buckets[key]) if isinstance(buckets[key], dict) else buckets[key]
+                        if res is not None:
+                            return res
+        return None
+
+    if isinstance(model, list):
+        for rule in model:
+            if not isinstance(rule, dict):
+                continue
+            min_rank = rule.get('min_rank', rule.get('rank_min', -999))
+            max_rank = rule.get('max_rank', rule.get('rank_max', 999))
+            if min_rank <= rank <= max_rank:
+                res = _apply_rule(rule)
+                if res is not None:
+                    return res
+        return None
+
+    if not isinstance(model, dict):
+        return None
+
+    for key in (stage, he_state, 'default', 'general'):
+        node = model.get(key)
+        if node is None:
+            continue
+
+        if isinstance(node, list):
+            for rule in node:
+                res = _apply_rule(rule)
+                if res is not None:
+                    return res
+
+        if isinstance(node, dict):
+            res = _match_rank_rule(node)
+            if res is not None:
+                return res
+
+            if any(k in node for k in ('fold_prob', 'call_prob', 'raise_prob', 'raise_mult')):
+                import random as _rnd
+                r = _rnd.random()
+                fold_p = float(node.get('fold_prob', 0.0) or 0.0)
+                call_p = float(node.get('call_prob', 0.0) or 0.0)
+                raise_p = float(node.get('raise_prob', 0.0) or 0.0)
+                if r < fold_p:
+                    he_ai_folded[ai_idx] = True
+                    return node.get('fold_text', 'se retira')
+                if r < fold_p + raise_p:
+                    mult = node.get('raise_mult', 1)
+                    try:
+                        mult = max(1, int(mult))
+                    except Exception:
+                        mult = 1
+                    amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
+                    return f"{node.get('raise_text_prefix', 'sube')} {amt}".strip() if amt else None
+                if r < fold_p + raise_p + call_p:
+                    _he_ai_apply_call(ai_idx, money, call_amt)
+                    return node.get('call_text', 'iguala')
+
+            action = str(node.get('action', '')).lower().strip()
+            if action:
+                res = _apply_rule(node)
+                if res is not None:
+                    return res
+
+    return None
+
 he_ai_turn_active       = False
 he_ai_turn_idx          = 0
 he_ai_turn_phase        = 'announcing'  
@@ -2385,7 +2567,11 @@ he_dealing         = False
 _HE_DECIDE_MS           = 900
 
 def _he_ai_compute_action(ai_idx):
-    """Decide what AI player ai_idx does. Returns action string and modifies pot/money."""
+    """Decide what AI player ai_idx does, prefiriendo el modelo JSON externo."""
+    model_action = _he_ai_pick_from_model(ai_idx)
+    if model_action is not None:
+        return model_action
+
     global he_pot, he_ai_money, he_ai_folded, he_ai_raised_this_round, he_ai_raise_amount
     if he_ai_folded[ai_idx]:
         return "ya retirado"
@@ -2416,21 +2602,21 @@ def _he_ai_compute_action(ai_idx):
         he_ai_raise_amount = max(he_ai_raise_amount, amt)
         return amt
 
-    if rank >= 5:       
+    if rank >= 5:
         if r < 0.80:
             amt = do_raise(3, 7)
             return f"SUBE {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 3:     
+    elif rank >= 3:
         if r < 0.50:
             amt = do_raise(2, 4)
             return f"sube {amt}"
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    elif rank >= 0:      
+    elif rank >= 0:
         if r < 0.22:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -2440,7 +2626,7 @@ def _he_ai_compute_action(ai_idx):
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
             return "iguala"
-    else:               
+    else:
         if r < 0.50:
             he_ai_folded[ai_idx] = True
             return "se retira"
@@ -3108,6 +3294,25 @@ _MENU_BTN_POKER_EXTRA_W = 28
 _MENU_HOVER_TARGET = 1.045
 _menu_btn_scales = [1.0 for _ in MENU_OPTIONS]
 main_menu_button_rects = []
+_hard_reset_confirm = False
+
+def _do_hard_reset():
+    """Borra la carpeta de datos de ElFarolRojo y reinicia el juego desde cero."""
+    try:
+        pygame.mixer.music.stop()
+    except Exception:
+        pass
+    try:
+        os.chdir(os.path.expanduser('~'))
+        shutil.rmtree(DATA_DIR, ignore_errors=True)
+    except Exception as e:
+        print(f"[RESET] Error borrando datos: {e}")
+    try:
+        os.execv(sys.executable, [sys.executable, _SCRIPT_PATH])
+    except Exception:
+        subprocess.Popen([sys.executable, _SCRIPT_PATH])
+        pygame.quit()
+        sys.exit(0)
 
 def _main_menu_rect(i):
     w = _MENU_BTN_BASE_W + (_MENU_BTN_POKER_EXTRA_W if i == 2 else 0)
@@ -3152,9 +3357,11 @@ def _render_main_menu(now):
     main_menu_button_rects = []
     btn_start_y = _MENU_BTN_START_Y
 
+    menu_locked = _hard_reset_confirm
+
     for i, opt in enumerate(MENU_OPTIONS):
         base_rect = _main_menu_rect(i)
-        hovered = base_rect.collidepoint(mouse_pos)
+        hovered = base_rect.collidepoint(mouse_pos) and not menu_locked
         if hovered:
             main_menu_hovered = i
 
@@ -3169,46 +3376,125 @@ def _render_main_menu(now):
         draw_rect = pygame.Rect(draw_x, draw_y, draw_w, draw_h)
         main_menu_button_rects.append(draw_rect)
 
-        bg_alpha = 220 if hovered else 160
-        bg_col = (55, 95, 68) if hovered else (22, 36, 26)
+        if menu_locked:
+            bg_alpha = 120
+            bg_col = (26, 28, 30)
+            border_col = (90, 90, 95)
+            lbl_col = (170, 170, 175)
+            sub_col = (115, 115, 120)
+        else:
+            bg_alpha = 220 if hovered else 160
+            bg_col = (55, 95, 68) if hovered else (22, 36, 26)
+            border_col = DORADO if hovered else (70, 110, 80)
+            lbl_col = (220, 255, 225) if hovered else BLANCO
+            sub_col = (160, 190, 165) if hovered else (120, 140, 125)
+
         bg_s = pygame.Surface((draw_w, draw_h), pygame.SRCALPHA)
         bg_s.fill((*bg_col, bg_alpha))
         VENTANA.blit(bg_s, (draw_x, draw_y))
-        border_col = DORADO if hovered else (70, 110, 80)
         pygame.draw.rect(VENTANA, border_col, draw_rect, 2, border_radius=10)
 
-        lbl_col = (220, 255, 225) if hovered else BLANCO
         lbl_s = FUENTE_MENU_OPT.render(opt['label'], True, lbl_col)
         lbl_y = draw_y + 18
         VENTANA.blit(lbl_s, (draw_x + 36, lbl_y))
-        sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, (160, 190, 165) if hovered else (120, 140, 125))
+        sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, sub_col)
         VENTANA.blit(sub_s, (draw_x + 38, lbl_y + lbl_s.get_height() + 4))
 
-    hint = FUENTE_INSTR.render("Haz clic para seleccionar", True, (90, 80, 60))
-    VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 18))
+    hint = FUENTE_INSTR.render("Haz clic para seleccionar", True, (90, 80, 60) if not menu_locked else (70, 70, 75))
+    VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) - 4))
 
-    folder_btn_w = 380
-    folder_btn_h = 46
+    folder_btn_w = 470
+    folder_btn_h = 50
     folder_btn_x = (ANCHO - folder_btn_w) // 2
-    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 60
+    folder_btn_y = btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) + 30
     folder_rect = pygame.Rect(folder_btn_x, folder_btn_y, folder_btn_w, folder_btn_h)
-    folder_hov = folder_rect.collidepoint(mouse_pos)
-    fb_col = (45, 70, 55) if folder_hov else (25, 40, 32)
+    folder_hov = folder_rect.collidepoint(mouse_pos) and not menu_locked
+    fb_col = (45, 70, 55) if folder_hov else ((28, 32, 30) if menu_locked else (25, 40, 32))
     fb_s = pygame.Surface((folder_btn_w, folder_btn_h), pygame.SRCALPHA)
-    fb_s.fill((*fb_col, 220))
+    fb_s.fill((*fb_col, 220 if not menu_locked else 140))
     VENTANA.blit(fb_s, (folder_btn_x, folder_btn_y))
-    fb_border = DORADO if folder_hov else (55, 90, 65)
+    fb_border = DORADO if folder_hov else ((90, 90, 95) if menu_locked else (55, 90, 65))
     pygame.draw.rect(VENTANA, fb_border, folder_rect, 1, border_radius=8)
 
-    icon_col = (230, 250, 235) if folder_hov else (160, 190, 165)
+    folder_text_font = pygame.font.SysFont("arial", 21, bold=True)
+    icon_col = (230, 250, 235) if folder_hov else ((155, 155, 160) if menu_locked else (160, 190, 165))
     icon_surf = _get_emoji_font().render("📁", True, icon_col)
-    text_surf = FUENTE_MENU_SUB.render("Abrir carpeta de datos del juego", True, icon_col)
-    total_w = icon_surf.get_width() + 10 + text_surf.get_width()
-    ix = folder_btn_x + (folder_btn_w - total_w) // 2
-    iy = folder_btn_y + (folder_btn_h - max(icon_surf.get_height(), text_surf.get_height())) // 2
+    icon_surf = pygame.transform.smoothscale(
+        icon_surf,
+        (max(1, int(icon_surf.get_width() * 0.60)), max(1, int(icon_surf.get_height() * 0.60)))
+    )
+    text_surf = folder_text_font.render("Abrir carpeta de datos del juego", True, icon_col)
+    ix = folder_btn_x + 18
+    iy = folder_btn_y + (folder_btn_h - icon_surf.get_height()) // 2 - 1
+    tx = ix + icon_surf.get_width() + 12
+    ty = folder_btn_y + (folder_btn_h - text_surf.get_height()) // 2 + 1
     VENTANA.blit(icon_surf, (ix, iy))
-    VENTANA.blit(text_surf, (ix + icon_surf.get_width() + 10, iy + (icon_surf.get_height() - text_surf.get_height()) // 2))
+    VENTANA.blit(text_surf, (tx, ty))
     _render_main_menu._folder_rect = folder_rect
+
+    reset_btn_w = 470
+    reset_btn_h = 50
+    reset_btn_x = (ANCHO - reset_btn_w) // 2
+    reset_btn_y = folder_btn_y + folder_btn_h + 12
+    reset_rect  = pygame.Rect(reset_btn_x, reset_btn_y, reset_btn_w, reset_btn_h)
+    reset_hov   = reset_rect.collidepoint(mouse_pos) and not menu_locked
+    rb_col      = (90, 28, 28) if reset_hov else ((28, 14, 14) if menu_locked else (40, 12, 12))
+    rb_s        = pygame.Surface((reset_btn_w, reset_btn_h), pygame.SRCALPHA)
+    rb_s.fill((*rb_col, 210 if not menu_locked else 140))
+    VENTANA.blit(rb_s, (reset_btn_x, reset_btn_y))
+    rb_border   = (220, 70, 70) if reset_hov else ((110, 85, 85) if menu_locked else (100, 35, 35))
+    pygame.draw.rect(VENTANA, rb_border, reset_rect, 1, border_radius=8)
+    reset_text_font = pygame.font.SysFont("arial", 20, bold=True)
+    icon_col_r  = (255, 190, 190) if reset_hov else ((145, 110, 110) if menu_locked else (165, 90, 90))
+    reset_icon  = _get_emoji_font().render("⚠", True, icon_col_r)
+    reset_icon  = pygame.transform.smoothscale(
+        reset_icon,
+        (max(1, int(reset_icon.get_width() * 0.58)), max(1, int(reset_icon.get_height() * 0.58)))
+    )
+    reset_text  = reset_text_font.render("Hard Reset · Borrar datos y reiniciar", True, icon_col_r)
+    rix = reset_btn_x + 18
+    riy = reset_btn_y + (reset_btn_h - reset_icon.get_height()) // 2 - 1
+    rtx = rix + reset_icon.get_width() + 12
+    rty = reset_btn_y + (reset_btn_h - reset_text.get_height()) // 2 + 1
+    VENTANA.blit(reset_icon, (rix, riy))
+    VENTANA.blit(reset_text, (rtx, rty))
+    _render_main_menu._hard_reset_rect = reset_rect
+    if _hard_reset_confirm:
+        ov2 = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        ov2.fill((0, 0, 0, 185))
+        VENTANA.blit(ov2, (0, 0))
+        dlg_w, dlg_h = 700, 270
+        dlg_x = (ANCHO - dlg_w) // 2
+        dlg_y = (ALTO  - dlg_h) // 2
+        dlg_s = pygame.Surface((dlg_w, dlg_h), pygame.SRCALPHA)
+        dlg_s.fill((18, 6, 6, 245))
+        VENTANA.blit(dlg_s, (dlg_x, dlg_y))
+        pygame.draw.rect(VENTANA, (210, 55, 55), (dlg_x, dlg_y, dlg_w, dlg_h), 2, border_radius=14)
+        warn_s = FUENTE_MSG.render("\u26a0  \u00bfBorrar todos los datos?", True, (255, 110, 110))
+        VENTANA.blit(warn_s, (dlg_x + (dlg_w - warn_s.get_width()) // 2, dlg_y + 30))
+        sub_s2 = FUENTE_MENU_SUB.render(
+            "Se borrar\u00e1n guardados, im\u00e1genes y m\u00fasica descargada.", True, (200, 155, 155))
+        VENTANA.blit(sub_s2, (dlg_x + (dlg_w - sub_s2.get_width()) // 2, dlg_y + 95))
+        sub_s3 = FUENTE_MENU_SUB.render(
+            "El juego se reiniciar\u00e1 autom\u00e1ticamente.", True, (170, 130, 130))
+        VENTANA.blit(sub_s3, (dlg_x + (dlg_w - sub_s3.get_width()) // 2, dlg_y + 125))
+        btn_y2      = dlg_y + 170
+        confirm_r   = pygame.Rect(dlg_x + 70,  btn_y2, 240, 62)
+        cancel_r    = pygame.Rect(dlg_x + dlg_w - 310, btn_y2, 240, 62)
+        conf_hov    = confirm_r.collidepoint(mouse_pos)
+        canc_hov    = cancel_r.collidepoint(mouse_pos)
+        pygame.draw.rect(VENTANA, (170, 35, 35) if conf_hov else (90, 18, 18), confirm_r, border_radius=9)
+        pygame.draw.rect(VENTANA, (230, 70, 70), confirm_r, 2, border_radius=9)
+        pygame.draw.rect(VENTANA, (30, 75, 44)  if canc_hov else (16, 44, 26), cancel_r,  border_radius=9)
+        pygame.draw.rect(VENTANA, (65, 170, 90), cancel_r,  2, border_radius=9)
+        conf_txt = FUENTE_MENU_SUB.render("Borrar y reiniciar", True, BLANCO)
+        canc_txt = FUENTE_MENU_SUB.render("Cancelar",           True, BLANCO)
+        VENTANA.blit(conf_txt, (confirm_r.centerx - conf_txt.get_width() // 2,
+                                 confirm_r.centery - conf_txt.get_height() // 2))
+        VENTANA.blit(canc_txt, (cancel_r.centerx  - canc_txt.get_width() // 2,
+                                 cancel_r.centery  - canc_txt.get_height() // 2))
+        _render_main_menu._confirm_rect = confirm_r
+        _render_main_menu._cancel_rect  = cancel_r
 
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
@@ -3526,6 +3812,7 @@ def loading_screen():
     os.makedirs(os.path.join('imagenes', 'cards'), exist_ok=True)
     os.makedirs('music', exist_ok=True)
     os.makedirs(os.path.join('music', 'sounds-storymode'), exist_ok=True)
+    os.makedirs('test', exist_ok=True)
 
     def _build_file_list():
         all_files = []
@@ -3554,6 +3841,7 @@ def loading_screen():
         for key, (local_path, url) in {**_STORY_MUSIC_FILES, **_STORY_SFX_FILES}.items():
             all_files.append((url, local_path, os.path.basename(local_path)))
         all_files.append((_MUSIC_URL, _MUSIC_LOCAL, "coffee_time.mp3"))
+        all_files.append((_HE_AI_MODEL_URL, _HE_AI_MODEL_LOCAL, "he_ai_model.json"))
         return all_files
 
     FUENTE_LOAD  = pygame.font.SysFont("arial", 36, bold=True)
@@ -3687,13 +3975,28 @@ while True:
 
         if app_state == 'main_menu':
             if evento.type == pygame.KEYDOWN:
+                if _hard_reset_confirm:
+                    if evento.key == pygame.K_ESCAPE:
+                        _hard_reset_confirm = False
+                    continue
                 if evento.key == pygame.K_1: _start_story_mode()
                 elif evento.key == pygame.K_2: _start_infinite_mode()
                 elif evento.key == pygame.K_3: _start_poker_mode()
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
+
+                if _hard_reset_confirm:
+                    confirm_r2 = getattr(_render_main_menu, '_confirm_rect', None)
+                    cancel_r2  = getattr(_render_main_menu, '_cancel_rect',  None)
+                    if confirm_r2 and confirm_r2.collidepoint(lpos):
+                        _do_hard_reset()
+                    elif cancel_r2 and cancel_r2.collidepoint(lpos):
+                        _hard_reset_confirm = False
+                    continue
+
                 for i, rect in enumerate(main_menu_button_rects):
                     if rect.collidepoint(lpos):
+                        _hard_reset_confirm = False
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
                         elif i == 2: _start_poker_mode()
@@ -3705,8 +4008,10 @@ while True:
                 folder_r = getattr(_render_main_menu, '_folder_rect', None)
                 if folder_r and folder_r.collidepoint(lpos):
                     open_data_folder()
+                reset_r = getattr(_render_main_menu, '_hard_reset_rect', None)
+                if reset_r and reset_r.collidepoint(lpos):
+                    _hard_reset_confirm = True
             continue
-
         if app_state == 'poker':
             if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                 if he_in_raise:
