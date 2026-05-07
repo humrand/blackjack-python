@@ -3294,6 +3294,25 @@ _MENU_BTN_POKER_EXTRA_W = 28
 _MENU_HOVER_TARGET = 1.045
 _menu_btn_scales = [1.0 for _ in MENU_OPTIONS]
 main_menu_button_rects = []
+_hard_reset_confirm = False
+
+def _do_hard_reset():
+    """Borra la carpeta de datos de ElFarolRojo y reinicia el juego desde cero."""
+    try:
+        pygame.mixer.music.stop()
+    except Exception:
+        pass
+    try:
+        os.chdir(os.path.expanduser('~'))
+        shutil.rmtree(DATA_DIR, ignore_errors=True)
+    except Exception as e:
+        print(f"[RESET] Error borrando datos: {e}")
+    try:
+        os.execv(sys.executable, [sys.executable, _SCRIPT_PATH])
+    except Exception:
+        subprocess.Popen([sys.executable, _SCRIPT_PATH])
+        pygame.quit()
+        sys.exit(0)
 
 def _main_menu_rect(i):
     w = _MENU_BTN_BASE_W + (_MENU_BTN_POKER_EXTRA_W if i == 2 else 0)
@@ -3395,6 +3414,66 @@ def _render_main_menu(now):
     VENTANA.blit(icon_surf, (ix, iy))
     VENTANA.blit(text_surf, (ix + icon_surf.get_width() + 10, iy + (icon_surf.get_height() - text_surf.get_height()) // 2))
     _render_main_menu._folder_rect = folder_rect
+
+    reset_btn_w = 380
+    reset_btn_h = 46
+    reset_btn_x = (ANCHO - reset_btn_w) // 2
+    reset_btn_y = folder_btn_y + folder_btn_h + 14
+    reset_rect  = pygame.Rect(reset_btn_x, reset_btn_y, reset_btn_w, reset_btn_h)
+    reset_hov   = reset_rect.collidepoint(mouse_pos) and not _hard_reset_confirm
+    rb_col      = (90, 28, 28) if reset_hov else (40, 12, 12)
+    rb_s        = pygame.Surface((reset_btn_w, reset_btn_h), pygame.SRCALPHA)
+    rb_s.fill((*rb_col, 210))
+    VENTANA.blit(rb_s, (reset_btn_x, reset_btn_y))
+    rb_border   = (220, 70, 70) if reset_hov else (100, 35, 35)
+    pygame.draw.rect(VENTANA, rb_border, reset_rect, 1, border_radius=8)
+    icon_col_r  = (255, 190, 190) if reset_hov else (165, 90, 90)
+    reset_icon  = _get_emoji_font().render("\u26a0", True, icon_col_r)
+    reset_text  = FUENTE_MENU_SUB.render("Hard Reset \u00b7 Borrar datos y reiniciar", True, icon_col_r)
+    total_rw    = reset_icon.get_width() + 10 + reset_text.get_width()
+    rix = reset_btn_x + (reset_btn_w - total_rw) // 2
+    riy = reset_btn_y + (reset_btn_h - max(reset_icon.get_height(), reset_text.get_height())) // 2
+    VENTANA.blit(reset_icon, (rix, riy))
+    VENTANA.blit(reset_text, (rix + reset_icon.get_width() + 10,
+                               riy + (reset_icon.get_height() - reset_text.get_height()) // 2))
+    _render_main_menu._hard_reset_rect = reset_rect
+
+    if _hard_reset_confirm:
+        ov2 = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        ov2.fill((0, 0, 0, 185))
+        VENTANA.blit(ov2, (0, 0))
+        dlg_w, dlg_h = 700, 270
+        dlg_x = (ANCHO - dlg_w) // 2
+        dlg_y = (ALTO  - dlg_h) // 2
+        dlg_s = pygame.Surface((dlg_w, dlg_h), pygame.SRCALPHA)
+        dlg_s.fill((18, 6, 6, 245))
+        VENTANA.blit(dlg_s, (dlg_x, dlg_y))
+        pygame.draw.rect(VENTANA, (210, 55, 55), (dlg_x, dlg_y, dlg_w, dlg_h), 2, border_radius=14)
+        warn_s = FUENTE_MSG.render("\u26a0  \u00bfBorrar todos los datos?", True, (255, 110, 110))
+        VENTANA.blit(warn_s, (dlg_x + (dlg_w - warn_s.get_width()) // 2, dlg_y + 30))
+        sub_s2 = FUENTE_MENU_SUB.render(
+            "Se borrar\u00e1n guardados, im\u00e1genes y m\u00fasica descargada.", True, (200, 155, 155))
+        VENTANA.blit(sub_s2, (dlg_x + (dlg_w - sub_s2.get_width()) // 2, dlg_y + 95))
+        sub_s3 = FUENTE_MENU_SUB.render(
+            "El juego se reiniciar\u00e1 autom\u00e1ticamente.", True, (170, 130, 130))
+        VENTANA.blit(sub_s3, (dlg_x + (dlg_w - sub_s3.get_width()) // 2, dlg_y + 125))
+        btn_y2      = dlg_y + 170
+        confirm_r   = pygame.Rect(dlg_x + 70,  btn_y2, 240, 62)
+        cancel_r    = pygame.Rect(dlg_x + dlg_w - 310, btn_y2, 240, 62)
+        conf_hov    = confirm_r.collidepoint(mouse_pos)
+        canc_hov    = cancel_r.collidepoint(mouse_pos)
+        pygame.draw.rect(VENTANA, (170, 35, 35) if conf_hov else (90, 18, 18), confirm_r, border_radius=9)
+        pygame.draw.rect(VENTANA, (230, 70, 70), confirm_r, 2, border_radius=9)
+        pygame.draw.rect(VENTANA, (30, 75, 44)  if canc_hov else (16, 44, 26), cancel_r,  border_radius=9)
+        pygame.draw.rect(VENTANA, (65, 170, 90), cancel_r,  2, border_radius=9)
+        conf_txt = FUENTE_MENU_SUB.render("Borrar y reiniciar", True, BLANCO)
+        canc_txt = FUENTE_MENU_SUB.render("Cancelar",           True, BLANCO)
+        VENTANA.blit(conf_txt, (confirm_r.centerx - conf_txt.get_width() // 2,
+                                 confirm_r.centery - conf_txt.get_height() // 2))
+        VENTANA.blit(canc_txt, (cancel_r.centerx  - canc_txt.get_width() // 2,
+                                 cancel_r.centery  - canc_txt.get_height() // 2))
+        _render_main_menu._confirm_rect = confirm_r
+        _render_main_menu._cancel_rect  = cancel_r
 
     ver_s = FUENTE_INSTR.render(f"v{VERSION}", True, (60, 55, 45))
     VENTANA.blit(ver_s, (ANCHO - ver_s.get_width() - 14, ALTO - ver_s.get_height() - 10))
@@ -3875,13 +3954,16 @@ while True:
 
         if app_state == 'main_menu':
             if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_1: _start_story_mode()
+                if evento.key == pygame.K_ESCAPE and _hard_reset_confirm:
+                    _hard_reset_confirm = False
+                elif evento.key == pygame.K_1: _start_story_mode()
                 elif evento.key == pygame.K_2: _start_infinite_mode()
                 elif evento.key == pygame.K_3: _start_poker_mode()
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
                 for i, rect in enumerate(main_menu_button_rects):
                     if rect.collidepoint(lpos):
+                        _hard_reset_confirm = False
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
                         elif i == 2: _start_poker_mode()
@@ -3893,6 +3975,16 @@ while True:
                 folder_r = getattr(_render_main_menu, '_folder_rect', None)
                 if folder_r and folder_r.collidepoint(lpos):
                     open_data_folder()
+                reset_r = getattr(_render_main_menu, '_hard_reset_rect', None)
+                if reset_r and reset_r.collidepoint(lpos) and not _hard_reset_confirm:
+                    _hard_reset_confirm = True
+                if _hard_reset_confirm:
+                    confirm_r2 = getattr(_render_main_menu, '_confirm_rect', None)
+                    cancel_r2  = getattr(_render_main_menu, '_cancel_rect',  None)
+                    if confirm_r2 and confirm_r2.collidepoint(lpos):
+                        _do_hard_reset()
+                    if cancel_r2 and cancel_r2.collidepoint(lpos):
+                        _hard_reset_confirm = False
             continue
 
         if app_state == 'poker':
