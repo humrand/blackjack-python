@@ -3226,7 +3226,9 @@ def _start_poker_mode():
 ONLINE_DEFAULT_PORT = 5555
 
 _online_sock          = None          
+_online_server_addr   = None          
 _online_recv_thread   = None
+_online_ping_thread   = None
 _online_msg_queue     = _collections_mod.deque()  
 
 _online_ip_input      = ""
@@ -3257,67 +3259,104 @@ _online_min_players   = 2
 
 
 def _online_recv_loop(sock):
-    """Hilo de recepción: lee líneas JSON del servidor y las encola."""
-    buf = ""
-    try:
-        while True:
-            data = sock.recv(4096)
-            if not data:
+    """Hilo de recepción UDP: recibe datagramas JSON del servidor y los encola."""
+    buf = b""
+    sock.settimeout(1.0)
+    while True:
+        try:
+            data, _ = sock.recvfrom(65507)
+            buf += data
+        except _socket_mod.timeout:
+            if sock.fileno() == -1:
                 break
-            buf += data.decode('utf-8', errors='replace')
-            while '\n' in buf:
-                line, buf = buf.split('\n', 1)
-                line = line.strip()
-                if line:
-                    try:
-                        msg = _json_mod.loads(line)
+            continue
+        except Exception:
+            break
+        while b'\n' in buf:
+            line, buf = buf.split(b'\n', 1)
+            line = line.strip()
+            if line:
+                try:
+                    msg = _json_mod.loads(line.decode('utf-8', errors='replace'))
+                    if msg.get('type') != 'pong':  
                         _online_msg_queue.append(msg)
-                    except Exception:
-                        pass
-    except Exception:
-        pass
+                except Exception:
+                    pass
     _online_msg_queue.append({'type': 'disconnected'})
 
 
+def _online_ping_loop(sock, server_addr):
+    """Hilo de heartbeat: envía ping cada 5s para mantener la conexión viva."""
+    import time as _time
+    while True:
+        _time.sleep(5)
+        if sock.fileno() == -1:
+            break
+        try:
+            sock.sendto((_json_mod.dumps({'type': 'ping'}) + '\n').encode('utf-8'), server_addr)
+        except Exception:
+            break
+
+
 def _online_send(obj):
-    """Envía un mensaje JSON al servidor (thread-safe)."""
-    global _online_sock
-    if _online_sock is None:
+    """Envía un datagrama JSON al servidor."""
+    global _online_sock, _online_server_addr
+    if _online_sock is None or _online_server_addr is None:
         return
     try:
-        _online_sock.sendall((_json_mod.dumps(obj) + '\n').encode('utf-8'))
+        _online_sock.sendto((_json_mod.dumps(obj) + '\n').encode('utf-8'), _online_server_addr)
     except Exception as e:
         print(f"[ONLINE] Error enviando: {e}")
 
 
 def _online_connect(ip, port, name):
-    """Intenta conectar al servidor en un hilo; actualiza estado al terminar."""
-    global _online_sock, _online_recv_thread, _online_connect_error
-    global _online_connecting, app_state, _online_name_input
+    """Crea socket UDP, envía join y espera respuesta inicial del servidor."""
+    global _online_sock, _online_server_addr, _online_recv_thread, _online_ping_thread
+    global _online_connect_error, _online_connecting, app_state, _online_name_input
+    import time as _time
     try:
-        s = _socket_mod.create_connection((ip, int(port)), timeout=6)
+        port = int(port)
+        s = _socket_mod.socket(_socket_mod.AF_INET, _socket_mod.SOCK_DGRAM)
+        s.settimeout(6)
+        server_addr = (ip, port)
+        s.sendto((_json_mod.dumps({'type': 'join', 'name': name}) + '\n').encode('utf-8'), server_addr)
+        data, _ = s.recvfrom(65507)           
         s.settimeout(None)
-        _online_sock = s
-        _online_recv_thread = threading.Thread(
-            target=_online_recv_loop, args=(s,), daemon=True)
+        _online_sock        = s
+        _online_server_addr = server_addr
+        for line in data.split(b'\n'):
+            line = line.strip()
+            if line:
+                try: _online_msg_queue.append(_json_mod.loads(line.decode('utf-8', errors='replace')))
+                except: pass
+        _online_recv_thread = threading.Thread(target=_online_recv_loop, args=(s,), daemon=True)
         _online_recv_thread.start()
-        _online_send({'type': 'join', 'name': name})
-        _online_connecting = False
+        _online_ping_thread = threading.Thread(target=_online_ping_loop, args=(s, server_addr), daemon=True)
+        _online_ping_thread.start()
+        _online_connecting    = False
         _online_connect_error = ""
         app_state = 'poker_online_lobby'
+    except _socket_mod.timeout:
+        _online_connect_error = "No se pudo conectar: tiempo de espera agotado"
+        _online_connecting = False
+        try: s.close()
+        except: pass
     except Exception as e:
         _online_connect_error = f"No se pudo conectar: {e}"
         _online_connecting = False
+        try: s.close()
+        except: pass
 
 
 def _online_disconnect():
-    global _online_sock, _online_game_started
+    global _online_sock, _online_server_addr, _online_game_started
     try:
         if _online_sock:
             _online_sock.close()
     except Exception:
         pass
-    _online_sock = None
+    _online_sock        = None
+    _online_server_addr = None
     _online_game_started = False
     _online_msg_queue.clear()
 
