@@ -3613,23 +3613,24 @@ def _render_poker_online_lobby(now):
     VENTANA.blit(back_s, (ANCHO//2 - back_s.get_width()//2, 740))
 
 
-_OL_POSITIONS_4 = [(190, 150), (190, 440), (1634, 150), (1634, 440)]
-
 def _render_poker_online_game(now):
-    """Mesa de poker online (sin bots)."""
+    """Mesa de poker online — misma UI que el modo offline."""
     mouse_pos = to_logical(pygame.mouse.get_pos())
 
-    VENTANA.fill((7, 5, 12))
+    VENTANA.fill((8, 52, 8))
+    for y in range(0, ALTO, 38):
+        pygame.draw.line(VENTANA, (6, 44, 6), (0, y), (ANCHO, y), 1)
     for x in range(0, ANCHO, 38):
         pygame.draw.line(VENTANA, (6, 44, 6), (x, 0), (x, ALTO), 1)
     pygame.draw.ellipse(VENTANA, (12, 80, 12), (180, 80, ANCHO-360, ALTO-160))
-    pygame.draw.ellipse(VENTANA, DORADO, (180, 80, ANCHO-360, ALTO-160), 3)
-    pygame.draw.ellipse(VENTANA, (8, 60, 8), (210, 98, ANCHO-420, ALTO-196), 1)
+    pygame.draw.ellipse(VENTANA, DORADO,       (180, 80, ANCHO-360, ALTO-160), 3)
+    pygame.draw.ellipse(VENTANA, (8, 60, 8),   (210, 98, ANCHO-420, ALTO-196), 1)
 
-    title_s = FUENTE_PEQUENA.render("♠  TEXAS HOLD'EM ONLINE  ♠", True, DORADO)
+    title_s = FUENTE_PEQUENA.render("♠  TEXAS HOLD'EM  ♠", True, DORADO)
     VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, 38))
 
-    ft, fb, fs = _get_online_fonts()
+    pl = FUENTE_PEQUENA.render("TÚ", True, (180, 240, 190))
+    VENTANA.blit(pl, (ANCHO//2 - pl.get_width()//2, HE_PLAYER_Y - 30))
 
     cl = _FUENTE_HE_SMALL.render("CARTAS COMUNITARIAS", True, (180, 160, 80))
     VENTANA.blit(cl, (ANCHO//2 - cl.get_width()//2, HE_COMMUNITY_Y - 26))
@@ -3640,18 +3641,35 @@ def _render_poker_online_game(now):
         VENTANA.blit(slot, (sx, sy))
         pygame.draw.rect(VENTANA, (80, 120, 80), (sx, sy, CARD_W, CARD_H), 1, border_radius=10)
 
-    positions = _OL_POSITIONS_4[:len(_online_other_players)]
-    for i, (ax, ay) in enumerate(positions):
-        if i >= len(_online_other_players):
+    _ol_result_hand_map = {}
+    if _online_result:
+        winner_name = _online_result.get('winner', '')
+        hand_nm     = _online_result.get('hand_name', '')
+        if winner_name and hand_nm:
+            _ol_result_hand_map[winner_name] = hand_nm
+
+    for ai_i, (ax, ay) in enumerate(HE_AI_POSITIONS):
+        if ai_i >= len(_online_other_players):
             break
-        op = _online_other_players[i]
-        name_col = (100, 80, 80) if op.get('folded') else (220, 180, 100)
-        name_s = _FUENTE_HE_SMALL.render(op.get('name','?'), True, name_col)
+        op = _online_other_players[ai_i]
+        op_name  = op.get('name', '?')
+        folded   = op.get('folded', False)
+        op_money = op.get('money', 0)
+
+        if folded:
+            name_col = (100, 80, 80)
+        elif _online_result and op_name in _ol_result_hand_map:
+            name_col = (255, 160, 160)
+        else:
+            name_col = (220, 180, 100)
+
+        name_s = _FUENTE_HE_SMALL.render(op_name, True, name_col)
         VENTANA.blit(name_s, (ax, ay - 22))
-        money_s = _FUENTE_HE_SMALL.render(f"${op.get('money', 0)}", True, (160, 200, 160))
+        money_s = _FUENTE_HE_SMALL.render(f"${op_money}", True, (160, 200, 160))
         VENTANA.blit(money_s, (ax, ay - 42))
+
         total_w = 2 * CARD_W + HE_AI_CARD_GAP - CARD_W
-        if op.get('folded'):
+        if folded:
             fold_bg = pygame.Surface((total_w, CARD_H), pygame.SRCALPHA)
             fold_bg.fill((0, 0, 0, 60))
             VENTANA.blit(fold_bg, (ax, ay))
@@ -3661,36 +3679,48 @@ def _render_poker_online_game(now):
                                    ay + CARD_H//2 - fold_s.get_height()//2))
         else:
             for ci in range(2):
-                back = get_card_back_image()
                 bx2 = ax + ci * HE_AI_CARD_GAP
+                back = get_card_back_image()
                 if back:
                     scaled = pygame.transform.smoothscale(back, (CARD_W, CARD_H))
                     VENTANA.blit(scaled, (bx2, ay))
                 else:
                     slot2 = pygame.Surface((CARD_W, CARD_H), pygame.SRCALPHA)
-                    slot2.fill((150, 0, 0, 220))
+                    slot2.fill((0, 0, 0, 50))
                     VENTANA.blit(slot2, (bx2, ay))
-                    pygame.draw.rect(VENTANA, NEGRO, (bx2, ay, CARD_W, CARD_H), 2, border_radius=10)
+                    pygame.draw.rect(VENTANA, (60, 100, 60), (bx2, ay, CARD_W, CARD_H), 1, border_radius=8)
+            if _online_result and op_name in _ol_result_hand_map:
+                hn_s = _FUENTE_HE_SMALL.render(_ol_result_hand_map[op_name], True, (255, 200, 180))
+                VENTANA.blit(hn_s, (ax, ay + CARD_H + 6))
 
     for c in _online_community:
+        c.target_scale = 1.12 if pygame.Rect(int(c.x), int(c.y), CARD_W, CARD_H).collidepoint(mouse_pos) else 1.0
         c.actualizar(now); c.dibujar(now)
 
-    pl = FUENTE_PEQUENA.render("TÚ", True, (180, 240, 190))
-    VENTANA.blit(pl, (ANCHO//2 - pl.get_width()//2, HE_PLAYER_Y - 30))
     for c in _online_hand:
+        c.target_scale = 1.12 if pygame.Rect(int(c.x), int(c.y), CARD_W, CARD_H).collidepoint(mouse_pos) else 1.0
         c.actualizar(now); c.dibujar(now)
 
     if _online_hand and _online_community:
-        pc_live = [( c.valor, c.palo, c.valor_num, c.color) for c in _online_hand]
-        cc_live = [( c.valor, c.palo, c.valor_num, c.color) for c in _online_community]
+        pc_live = [(c.valor, c.palo, c.valor_num, c.color) for c in _online_hand]
+        cc_live = [(c.valor, c.palo, c.valor_num, c.color) for c in _online_community]
         _, live_name = evaluate_holdem_hand(pc_live + cc_live)
-        combo_bg = pygame.Surface((320, 30), pygame.SRCALPHA)
+        hand_rank = {n: i for i, n in enumerate([
+            'Carta Alta','Pareja','Doble Pareja','Trío','Escalera',
+            'Color','Full House','Póker (4 iguales)','Escalera de Color','Escalera Real'
+        ])}
+        rank_val = hand_rank.get(live_name, 0)
+        if rank_val >= 7:   live_col = (255, 220, 0)
+        elif rank_val >= 4: live_col = (120, 255, 120)
+        elif rank_val >= 2: live_col = (180, 220, 255)
+        else:               live_col = (200, 200, 200)
+        combo_bg = pygame.Surface((340, 32), pygame.SRCALPHA)
         combo_bg.fill((0, 0, 0, 170))
-        combo_x = ANCHO//2 - 160
+        combo_x = ANCHO // 2 - 170
         combo_y = HE_PLAYER_Y + CARD_H + 8
         VENTANA.blit(combo_bg, (combo_x, combo_y))
-        pygame.draw.rect(VENTANA, (180, 255, 180), (combo_x, combo_y, 320, 30), 1, border_radius=6)
-        combo_lbl = FUENTE_PEQUENA.render(f"Tu mano: {live_name}", True, (180, 255, 180))
+        pygame.draw.rect(VENTANA, live_col, (combo_x, combo_y, 340, 32), 1, border_radius=6)
+        combo_lbl = FUENTE_PEQUENA.render(f"Tu mano: {live_name}", True, live_col)
         VENTANA.blit(combo_lbl, (ANCHO//2 - combo_lbl.get_width()//2, combo_y + 4))
 
     pot_s = FUENTE_PEQUENA.render(f"BOTE: {_online_pot} fichas", True, DORADO)
@@ -3701,16 +3731,34 @@ def _render_poker_online_game(now):
     VENTANA.blit(pot_bg, (px2, py2))
     VENTANA.blit(pot_s, (px2+12, py2+5))
 
-    if _online_action_log:
-        log_y = HE_COMMUNITY_Y + CARD_H + 52
-        for line in _online_action_log[-4:]:
-            ls = _FUENTE_HE_SMALL.render(line, True, (200, 200, 200))
-            lb = pygame.Surface((ls.get_width()+16, ls.get_height()+4), pygame.SRCALPHA)
-            lb.fill((0,0,0,150))
-            lx = ANCHO//2 - lb.get_width()//2
-            VENTANA.blit(lb, (lx, log_y))
-            VENTANA.blit(ls, (lx+8, log_y+2))
-            log_y += ls.get_height() + 6
+    if _online_result and _online_hand:
+        ol_r_hand = _online_result.get('hand_name', '')
+        phn_col = (180, 255, 180) if _online_result.get('winner') == _online_name_input else (255, 180, 180)
+        phn_s = FUENTE_PEQUENA.render(f"Tu mano: {ol_r_hand}", True, phn_col)
+        VENTANA.blit(phn_s, (ANCHO//2 - phn_s.get_width()//2, HE_PLAYER_Y + CARD_H + 10))
+
+    if _online_action_log and not _online_result:
+        box_w_tmp = 960; bx_tmp = (ANCHO - box_w_tmp)//2; by_tmp = ALTO - 130 - 14
+        last_action = _online_action_log[-1]
+        turn_col  = (120, 255, 160)
+        turn_surf = FUENTE_MSG.render(f"✓  {last_action}", True, turn_col)
+        turn_bg   = pygame.Surface((turn_surf.get_width() + 40, turn_surf.get_height() + 16), pygame.SRCALPHA)
+        turn_bg.fill((0, 0, 0, 210))
+        tx = ANCHO // 2 - turn_bg.get_width() // 2
+        ty = by_tmp - turn_bg.get_height() - 12
+        VENTANA.blit(turn_bg, (tx, ty))
+        pygame.draw.rect(VENTANA, turn_col, (tx, ty, turn_bg.get_width(), turn_bg.get_height()), 2, border_radius=10)
+        VENTANA.blit(turn_surf, (tx + 20, ty + 8))
+        if len(_online_action_log) > 1:
+            log_y = ty - len(_online_action_log[:-1]) * 26 - 8
+            for log_line in _online_action_log[:-1]:
+                log_s  = _FUENTE_HE_SMALL.render(log_line, True, (200, 200, 200))
+                log_bg = pygame.Surface((log_s.get_width() + 20, log_s.get_height() + 6), pygame.SRCALPHA)
+                log_bg.fill((0, 0, 0, 160))
+                lx = ANCHO // 2 - log_bg.get_width() // 2
+                VENTANA.blit(log_bg, (lx, log_y))
+                VENTANA.blit(log_s, (lx + 10, log_y + 3))
+                log_y += 26
 
     box_w = 960; pad = 16; lh = 32
     box_h = 130; bx = (ANCHO - box_w)//2; by = ALTO - box_h - 14
@@ -3718,79 +3766,102 @@ def _render_poker_online_game(now):
     bg_s.fill((0, 0, 0, 190))
     VENTANA.blit(bg_s, (bx, by))
     pygame.draw.rect(VENTANA, NEGRO, (bx, by, box_w, box_h), 2, border_radius=10)
+
     y_o = by + pad
     chips_s = FUENTE_PEQUENA.render(f"Fichas: {_online_my_money}", True, DORADO)
     VENTANA.blit(chips_s, (bx + pad, y_o))
 
-    street_labels = {'pre_flop':'PRE-FLOP','flop':'FLOP','turn':'TURN','river':'RIVER'}
-    if _online_street:
-        sl = FUENTE_PEQUENA.render(street_labels.get(_online_street, _online_street.upper()),
-                                   True, (220, 200, 120))
-        VENTANA.blit(sl, (bx + pad, y_o + lh))
+    he_ol_menu_btn = he_menu_btn
+    _draw_he_btn("ESC: Menú",    he_ol_menu_btn,   (30,70,140), (50,110,200), mouse_pos)
 
-    he_ol_menu_btn      = pygame.Rect(ANCHO-164, ALTO-44, 152, 34)
-    he_ol_fold_btn      = pygame.Rect(bx + box_w - 570, y_o + lh, 130, 34)
-    he_ol_call_btn      = pygame.Rect(bx + box_w - 420, y_o + lh, 130, 34)
-    he_ol_check_btn     = pygame.Rect(bx + box_w - 420, y_o + lh, 130, 34)
-    he_ol_raise_btn     = pygame.Rect(bx + box_w - 270, y_o + lh, 130, 34)
+    is_in_game = _online_game_started and bool(_online_hand)
+    is_result  = _online_result is not None
 
-    def _draw_ol_btn(label, rect, base_col, hov_col):
-        hov = rect.collidepoint(mouse_pos)
-        col = hov_col if hov else base_col
-        bgs = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
-        bgs.fill((*col, 230))
-        VENTANA.blit(bgs, (rect.x, rect.y))
-        pygame.draw.rect(VENTANA, NEGRO, rect, 1, border_radius=6)
-        ls = FUENTE_PEQUENA.render(label, True, BLANCO)
-        VENTANA.blit(ls, (rect.centerx - ls.get_width()//2,
-                          rect.centery - ls.get_height()//2))
+    if not is_in_game and not is_result:
+        dots = '.' * ((now // 300) % 4)
+        deal_s = FUENTE_PEQUENA.render("Esperando mano" + dots, True, (220, 200, 120))
+        VENTANA.blit(deal_s, (bx + (box_w - deal_s.get_width()) // 2, y_o + lh))
 
-    _draw_ol_btn("ESC: Menú", he_ol_menu_btn, (30,70,140), (50,110,200), )
+    elif is_in_game and not is_result:
+        street_labels = {'pre_flop': 'PRE-FLOP', 'flop': 'FLOP', 'turn': 'TURN', 'river': 'RIVER'}
+        if _online_street:
+            sl = FUENTE_PEQUENA.render(street_labels.get(_online_street, _online_street.upper()),
+                                       True, (220, 200, 120))
+            VENTANA.blit(sl, (bx + pad, y_o + lh))
 
-    if _online_my_turn and not _online_in_raise:
-        _draw_ol_btn("RETIRARSE (F)", he_ol_fold_btn,  (120,30,30),  (180,50,50))
-        if _online_to_call > 0:
-            _draw_ol_btn(f"IGUALAR {_online_to_call}", he_ol_call_btn, (20,80,140), (40,120,200))
+        if _online_my_turn and not _online_in_raise:
+            btn_w = 230; btn_h = 38; gap = 18
+            total_bw = 3*btn_w + 2*gap; bx_btns = ANCHO//2 - total_bw//2
+            by_btns  = by + box_h - btn_h - pad
+
+            he_ol_fold_btn  = pygame.Rect(bx_btns,             by_btns, btn_w, btn_h)
+            he_ol_call_btn  = pygame.Rect(bx_btns+btn_w+gap,   by_btns, btn_w, btn_h)
+            he_ol_raise_btn = pygame.Rect(bx_btns+2*(btn_w+gap), by_btns, btn_w, btn_h)
+
+            _draw_he_btn("F: Retirarse",  he_ol_fold_btn,  (120,30,30),  (180,50,50),  mouse_pos)
+            call_lbl = "C: Check" if _online_to_call == 0 else f"C: Igualar ({_online_to_call})"
+            _draw_he_btn(call_lbl, he_ol_call_btn, (30,80,140), (50,120,200), mouse_pos)
+            _draw_he_btn("SUBIR", he_ol_raise_btn, (120,90,0), (200,150,0), mouse_pos, border=DORADO)
+            hint2 = FUENTE_INSTR.render("F=Retirarse  C=Check/Igualar  Click SUBIR para apostar más",
+                                        True, (120,120,120))
+            VENTANA.blit(hint2, (bx + (box_w - hint2.get_width())//2, y_o + lh))
+
+            he_ol_fold_btn_ret  = he_ol_fold_btn
+            he_ol_call_btn_ret  = he_ol_call_btn
+            he_ol_raise_btn_ret = he_ol_raise_btn
         else:
-            _draw_ol_btn("PASAR (C)",   he_ol_check_btn, (30,100,50),  (50,150,70))
-        _draw_ol_btn("SUBIR (R)", he_ol_raise_btn, (130,80,20),  (190,120,30))
-    elif _online_my_turn and _online_in_raise:
-        rl = FUENTE_PEQUENA.render("Cantidad a subir:", True, BLANCO)
-        VENTANA.blit(rl, (bx + pad, y_o + lh*2))
-        inp_x = bx + pad + rl.get_width() + 12; inp_w = 200; inp_h = 32
-        inp_bg = pygame.Surface((inp_w, inp_h), pygame.SRCALPHA)
-        inp_bg.fill((20,20,20,230))
-        VENTANA.blit(inp_bg, (inp_x, y_o + lh*2 - 4))
-        pygame.draw.rect(VENTANA, DORADO, (inp_x, y_o + lh*2 - 4, inp_w, inp_h), 2, border_radius=6)
-        disp2 = clip_text_right(_online_raise_input + (
-            '|' if (now//400)%2==0 else ''), FUENTE_PEQUENA, inp_w-12)
-        dt2 = FUENTE_PEQUENA.render(disp2, True, BLANCO)
-        VENTANA.blit(dt2, (inp_x+8, y_o + lh*2 + (inp_h-dt2.get_height())//2 - 4))
-        hint_r = FUENTE_INSTR.render("ENTER confirmar · ESC cancelar", True, (150,150,150))
-        VENTANA.blit(hint_r, (inp_x, y_o + lh*2 + inp_h + 2))
+            he_ol_fold_btn_ret  = pygame.Rect(0,0,0,0)
+            he_ol_call_btn_ret  = pygame.Rect(0,0,0,0)
+            he_ol_raise_btn_ret = pygame.Rect(0,0,0,0)
 
-    elif not _online_my_turn and _online_game_started:
-        wait_s = FUENTE_PEQUENA.render("Esperando turno...", True, (160, 160, 160))
-        VENTANA.blit(wait_s, (bx + pad, y_o + lh))
+        if _online_my_turn and _online_in_raise:
+            rl = FUENTE_PEQUENA.render("Sube (+fichas):", True, BLANCO)
+            VENTANA.blit(rl, (bx + pad, y_o + lh*2))
+            inp_x = bx + pad + rl.get_width() + 12; inp_w = 200; inp_h = 32
+            inp_bg = pygame.Surface((inp_w, inp_h), pygame.SRCALPHA)
+            inp_bg.fill((30, 20, 0, 230))
+            VENTANA.blit(inp_bg, (inp_x, y_o + lh*2 - 2))
+            pygame.draw.rect(VENTANA, DORADO, (inp_x, y_o + lh*2 - 2, inp_w, inp_h), 2, border_radius=6)
+            disp2 = clip_text_right(_online_raise_input + ('|' if (now//400)%2==0 else ''),
+                                    FUENTE_PEQUENA, inp_w-12)
+            dt2 = FUENTE_PEQUENA.render(disp2, True, BLANCO)
+            VENTANA.blit(dt2, (inp_x+8, y_o + lh*2 + (inp_h-dt2.get_height())//2 - 2))
+            cancel_s = FUENTE_INSTR.render("ENTER para confirmar · ESC para cancelar", True, (180,160,100))
+            VENTANA.blit(cancel_s, (bx + (box_w - cancel_s.get_width())//2, y_o + lh*3))
+        elif not _online_my_turn:
+            wait_s = FUENTE_PEQUENA.render("Esperando turno...", True, (160, 160, 160))
+            VENTANA.blit(wait_s, (bx + pad, y_o + lh))
 
-    if _online_result:
+    elif is_result:
         winner  = _online_result.get('winner', '?')
         hand_nm = _online_result.get('hand_name', '')
         pot_won = _online_result.get('pot', 0)
         is_me   = (winner == _online_name_input)
         res_col = DORADO if is_me else ROJO
-        res_txt = f"{'¡GANASTE!' if is_me else winner + ' GANA'}  —  {hand_nm}  —  Bote: {pot_won}"
-        res_s   = FUENTE_MSG.render(res_txt, True, res_col)
-        msg_x   = (ANCHO - res_s.get_width())//2
-        VENTANA.blit(res_s, (msg_x, ALTO//2 - 20))
-        hint_n  = FUENTE_INSTR.render("Esperando siguiente mano...", True, (140,140,140))
-        VENTANA.blit(hint_n, (ANCHO//2 - hint_n.get_width()//2, ALTO//2 + 28))
+        if is_me:
+            mensaje = f"¡GANASTE! — {hand_nm}  (+{pot_won})"
+        else:
+            mensaje = f"{winner} GANA — {hand_nm}"
+        msg_s = FUENTE_MSG.render(mensaje, True, res_col)
+        VENTANA.blit(msg_s, (ANCHO//2 - msg_s.get_width()//2, by + (box_h - msg_s.get_height())//2 - 10))
+        hint3 = FUENTE_INSTR.render("Esperando siguiente mano...", True, (140,140,140))
+        VENTANA.blit(hint3, (ANCHO//2 - hint3.get_width()//2, by + box_h - hint3.get_height() - 8))
+        he_ol_fold_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_call_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_raise_btn_ret = pygame.Rect(0,0,0,0)
 
-    if _online_message and not _online_result:
-        msg_s = FUENTE_PEQUENA.render(_online_message, True, (255,200,100))
-        VENTANA.blit(msg_s, (ANCHO//2 - msg_s.get_width()//2, ALTO//2))
+    else:
+        he_ol_fold_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_call_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_raise_btn_ret = pygame.Rect(0,0,0,0)
 
-    return he_ol_menu_btn, he_ol_fold_btn, he_ol_call_btn, he_ol_check_btn, he_ol_raise_btn
+    if _online_message and not is_result:
+        msg_s2 = FUENTE_PEQUENA.render(_online_message, True, (255,200,100))
+        VENTANA.blit(msg_s2, (ANCHO//2 - msg_s2.get_width()//2, ALTO//2))
+
+    return (he_ol_menu_btn,
+            he_ol_fold_btn_ret, he_ol_call_btn_ret,
+            he_ol_call_btn_ret, he_ol_raise_btn_ret)
 
 
 MENU_OPTIONS = [
