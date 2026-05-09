@@ -3445,6 +3445,8 @@ def _online_process_messages(now):
             if len(_online_action_log) > 6:
                 _online_action_log.pop(0)
             _online_pot = msg.get('pot', _online_pot)
+            if action == 'rebuy' and name == _online_name_input:
+                _online_my_money = int(amount) if amount else _online_my_money
             for pp in msg.get('players', []):
                 for op in _online_other_players:
                     if op['name'] == pp['name']:
@@ -3772,7 +3774,12 @@ def _render_poker_online_game(now):
     VENTANA.blit(chips_s, (bx + pad, y_o))
 
     he_ol_menu_btn = he_menu_btn
+    he_ol_rebuy_btn = pygame.Rect(ANCHO-324, ALTO-44, 152, 34)
     _draw_he_btn("ESC: Menú",    he_ol_menu_btn,   (30,70,140), (50,110,200), mouse_pos)
+    if _online_my_money <= 0:
+        _draw_he_btn("RECARGAR GRATIS", he_ol_rebuy_btn, (22,120,60), (35,170,80), mouse_pos)
+    else:
+        he_ol_rebuy_btn = pygame.Rect(0,0,0,0)
 
     is_in_game = _online_game_started and bool(_online_hand)
     is_result  = _online_result is not None
@@ -3859,9 +3866,13 @@ def _render_poker_online_game(now):
         msg_s2 = FUENTE_PEQUENA.render(_online_message, True, (255,200,100))
         VENTANA.blit(msg_s2, (ANCHO//2 - msg_s2.get_width()//2, ALTO//2))
 
+    if _online_my_money <= 0:
+        low_s = FUENTE_INSTR.render("Sin fichas — recarga gratis para seguir jugando", True, (255, 180, 120))
+        VENTANA.blit(low_s, (ANCHO//2 - low_s.get_width()//2, by - 28))
+
     return (he_ol_menu_btn,
             he_ol_fold_btn_ret, he_ol_call_btn_ret,
-            he_ol_call_btn_ret, he_ol_raise_btn_ret)
+            he_ol_call_btn_ret, he_ol_raise_btn_ret, he_ol_rebuy_btn)
 
 
 MENU_OPTIONS = [
@@ -4799,20 +4810,22 @@ while True:
                 lpos = to_logical(evento.pos)
                 btns = getattr(_render_poker_online_game, '_last_btns', None)
                 if btns:
-                    menu_b, fold_b, call_b, check_b, raise_b = btns
+                    menu_b, fold_b, call_b, check_b, raise_b, rebuy_b = btns
                     if menu_b.collidepoint(lpos):
                         _online_disconnect(); app_state = 'poker_mode_select'
+                    elif rebuy_b.collidepoint(lpos) and _online_my_money <= 0:
+                        _online_send({'type':'action','action':'rebuy'})
                     elif _online_my_turn and not _online_in_raise:
                         if fold_b.collidepoint(lpos):
                             _online_send({'type':'action','action':'fold'})
                             _online_my_turn = False
-                        elif _online_to_call > 0 and call_b.collidepoint(lpos):
+                        elif _online_my_money > 0 and _online_to_call > 0 and call_b.collidepoint(lpos):
                             _online_send({'type':'action','action':'call'})
                             _online_my_turn = False
-                        elif _online_to_call == 0 and check_b.collidepoint(lpos):
+                        elif _online_my_money > 0 and _online_to_call == 0 and check_b.collidepoint(lpos):
                             _online_send({'type':'action','action':'check'})
                             _online_my_turn = False
-                        elif raise_b.collidepoint(lpos):
+                        elif _online_my_money > 0 and raise_b.collidepoint(lpos):
                             _online_in_raise = True; _online_raise_input = ""
             if evento.type == pygame.KEYDOWN:
                 if app_state != 'poker_online_game':
@@ -4838,12 +4851,15 @@ while True:
                         if evento.key == pygame.K_f:
                             _online_send({'type':'action','action':'fold'})
                             _online_my_turn = False
-                        elif evento.key == pygame.K_c:
+                        elif evento.key == pygame.K_c and _online_my_money > 0:
                             action = 'call' if _online_to_call > 0 else 'check'
                             _online_send({'type':'action','action':action})
                             _online_my_turn = False
                         elif evento.key == pygame.K_r:
-                            _online_in_raise = True; _online_raise_input = ""
+                            if _online_my_money <= 0:
+                                _online_send({'type':'action','action':'rebuy'})
+                            else:
+                                _online_in_raise = True; _online_raise_input = ""
             continue
 
 
