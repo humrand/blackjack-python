@@ -8,6 +8,9 @@ import urllib.request
 import shutil
 import subprocess
 import platform as _platform_mod
+import socket as _socket_mod
+import json as _json_mod
+import collections as _collections_mod
 
 _SCRIPT_PATH = os.path.abspath(__file__)
 
@@ -41,7 +44,7 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "1.4.3"
+VERSION = "1.5.4"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
@@ -3220,6 +3223,658 @@ def _start_poker_mode():
     he_reiniciar()
 
 
+ONLINE_DEFAULT_PORT = 5555
+
+_online_sock          = None          
+_online_server_addr   = None          
+_online_recv_thread   = None
+_online_ping_thread   = None
+_online_msg_queue     = _collections_mod.deque()  
+
+_online_ip_input      = ""
+_online_port_input    = str(ONLINE_DEFAULT_PORT)
+_online_name_input    = "Jugador"
+_online_active_field  = 'ip'         
+_online_connect_error = ""
+_online_connecting    = False
+
+_online_lobby_players = []            
+_online_hand          = []          
+_online_community     = []            
+_online_other_players = []           
+_online_pot           = 0
+_online_blind         = 50
+_online_my_money      = 3000
+_online_my_turn       = False
+_online_to_call       = 0
+_online_street        = ""
+_online_message       = ""           
+_online_in_raise      = False
+_online_raise_input   = ""
+_online_action_log    = []          
+_online_result        = None       
+_online_result_timer  = 0
+_online_game_started  = False
+_online_min_players   = 2
+
+
+def _online_recv_loop(sock):
+    """Hilo de recepción UDP: recibe datagramas JSON del servidor y los encola."""
+    buf = b""
+    sock.settimeout(1.0)
+    while True:
+        try:
+            data, _ = sock.recvfrom(65507)
+            buf += data
+        except _socket_mod.timeout:
+            if sock.fileno() == -1:
+                break
+            continue
+        except Exception:
+            break
+        while b'\n' in buf:
+            line, buf = buf.split(b'\n', 1)
+            line = line.strip()
+            if line:
+                try:
+                    msg = _json_mod.loads(line.decode('utf-8', errors='replace'))
+                    if msg.get('type') != 'pong':  
+                        _online_msg_queue.append(msg)
+                except Exception:
+                    pass
+    _online_msg_queue.append({'type': 'disconnected'})
+
+
+def _online_ping_loop(sock, server_addr):
+    """Hilo de heartbeat: envía ping cada 5s para mantener la conexión viva."""
+    import time as _time
+    while True:
+        _time.sleep(5)
+        if sock.fileno() == -1:
+            break
+        try:
+            sock.sendto((_json_mod.dumps({'type': 'ping'}) + '\n').encode('utf-8'), server_addr)
+        except Exception:
+            break
+
+
+def _online_send(obj):
+    """Envía un datagrama JSON al servidor."""
+    global _online_sock, _online_server_addr
+    if _online_sock is None or _online_server_addr is None:
+        return
+    try:
+        _online_sock.sendto((_json_mod.dumps(obj) + '\n').encode('utf-8'), _online_server_addr)
+    except Exception as e:
+        print(f"[ONLINE] Error enviando: {e}")
+
+
+def _online_connect(ip, port, name):
+    """Crea socket UDP, envía join y espera respuesta inicial del servidor."""
+    global _online_sock, _online_server_addr, _online_recv_thread, _online_ping_thread
+    global _online_connect_error, _online_connecting, app_state, _online_name_input
+    import time as _time
+    try:
+        port = int(port)
+        s = _socket_mod.socket(_socket_mod.AF_INET, _socket_mod.SOCK_DGRAM)
+        s.settimeout(6)
+        server_addr = (ip, port)
+        s.sendto((_json_mod.dumps({'type': 'join', 'name': name}) + '\n').encode('utf-8'), server_addr)
+        data, _ = s.recvfrom(65507)           
+        s.settimeout(None)
+        _online_sock        = s
+        _online_server_addr = server_addr
+        for line in data.split(b'\n'):
+            line = line.strip()
+            if line:
+                try: _online_msg_queue.append(_json_mod.loads(line.decode('utf-8', errors='replace')))
+                except: pass
+        _online_recv_thread = threading.Thread(target=_online_recv_loop, args=(s,), daemon=True)
+        _online_recv_thread.start()
+        _online_ping_thread = threading.Thread(target=_online_ping_loop, args=(s, server_addr), daemon=True)
+        _online_ping_thread.start()
+        _online_connecting    = False
+        _online_connect_error = ""
+        app_state = 'poker_online_lobby'
+    except _socket_mod.timeout:
+        _online_connect_error = "No se pudo conectar: tiempo de espera agotado"
+        _online_connecting = False
+        try: s.close()
+        except: pass
+    except Exception as e:
+        _online_connect_error = f"No se pudo conectar: {e}"
+        _online_connecting = False
+        try: s.close()
+        except: pass
+
+
+def _online_disconnect():
+    global _online_sock, _online_server_addr, _online_game_started
+    try:
+        if _online_sock:
+            _online_sock.close()
+    except Exception:
+        pass
+    _online_sock        = None
+    _online_server_addr = None
+    _online_game_started = False
+    _online_msg_queue.clear()
+
+
+def _online_make_carta(v, p, dest_x, dest_y):
+    """Crea un objeto Carta para una carta recibida del servidor."""
+    val_map = {'A':11,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':10,'Q':10,'K':10}
+    color_map = {'H': ROJO, 'D': ROJO, 'S': NEGRO, 'C': NEGRO}
+    val   = val_map.get(str(v), 10)
+    color = color_map.get(str(p), NEGRO)
+    return Carta(str(v), str(p), val, color, dest_x, dest_y,
+                 start_pos=(ANCHO // 2, 30))
+
+
+def _online_process_messages(now):
+    """Procesa mensajes del servidor en el hilo principal (llamar cada frame)."""
+    global app_state, _online_lobby_players, _online_game_started
+    global _online_hand, _online_community, _online_other_players
+    global _online_pot, _online_blind, _online_my_money
+    global _online_my_turn, _online_to_call, _online_street
+    global _online_message, _online_action_log, _online_result, _online_result_timer
+    global _online_in_raise
+
+    while _online_msg_queue:
+        msg = _online_msg_queue.popleft()
+        mtype = msg.get('type', '')
+
+        if mtype == 'disconnected':
+            _online_message = "Desconectado del servidor."
+            app_state = 'poker_online_connect'
+            _online_disconnect()
+
+        elif mtype == 'lobby':
+            _online_lobby_players = msg.get('players', [])
+            _online_game_started = False
+
+        elif mtype == 'deal':
+            _online_game_started = True
+            _online_result = None
+            _online_in_raise = False
+            _online_action_log = []
+            _online_my_turn = False
+            _online_message = ""
+
+            raw_hand = msg.get('hand', [])
+            _online_hand = []
+            for idx, (v, p) in enumerate(raw_hand):
+                dest_x = _he_card_x(idx, 2)
+                _online_hand.append(_online_make_carta(v, p, dest_x, HE_PLAYER_Y))
+
+            _online_community = []
+            _online_pot        = msg.get('pot', 0)
+            _online_blind      = msg.get('blind', 50)
+            _online_my_money   = msg.get('my_money', _online_my_money)
+            raw_players        = msg.get('players', [])
+            _online_other_players = [p for p in raw_players
+                                     if p.get('name') != _online_name_input]
+            if app_state != 'poker_online_game':
+                app_state = 'poker_online_game'
+
+        elif mtype == 'community':
+            raw = msg.get('cards', [])
+            n = len(raw)
+            _online_community = []
+            for idx, (v, p) in enumerate(raw):
+                cx = _he_card_x(idx, 5)
+                _online_community.append(_online_make_carta(v, p, cx, HE_COMMUNITY_Y))
+            _online_pot = msg.get('pot', _online_pot)
+
+        elif mtype == 'your_turn':
+            _online_my_turn  = True
+            _online_to_call  = msg.get('to_call', 0)
+            _online_street   = msg.get('street', _online_street)
+            _online_pot      = msg.get('pot', _online_pot)
+            _online_in_raise = False
+
+        elif mtype == 'player_action':
+            name   = msg.get('player', '?')
+            action = msg.get('action', '')
+            amount = msg.get('amount', 0)
+            if amount:
+                log_line = f"{name}: {action} {amount}"
+            else:
+                log_line = f"{name}: {action}"
+            _online_action_log.append(log_line)
+            if len(_online_action_log) > 6:
+                _online_action_log.pop(0)
+            _online_pot = msg.get('pot', _online_pot)
+            if action == 'rebuy' and name == _online_name_input:
+                _online_my_money = int(amount) if amount else _online_my_money
+            for pp in msg.get('players', []):
+                for op in _online_other_players:
+                    if op['name'] == pp['name']:
+                        op.update(pp)
+
+        elif mtype == 'result':
+            _online_result       = msg
+            _online_result_timer = now
+            _online_my_turn      = False
+            _online_my_money     = msg.get('my_money', _online_my_money)
+            _online_pot          = 0
+
+        elif mtype == 'next_hand':
+            _online_result   = None
+            _online_my_turn  = False
+            _online_message  = ""
+            _online_in_raise = False
+
+        elif mtype == 'error':
+            _online_message = msg.get('msg', 'Error desconocido')
+
+        elif mtype == 'waiting':
+            _online_message = msg.get('msg', 'Esperando jugadores...')
+
+
+
+_FUENTE_OL_TITLE = None
+_FUENTE_OL_BTN   = None
+_FUENTE_OL_SUB   = None
+
+def _get_online_fonts():
+    global _FUENTE_OL_TITLE, _FUENTE_OL_BTN, _FUENTE_OL_SUB
+    if _FUENTE_OL_TITLE is None:
+        _FUENTE_OL_TITLE = pygame.font.SysFont("arial", 56, bold=True)
+        _FUENTE_OL_BTN   = pygame.font.SysFont("arial", 34, bold=True)
+        _FUENTE_OL_SUB   = pygame.font.SysFont("arial", 22)
+    return _FUENTE_OL_TITLE, _FUENTE_OL_BTN, _FUENTE_OL_SUB
+
+
+def _render_poker_mode_select(now):
+    """Pantalla de selección: Online / Offline."""
+    VENTANA.fill((6, 4, 14))
+    draw_rain(VENTANA, now, alpha=45)
+    ft, fb, fs = _get_online_fonts()
+
+    title = ft.render("Texas Hold'em", True, DORADO)
+    VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, 180))
+    sub = fs.render("¿Cómo quieres jugar?", True, (160, 140, 90))
+    VENTANA.blit(sub, (ANCHO//2 - sub.get_width()//2, 260))
+    pygame.draw.line(VENTANA, DORADO, (ANCHO//2-280, 300), (ANCHO//2+280, 300), 1)
+
+    mouse_pos = to_logical(pygame.mouse.get_pos())
+    BTN_W = 560; BTN_H = 110; GAP = 28
+    BX = ANCHO//2 - BTN_W//2
+    opts = [
+        ("🌐  Jugar Online",  "Conecta a una partida con jugadores reales vía red", 360),
+        ("🤖  Jugar Offline", "Partida local contra bots · Sin conexión necesaria",   360 + BTN_H + GAP),
+    ]
+    rects = []
+    for label, hint, by in opts:
+        rect = pygame.Rect(BX, by, BTN_W, BTN_H)
+        hov  = rect.collidepoint(mouse_pos)
+        bg_col = (55, 95, 68) if hov else (22, 36, 26)
+        bg_s   = pygame.Surface((BTN_W, BTN_H), pygame.SRCALPHA)
+        bg_s.fill((*bg_col, 220 if hov else 160))
+        VENTANA.blit(bg_s, (BX, by))
+        pygame.draw.rect(VENTANA, DORADO if hov else (70, 110, 80), rect, 2, border_radius=12)
+        lbl_s = fb.render(label, True, (220, 255, 225) if hov else BLANCO)
+        VENTANA.blit(lbl_s, (BX + 32, by + 20))
+        hint_s = fs.render(hint, True, (160, 190, 165) if hov else (110, 130, 115))
+        VENTANA.blit(hint_s, (BX + 32, by + 20 + lbl_s.get_height() + 6))
+        rects.append(rect)
+
+    back_s = fs.render("ESC: volver al menú principal", True, (80, 70, 55))
+    VENTANA.blit(back_s, (ANCHO//2 - back_s.get_width()//2, 700))
+    return rects 
+
+
+def _render_poker_online_connect(now):
+    """Pantalla de conexión: IP, puerto, nombre."""
+    global _online_active_field
+    VENTANA.fill((6, 4, 14))
+    draw_rain(VENTANA, now, alpha=45)
+    ft, fb, fs = _get_online_fonts()
+
+    title = ft.render("Conectar al servidor", True, DORADO)
+    VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, 120))
+    pygame.draw.line(VENTANA, DORADO, (ANCHO//2-320, 195), (ANCHO//2+320, 195), 1)
+
+    mouse_pos = to_logical(pygame.mouse.get_pos())
+    fields = [
+        ('ip',   "IP del servidor",  _online_ip_input,   340),
+        ('port', "Puerto",           _online_port_input, 440),
+        ('name', "Tu nombre",        _online_name_input, 540),
+    ]
+    field_rects = {}
+    FW = 560; FH = 48; FX = ANCHO//2 - FW//2
+    for key, label, value, fy in fields:
+        lbl_s = fs.render(label, True, (180, 160, 90))
+        VENTANA.blit(lbl_s, (FX, fy - 24))
+        active = (_online_active_field == key)
+        bg = pygame.Surface((FW, FH), pygame.SRCALPHA)
+        bg.fill((30, 30, 30, 230))
+        VENTANA.blit(bg, (FX, fy))
+        border_col = DORADO if active else (80, 100, 80)
+        frect = pygame.Rect(FX, fy, FW, FH)
+        pygame.draw.rect(VENTANA, border_col, frect, 2, border_radius=7)
+        cursor = ('|' if (now // 420) % 2 == 0 else '') if active else ''
+        disp = clip_text_right(value + cursor, FUENTE_PEQUENA, FW - 16)
+        txt_s = FUENTE_PEQUENA.render(disp, True, BLANCO)
+        VENTANA.blit(txt_s, (FX + 10, fy + (FH - txt_s.get_height())//2))
+        field_rects[key] = frect
+
+    conn_rect = pygame.Rect(ANCHO//2 - 140, 630, 280, 58)
+    conn_hov  = conn_rect.collidepoint(mouse_pos) and not _online_connecting
+    conn_col  = (55, 95, 68) if conn_hov else (30, 60, 40)
+    conn_bg   = pygame.Surface((280, 58), pygame.SRCALPHA)
+    conn_bg.fill((*conn_col, 230))
+    VENTANA.blit(conn_bg, (ANCHO//2 - 140, 630))
+    pygame.draw.rect(VENTANA, DORADO if conn_hov else (60, 110, 70), conn_rect, 2, border_radius=10)
+    label_txt = "Conectando..." if _online_connecting else "Conectar"
+    conn_lbl  = fb.render(label_txt, True, (220, 255, 225) if conn_hov else BLANCO)
+    VENTANA.blit(conn_lbl, (conn_rect.centerx - conn_lbl.get_width()//2,
+                             conn_rect.centery - conn_lbl.get_height()//2))
+
+    if _online_connect_error:
+        err_s = fs.render(_online_connect_error, True, (255, 100, 80))
+        VENTANA.blit(err_s, (ANCHO//2 - err_s.get_width()//2, 704))
+
+    back_s = fs.render("ESC: volver", True, (80, 70, 55))
+    VENTANA.blit(back_s, (ANCHO//2 - back_s.get_width()//2, 740))
+
+    return field_rects, conn_rect
+
+
+def _render_poker_online_lobby(now):
+    """Sala de espera online."""
+    VENTANA.fill((6, 4, 14))
+    draw_rain(VENTANA, now, alpha=45)
+    ft, fb, fs = _get_online_fonts()
+
+    title = ft.render("Sala de espera", True, DORADO)
+    VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, 140))
+
+    dots = '.' * ((now // 350) % 4)
+    wait_s = fb.render(f"Esperando jugadores{dots}", True, (200, 180, 90))
+    VENTANA.blit(wait_s, (ANCHO//2 - wait_s.get_width()//2, 240))
+
+    n = len(_online_lobby_players)
+    need_s = fs.render(f"Conectados: {n}  ·  Se necesitan mínimo {_online_min_players}",
+                       True, (160, 200, 160))
+    VENTANA.blit(need_s, (ANCHO//2 - need_s.get_width()//2, 310))
+
+    pygame.draw.line(VENTANA, (70, 60, 30), (ANCHO//2-260, 345), (ANCHO//2+260, 345), 1)
+    for i, pname in enumerate(_online_lobby_players):
+        icon_col = DORADO if pname == _online_name_input else (180, 200, 180)
+        icon = "▶ " if pname == _online_name_input else "• "
+        p_s = fb.render(icon + pname, True, icon_col)
+        VENTANA.blit(p_s, (ANCHO//2 - p_s.get_width()//2, 370 + i * 52))
+
+    if _online_message:
+        msg_s = fs.render(_online_message, True, (255, 200, 100))
+        VENTANA.blit(msg_s, (ANCHO//2 - msg_s.get_width()//2, 650))
+
+    back_s = fs.render("ESC: desconectar y volver", True, (80, 70, 55))
+    VENTANA.blit(back_s, (ANCHO//2 - back_s.get_width()//2, 740))
+
+
+def _render_poker_online_game(now):
+    """Mesa de poker online — misma UI que el modo offline."""
+    mouse_pos = to_logical(pygame.mouse.get_pos())
+
+    VENTANA.fill((8, 52, 8))
+    for y in range(0, ALTO, 38):
+        pygame.draw.line(VENTANA, (6, 44, 6), (0, y), (ANCHO, y), 1)
+    for x in range(0, ANCHO, 38):
+        pygame.draw.line(VENTANA, (6, 44, 6), (x, 0), (x, ALTO), 1)
+    pygame.draw.ellipse(VENTANA, (12, 80, 12), (180, 80, ANCHO-360, ALTO-160))
+    pygame.draw.ellipse(VENTANA, DORADO,       (180, 80, ANCHO-360, ALTO-160), 3)
+    pygame.draw.ellipse(VENTANA, (8, 60, 8),   (210, 98, ANCHO-420, ALTO-196), 1)
+
+    title_s = FUENTE_PEQUENA.render("♠  TEXAS HOLD'EM  ♠", True, DORADO)
+    VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, 38))
+
+    pl = FUENTE_PEQUENA.render("TÚ", True, (180, 240, 190))
+    VENTANA.blit(pl, (ANCHO//2 - pl.get_width()//2, HE_PLAYER_Y - 30))
+
+    cl = _FUENTE_HE_SMALL.render("CARTAS COMUNITARIAS", True, (180, 160, 80))
+    VENTANA.blit(cl, (ANCHO//2 - cl.get_width()//2, HE_COMMUNITY_Y - 26))
+    for i in range(5):
+        sx = _he_card_x(i, 5); sy = HE_COMMUNITY_Y
+        slot = pygame.Surface((CARD_W, CARD_H), pygame.SRCALPHA)
+        slot.fill((0, 0, 0, 60))
+        VENTANA.blit(slot, (sx, sy))
+        pygame.draw.rect(VENTANA, (80, 120, 80), (sx, sy, CARD_W, CARD_H), 1, border_radius=10)
+
+    _ol_result_hand_map = {}
+    if _online_result:
+        winner_name = _online_result.get('winner', '')
+        hand_nm     = _online_result.get('hand_name', '')
+        if winner_name and hand_nm:
+            _ol_result_hand_map[winner_name] = hand_nm
+
+    for ai_i, (ax, ay) in enumerate(HE_AI_POSITIONS):
+        if ai_i >= len(_online_other_players):
+            break
+        op = _online_other_players[ai_i]
+        op_name  = op.get('name', '?')
+        folded   = op.get('folded', False)
+        op_money = op.get('money', 0)
+
+        if folded:
+            name_col = (100, 80, 80)
+        elif _online_result and op_name in _ol_result_hand_map:
+            name_col = (255, 160, 160)
+        else:
+            name_col = (220, 180, 100)
+
+        name_s = _FUENTE_HE_SMALL.render(op_name, True, name_col)
+        VENTANA.blit(name_s, (ax, ay - 22))
+        money_s = _FUENTE_HE_SMALL.render(f"${op_money}", True, (160, 200, 160))
+        VENTANA.blit(money_s, (ax, ay - 42))
+
+        total_w = 2 * CARD_W + HE_AI_CARD_GAP - CARD_W
+        if folded:
+            fold_bg = pygame.Surface((total_w, CARD_H), pygame.SRCALPHA)
+            fold_bg.fill((0, 0, 0, 60))
+            VENTANA.blit(fold_bg, (ax, ay))
+            pygame.draw.rect(VENTANA, (80, 50, 50), (ax, ay, total_w, CARD_H), 1, border_radius=8)
+            fold_s = _FUENTE_HE_SMALL.render("RETIRADO", True, (140, 80, 80))
+            VENTANA.blit(fold_s, (ax + total_w//2 - fold_s.get_width()//2,
+                                   ay + CARD_H//2 - fold_s.get_height()//2))
+        else:
+            for ci in range(2):
+                bx2 = ax + ci * HE_AI_CARD_GAP
+                back = get_card_back_image()
+                if back:
+                    scaled = pygame.transform.smoothscale(back, (CARD_W, CARD_H))
+                    VENTANA.blit(scaled, (bx2, ay))
+                else:
+                    slot2 = pygame.Surface((CARD_W, CARD_H), pygame.SRCALPHA)
+                    slot2.fill((0, 0, 0, 50))
+                    VENTANA.blit(slot2, (bx2, ay))
+                    pygame.draw.rect(VENTANA, (60, 100, 60), (bx2, ay, CARD_W, CARD_H), 1, border_radius=8)
+            if _online_result and op_name in _ol_result_hand_map:
+                hn_s = _FUENTE_HE_SMALL.render(_ol_result_hand_map[op_name], True, (255, 200, 180))
+                VENTANA.blit(hn_s, (ax, ay + CARD_H + 6))
+
+    for c in _online_community:
+        c.target_scale = 1.12 if pygame.Rect(int(c.x), int(c.y), CARD_W, CARD_H).collidepoint(mouse_pos) else 1.0
+        c.actualizar(now); c.dibujar(now)
+
+    for c in _online_hand:
+        c.target_scale = 1.12 if pygame.Rect(int(c.x), int(c.y), CARD_W, CARD_H).collidepoint(mouse_pos) else 1.0
+        c.actualizar(now); c.dibujar(now)
+
+    if _online_hand and _online_community:
+        pc_live = [(c.valor, c.palo, c.valor_num, c.color) for c in _online_hand]
+        cc_live = [(c.valor, c.palo, c.valor_num, c.color) for c in _online_community]
+        _, live_name = evaluate_holdem_hand(pc_live + cc_live)
+        hand_rank = {n: i for i, n in enumerate([
+            'Carta Alta','Pareja','Doble Pareja','Trío','Escalera',
+            'Color','Full House','Póker (4 iguales)','Escalera de Color','Escalera Real'
+        ])}
+        rank_val = hand_rank.get(live_name, 0)
+        if rank_val >= 7:   live_col = (255, 220, 0)
+        elif rank_val >= 4: live_col = (120, 255, 120)
+        elif rank_val >= 2: live_col = (180, 220, 255)
+        else:               live_col = (200, 200, 200)
+        combo_bg = pygame.Surface((340, 32), pygame.SRCALPHA)
+        combo_bg.fill((0, 0, 0, 170))
+        combo_x = ANCHO // 2 - 170
+        combo_y = HE_PLAYER_Y + CARD_H + 8
+        VENTANA.blit(combo_bg, (combo_x, combo_y))
+        pygame.draw.rect(VENTANA, live_col, (combo_x, combo_y, 340, 32), 1, border_radius=6)
+        combo_lbl = FUENTE_PEQUENA.render(f"Tu mano: {live_name}", True, live_col)
+        VENTANA.blit(combo_lbl, (ANCHO//2 - combo_lbl.get_width()//2, combo_y + 4))
+
+    pot_s = FUENTE_PEQUENA.render(f"BOTE: {_online_pot} fichas", True, DORADO)
+    pot_bg = pygame.Surface((pot_s.get_width()+24, pot_s.get_height()+10), pygame.SRCALPHA)
+    pot_bg.fill((0, 0, 0, 160))
+    px2 = ANCHO//2 - pot_bg.get_width()//2
+    py2 = HE_COMMUNITY_Y + CARD_H + 14
+    VENTANA.blit(pot_bg, (px2, py2))
+    VENTANA.blit(pot_s, (px2+12, py2+5))
+
+    if _online_result and _online_hand:
+        ol_r_hand = _online_result.get('hand_name', '')
+        phn_col = (180, 255, 180) if _online_result.get('winner') == _online_name_input else (255, 180, 180)
+        phn_s = FUENTE_PEQUENA.render(f"Tu mano: {ol_r_hand}", True, phn_col)
+        VENTANA.blit(phn_s, (ANCHO//2 - phn_s.get_width()//2, HE_PLAYER_Y + CARD_H + 10))
+
+    if _online_action_log and not _online_result:
+        box_w_tmp = 960; bx_tmp = (ANCHO - box_w_tmp)//2; by_tmp = ALTO - 130 - 14
+        last_action = _online_action_log[-1]
+        turn_col  = (120, 255, 160)
+        turn_surf = FUENTE_MSG.render(f"✓  {last_action}", True, turn_col)
+        turn_bg   = pygame.Surface((turn_surf.get_width() + 40, turn_surf.get_height() + 16), pygame.SRCALPHA)
+        turn_bg.fill((0, 0, 0, 210))
+        tx = ANCHO // 2 - turn_bg.get_width() // 2
+        ty = by_tmp - turn_bg.get_height() - 12
+        VENTANA.blit(turn_bg, (tx, ty))
+        pygame.draw.rect(VENTANA, turn_col, (tx, ty, turn_bg.get_width(), turn_bg.get_height()), 2, border_radius=10)
+        VENTANA.blit(turn_surf, (tx + 20, ty + 8))
+        if len(_online_action_log) > 1:
+            log_y = ty - len(_online_action_log[:-1]) * 26 - 8
+            for log_line in _online_action_log[:-1]:
+                log_s  = _FUENTE_HE_SMALL.render(log_line, True, (200, 200, 200))
+                log_bg = pygame.Surface((log_s.get_width() + 20, log_s.get_height() + 6), pygame.SRCALPHA)
+                log_bg.fill((0, 0, 0, 160))
+                lx = ANCHO // 2 - log_bg.get_width() // 2
+                VENTANA.blit(log_bg, (lx, log_y))
+                VENTANA.blit(log_s, (lx + 10, log_y + 3))
+                log_y += 26
+
+    box_w = 960; pad = 16; lh = 32
+    box_h = 130; bx = (ANCHO - box_w)//2; by = ALTO - box_h - 14
+    bg_s = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    bg_s.fill((0, 0, 0, 190))
+    VENTANA.blit(bg_s, (bx, by))
+    pygame.draw.rect(VENTANA, NEGRO, (bx, by, box_w, box_h), 2, border_radius=10)
+
+    y_o = by + pad
+    chips_s = FUENTE_PEQUENA.render(f"Fichas: {_online_my_money}", True, DORADO)
+    VENTANA.blit(chips_s, (bx + pad, y_o))
+
+    he_ol_menu_btn = he_menu_btn
+    he_ol_rebuy_btn = pygame.Rect(ANCHO-324, ALTO-44, 152, 34)
+    _draw_he_btn("ESC: Menú",    he_ol_menu_btn,   (30,70,140), (50,110,200), mouse_pos)
+    if _online_my_money <= 0:
+        _draw_he_btn("RECARGAR GRATIS", he_ol_rebuy_btn, (22,120,60), (35,170,80), mouse_pos)
+    else:
+        he_ol_rebuy_btn = pygame.Rect(0,0,0,0)
+
+    is_in_game = _online_game_started and bool(_online_hand)
+    is_result  = _online_result is not None
+
+    if not is_in_game and not is_result:
+        dots = '.' * ((now // 300) % 4)
+        deal_s = FUENTE_PEQUENA.render("Esperando mano" + dots, True, (220, 200, 120))
+        VENTANA.blit(deal_s, (bx + (box_w - deal_s.get_width()) // 2, y_o + lh))
+
+    elif is_in_game and not is_result:
+        street_labels = {'pre_flop': 'PRE-FLOP', 'flop': 'FLOP', 'turn': 'TURN', 'river': 'RIVER'}
+        if _online_street:
+            sl = FUENTE_PEQUENA.render(street_labels.get(_online_street, _online_street.upper()),
+                                       True, (220, 200, 120))
+            VENTANA.blit(sl, (bx + pad, y_o + lh))
+
+        if _online_my_turn and not _online_in_raise:
+            btn_w = 230; btn_h = 38; gap = 18
+            total_bw = 3*btn_w + 2*gap; bx_btns = ANCHO//2 - total_bw//2
+            by_btns  = by + box_h - btn_h - pad
+
+            he_ol_fold_btn  = pygame.Rect(bx_btns,             by_btns, btn_w, btn_h)
+            he_ol_call_btn  = pygame.Rect(bx_btns+btn_w+gap,   by_btns, btn_w, btn_h)
+            he_ol_raise_btn = pygame.Rect(bx_btns+2*(btn_w+gap), by_btns, btn_w, btn_h)
+
+            _draw_he_btn("F: Retirarse",  he_ol_fold_btn,  (120,30,30),  (180,50,50),  mouse_pos)
+            call_lbl = "C: Check" if _online_to_call == 0 else f"C: Igualar ({_online_to_call})"
+            _draw_he_btn(call_lbl, he_ol_call_btn, (30,80,140), (50,120,200), mouse_pos)
+            _draw_he_btn("SUBIR", he_ol_raise_btn, (120,90,0), (200,150,0), mouse_pos, border=DORADO)
+            hint2 = FUENTE_INSTR.render("F=Retirarse  C=Check/Igualar  Click SUBIR para apostar más",
+                                        True, (120,120,120))
+            VENTANA.blit(hint2, (bx + (box_w - hint2.get_width())//2, y_o + lh))
+
+            he_ol_fold_btn_ret  = he_ol_fold_btn
+            he_ol_call_btn_ret  = he_ol_call_btn
+            he_ol_raise_btn_ret = he_ol_raise_btn
+        else:
+            he_ol_fold_btn_ret  = pygame.Rect(0,0,0,0)
+            he_ol_call_btn_ret  = pygame.Rect(0,0,0,0)
+            he_ol_raise_btn_ret = pygame.Rect(0,0,0,0)
+
+        if _online_my_turn and _online_in_raise:
+            rl = FUENTE_PEQUENA.render("Sube (+fichas):", True, BLANCO)
+            VENTANA.blit(rl, (bx + pad, y_o + lh*2))
+            inp_x = bx + pad + rl.get_width() + 12; inp_w = 200; inp_h = 32
+            inp_bg = pygame.Surface((inp_w, inp_h), pygame.SRCALPHA)
+            inp_bg.fill((30, 20, 0, 230))
+            VENTANA.blit(inp_bg, (inp_x, y_o + lh*2 - 2))
+            pygame.draw.rect(VENTANA, DORADO, (inp_x, y_o + lh*2 - 2, inp_w, inp_h), 2, border_radius=6)
+            disp2 = clip_text_right(_online_raise_input + ('|' if (now//400)%2==0 else ''),
+                                    FUENTE_PEQUENA, inp_w-12)
+            dt2 = FUENTE_PEQUENA.render(disp2, True, BLANCO)
+            VENTANA.blit(dt2, (inp_x+8, y_o + lh*2 + (inp_h-dt2.get_height())//2 - 2))
+            cancel_s = FUENTE_INSTR.render("ENTER para confirmar · ESC para cancelar", True, (180,160,100))
+            VENTANA.blit(cancel_s, (bx + (box_w - cancel_s.get_width())//2, y_o + lh*3))
+        elif not _online_my_turn:
+            wait_s = FUENTE_PEQUENA.render("Esperando turno...", True, (160, 160, 160))
+            VENTANA.blit(wait_s, (bx + pad, y_o + lh))
+
+    elif is_result:
+        winner  = _online_result.get('winner', '?')
+        hand_nm = _online_result.get('hand_name', '')
+        pot_won = _online_result.get('pot', 0)
+        is_me   = (winner == _online_name_input)
+        res_col = DORADO if is_me else ROJO
+        if is_me:
+            mensaje = f"¡GANASTE! — {hand_nm}  (+{pot_won})"
+        else:
+            mensaje = f"{winner} GANA — {hand_nm}"
+        msg_s = FUENTE_MSG.render(mensaje, True, res_col)
+        VENTANA.blit(msg_s, (ANCHO//2 - msg_s.get_width()//2, by + (box_h - msg_s.get_height())//2 - 10))
+        hint3 = FUENTE_INSTR.render("Esperando siguiente mano...", True, (140,140,140))
+        VENTANA.blit(hint3, (ANCHO//2 - hint3.get_width()//2, by + box_h - hint3.get_height() - 8))
+        he_ol_fold_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_call_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_raise_btn_ret = pygame.Rect(0,0,0,0)
+
+    else:
+        he_ol_fold_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_call_btn_ret  = pygame.Rect(0,0,0,0)
+        he_ol_raise_btn_ret = pygame.Rect(0,0,0,0)
+
+    if _online_message and not is_result:
+        msg_s2 = FUENTE_PEQUENA.render(_online_message, True, (255,200,100))
+        VENTANA.blit(msg_s2, (ANCHO//2 - msg_s2.get_width()//2, ALTO//2))
+
+    if _online_my_money <= 0:
+        low_s = FUENTE_INSTR.render("Sin fichas — recarga gratis para seguir jugando", True, (255, 180, 120))
+        VENTANA.blit(low_s, (ANCHO//2 - low_s.get_width()//2, by - 28))
+
+    return (he_ol_menu_btn,
+            he_ol_fold_btn_ret, he_ol_call_btn_ret,
+            he_ol_call_btn_ret, he_ol_raise_btn_ret, he_ol_rebuy_btn)
+
+
 MENU_OPTIONS = [
     {'label': 'Modo Historia',           'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
     {'label': 'BlackJack',               'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
@@ -3952,6 +4607,14 @@ while True:
                 paused = True; _pause_started_at = now  
             elif app_state == 'poker':
                 app_state = 'main_menu'
+            elif app_state == 'poker_mode_select':
+                app_state = 'main_menu'
+            elif app_state == 'poker_online_connect':
+                app_state = 'poker_mode_select'
+            elif app_state == 'poker_online_lobby':
+                _online_disconnect(); app_state = 'poker_mode_select'
+            elif app_state == 'poker_online_game':
+                _online_disconnect(); app_state = 'poker_mode_select'
             elif app_state in ('intro', 'win_ending', 'lose_ending', 'kicked_ending'):
                 app_state = 'main_menu'
             else:
@@ -3981,7 +4644,7 @@ while True:
                     continue
                 if evento.key == pygame.K_1: _start_story_mode()
                 elif evento.key == pygame.K_2: _start_infinite_mode()
-                elif evento.key == pygame.K_3: _start_poker_mode()
+                elif evento.key == pygame.K_3: app_state = 'poker_mode_select'
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
 
@@ -3999,7 +4662,7 @@ while True:
                         _hard_reset_confirm = False
                         if i == 0: _start_story_mode()
                         elif i == 1: _start_infinite_mode()
-                        elif i == 2: _start_poker_mode()
+                        elif i == 2: app_state = 'poker_mode_select'
                         elif i == 3:
                             if update_status != 'checking':
                                 update_status = 'checking'; update_msg = "Comprobando..."
@@ -4083,6 +4746,122 @@ while True:
                             he_player_money -= he_blind; poker_player_money = he_player_money
                             he_start_hand(now)
             continue
+
+        if app_state == 'poker_mode_select':
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                rects = getattr(_render_poker_mode_select, '_last_rects', [])
+                if len(rects) >= 2:
+                    if rects[0].collidepoint(lpos):   
+                        app_state = 'poker_online_connect'
+                    elif rects[1].collidepoint(lpos):  
+                        _start_poker_mode()
+            continue
+
+        if app_state == 'poker_online_connect':
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                frects, conn_r = getattr(_render_poker_online_connect, '_last_data', ({}, None))
+                for key, fr in frects.items():
+                    if fr.collidepoint(lpos):
+                        _online_active_field = key
+                if conn_r and conn_r.collidepoint(lpos) and not _online_connecting:
+                    _online_connecting = True
+                    _online_connect_error = ""
+                    threading.Thread(target=_online_connect,
+                                     args=(_online_ip_input, _online_port_input, _online_name_input),
+                                     daemon=True).start()
+            if evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_BACKSPACE:
+                    if _online_active_field == 'ip':
+                        _online_ip_input = _online_ip_input[:-1]
+                    elif _online_active_field == 'port':
+                        _online_port_input = _online_port_input[:-1]
+                    elif _online_active_field == 'name':
+                        _online_name_input = _online_name_input[:-1]
+                elif evento.key == pygame.K_TAB:
+                    fields_order = ['ip', 'port', 'name']
+                    idx = fields_order.index(_online_active_field)
+                    _online_active_field = fields_order[(idx + 1) % len(fields_order)]
+                elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    if not _online_connecting:
+                        _online_connecting = True
+                        _online_connect_error = ""
+                        threading.Thread(target=_online_connect,
+                                         args=(_online_ip_input, _online_port_input, _online_name_input),
+                                         daemon=True).start()
+                elif evento.unicode and len(evento.unicode) == 1:
+                    ch = evento.unicode
+                    if _online_active_field == 'ip' and len(_online_ip_input) < 64:
+                        _online_ip_input += ch
+                    elif _online_active_field == 'port' and ch.isdigit() and len(_online_port_input) < 6:
+                        _online_port_input += ch
+                    elif _online_active_field == 'name' and len(_online_name_input) < 20:
+                        _online_name_input += ch
+            continue
+
+        if app_state == 'poker_online_lobby':
+            _online_process_messages(now)
+            continue
+
+        if app_state == 'poker_online_game':
+            _online_process_messages(now)
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                btns = getattr(_render_poker_online_game, '_last_btns', None)
+                if btns:
+                    menu_b, fold_b, call_b, check_b, raise_b, rebuy_b = btns
+                    if menu_b.collidepoint(lpos):
+                        _online_disconnect(); app_state = 'poker_mode_select'
+                    elif rebuy_b.collidepoint(lpos) and _online_my_money <= 0:
+                        _online_send({'type':'action','action':'rebuy'})
+                    elif _online_my_turn and not _online_in_raise:
+                        if fold_b.collidepoint(lpos):
+                            _online_send({'type':'action','action':'fold'})
+                            _online_my_turn = False
+                        elif _online_my_money > 0 and _online_to_call > 0 and call_b.collidepoint(lpos):
+                            _online_send({'type':'action','action':'call'})
+                            _online_my_turn = False
+                        elif _online_my_money > 0 and _online_to_call == 0 and check_b.collidepoint(lpos):
+                            _online_send({'type':'action','action':'check'})
+                            _online_my_turn = False
+                        elif _online_my_money > 0 and raise_b.collidepoint(lpos):
+                            _online_in_raise = True; _online_raise_input = ""
+            if evento.type == pygame.KEYDOWN:
+                if app_state != 'poker_online_game':
+                    continue
+                if _online_my_turn:
+                    if _online_in_raise:
+                        if evento.key == pygame.K_BACKSPACE:
+                            _online_raise_input = _online_raise_input[:-1]
+                        elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                            try:
+                                amt = int(_online_raise_input) if _online_raise_input.strip() else 0
+                                if amt > 0:
+                                    _online_send({'type':'action','action':'raise','amount':amt})
+                                    _online_my_turn = False; _online_in_raise = False
+                            except ValueError:
+                                pass
+                        elif evento.key == pygame.K_ESCAPE:
+                            _online_in_raise = False
+                        elif evento.unicode and evento.unicode.isdigit():
+                            if len(_online_raise_input) < 6:
+                                _online_raise_input += evento.unicode
+                    else:
+                        if evento.key == pygame.K_f:
+                            _online_send({'type':'action','action':'fold'})
+                            _online_my_turn = False
+                        elif evento.key == pygame.K_c and _online_my_money > 0:
+                            action = 'call' if _online_to_call > 0 else 'check'
+                            _online_send({'type':'action','action':action})
+                            _online_my_turn = False
+                        elif evento.key == pygame.K_r:
+                            if _online_my_money <= 0:
+                                _online_send({'type':'action','action':'rebuy'})
+                            else:
+                                _online_in_raise = True; _online_raise_input = ""
+            continue
+
 
         if app_state == 'blackjack':
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
@@ -4275,6 +5054,33 @@ while True:
         _render_poker(now)
         flip_display()
         continue
+
+    if app_state == 'poker_mode_select':
+        rects = _render_poker_mode_select(now)
+        _render_poker_mode_select._last_rects = rects
+        flip_display()
+        continue
+
+    if app_state == 'poker_online_connect':
+        _online_process_messages(now)
+        frects, conn_r = _render_poker_online_connect(now)
+        _render_poker_online_connect._last_data = (frects, conn_r)
+        flip_display()
+        continue
+
+    if app_state == 'poker_online_lobby':
+        _online_process_messages(now)
+        _render_poker_online_lobby(now)
+        flip_display()
+        continue
+
+    if app_state == 'poker_online_game':
+        _online_process_messages(now)
+        btns = _render_poker_online_game(now)
+        _render_poker_online_game._last_btns = btns
+        flip_display()
+        continue
+
 
     if app_state == 'blackjack':
         _sync_bj_money()
