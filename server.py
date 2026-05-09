@@ -23,7 +23,8 @@ def nueva_baraja():
 
 def val_num(v):
     m = {'A':14,'K':13,'Q':12,'J':11,'10':10}
-    return m.get(str(v), int(v))
+    s = str(v)
+    return m[s] if s in m else int(s)
 
 def eval_5(hand5):
     vs  = [c[0] for c in hand5]
@@ -286,16 +287,24 @@ class PokerRoom:
                     next_actor.folded = True
                 elif action == 'call':
                     paid = min(p_call_needed, next_actor.money)
-                    next_actor.money -= paid; self.pot += paid
-                    self.street_bets[next_actor.name] = self.street_bets.get(next_actor.name,0) + paid
-                    log_amount = paid
+                    if paid <= 0 and p_call_needed > 0:
+                        next_actor.folded = True
+                        action = 'fold'
+                    else:
+                        next_actor.money -= paid; self.pot += paid
+                        self.street_bets[next_actor.name] = self.street_bets.get(next_actor.name,0) + paid
+                        log_amount = paid
                 elif action == 'raise':
                     total = min(p_call_needed + amount, next_actor.money)
-                    next_actor.money -= total; self.pot += total
-                    self.street_bets[next_actor.name] = self.street_bets.get(next_actor.name,0) + total
-                    to_call = self.street_bets[next_actor.name]
-                    acted = {next_actor.name}
-                    log_amount = total
+                    if total <= 0 and p_call_needed > 0:
+                        next_actor.folded = True
+                        action = 'fold'
+                    else:
+                        next_actor.money -= total; self.pot += total
+                        self.street_bets[next_actor.name] = self.street_bets.get(next_actor.name,0) + total
+                        to_call = self.street_bets[next_actor.name]
+                        acted = {next_actor.name}
+                        log_amount = total
 
                 self.broadcast_all({'type':'player_action','player':next_actor.name,
                                     'action':action,'amount':log_amount,
@@ -364,7 +373,21 @@ def recv_loop(sock, room: PokerRoom):
 
             elif mtype == 'action' and player is not None:
                 player.last_seen = time.time()
-                room.receive_action(player, str(msg.get('action','fold')).lower(), int(msg.get('amount',0)))
+                action = str(msg.get('action','fold')).lower()
+                amount = int(msg.get('amount',0))
+                if action == 'rebuy':
+                    if player.money <= 0:
+                        player.money = room.STARTING_MONEY
+                        room.broadcast_all({'type':'player_action','player':player.name,
+                                            'action':'rebuy','amount':room.STARTING_MONEY,
+                                            'pot':room.pot,'players':room._players_info()})
+                    else:
+                        try:
+                            sock.sendto((json.dumps({'type':'error','msg':'Solo puedes recargar cuando te has quedado sin fichas'})+'\n').encode(), addr)
+                        except Exception:
+                            pass
+                else:
+                    room.receive_action(player, action, amount)
 
         buf_by_addr[addr] = chunk
 
