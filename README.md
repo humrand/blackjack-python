@@ -4,9 +4,12 @@ para ejecutar
 to execute
 
 (debian / ubuntu based)
+```cmd
 sudo apt install python3-pygame python3-pip -y
-
-python3 El_farol_rojo.py
+```
+```cmd
+python3 El_farol_rojo.py```
+```
 
 
 windows
