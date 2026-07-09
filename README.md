@@ -8,7 +8,7 @@ to execute
 sudo apt install python3-pygame python3-pip -y
 ```
 ```cmd
-python3 El_farol_rojo.py```
+python3 El_farol_rojo.py
 ```
 
 
