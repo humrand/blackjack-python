@@ -11,8 +11,11 @@ import platform as _platform_mod
 import socket as _socket_mod
 import json as _json_mod
 import collections as _collections_mod
+import traceback as _traceback_mod
 
-_SCRIPT_PATH = os.path.abspath(__file__)
+FROZEN = bool(getattr(sys, 'frozen', False))
+
+_SCRIPT_PATH = os.path.abspath(sys.executable) if FROZEN else os.path.abspath(__file__)
 
 def _get_data_dir():
     _sys = sys.platform
@@ -27,7 +30,40 @@ def _get_data_dir():
     return d
 
 DATA_DIR = _get_data_dir()
-os.chdir(DATA_DIR)  
+os.chdir(DATA_DIR)
+
+_ERROR_LOG_PATH = os.path.join(DATA_DIR, 'error_log.txt')
+
+def _show_fatal_error(texto):
+    """En Windows/.exe no hay consola visible, así que si algo revienta al
+    arrancar el juego se cerraba sin más explicación. Esto muestra un
+    cuadro de diálogo con el error y lo deja guardado en error_log.txt."""
+    try:
+        with open(_ERROR_LOG_PATH, 'a', encoding='utf-8') as f:
+            f.write(texto + "\n" + ("-" * 60) + "\n")
+    except Exception:
+        pass
+    try:
+        if sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "El Farol Rojo se ha cerrado por un error.\n\n"
+                f"{texto}\n\n"
+                f"Detalles guardados en:\n{_ERROR_LOG_PATH}",
+                "El Farol Rojo - Error",
+                0x10 
+            )
+        else:
+            print(texto)
+    except Exception:
+        print(texto)
+
+def _global_excepthook(exc_type, exc_value, exc_tb):
+    texto = "".join(_traceback_mod.format_exception(exc_type, exc_value, exc_tb))
+    _show_fatal_error(texto)
+
+sys.excepthook = _global_excepthook
 
 def open_data_folder():
     """Abre la carpeta de datos en el explorador del sistema."""
@@ -41,10 +77,23 @@ def open_data_folder():
     except Exception as e:
         print(f"[FOLDER] No se pudo abrir carpeta: {e}")
 
-pygame.init()
-pygame.mixer.init()
+if sys.platform == 'win32':
+    try:
+        import ctypes
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
 
-VERSION = "1.5.4"
+pygame.init()
+try:
+    pygame.mixer.init()
+except Exception as e:
+    print(f"[AUDIO] No se pudo iniciar el audio, el juego continuará sin sonido: {e}")
+
+VERSION = "1.6.4"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
@@ -473,7 +522,28 @@ ANCHO, ALTO = 1920, 1080
 _dinfo = pygame.display.Info()
 SCREEN_W = _dinfo.current_w
 SCREEN_H = _dinfo.current_h
-VENTANA_REAL = pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN | pygame.SCALED)
+
+def _crear_ventana():
+    """En algunos PCs con Windows (portátiles con GPU híbrida, monitores
+    poco habituales, drivers de vídeo antiguos...) pygame.FULLSCREEN |
+    pygame.SCALED puede fallar o dejar el juego sin abrirse. Probamos varias
+    opciones en orden hasta que una funcione, en vez de morir directamente."""
+    intentos = [
+        lambda: pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN | pygame.SCALED),
+        lambda: pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN),
+        lambda: pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.FULLSCREEN),
+        lambda: pygame.display.set_mode((ANCHO, ALTO)),
+    ]
+    ultimo_error = None
+    for intento in intentos:
+        try:
+            return intento()
+        except Exception as e:
+            ultimo_error = e
+            continue
+    raise RuntimeError(f"No se pudo crear la ventana del juego: {ultimo_error}")
+
+VENTANA_REAL = _crear_ventana()
 pygame.display.set_caption("Blackjack – El Farol Rojo")
 
 VENTANA = pygame.Surface((ANCHO, ALTO))
@@ -2099,6 +2169,10 @@ def _sha256(path):
 def _check_for_updates():
     global update_status, update_msg, update_notif_time, update_restart_time
     import tempfile, time, json
+    if FROZEN:
+        update_status = "error"; update_msg = "Autoactualización no disponible en esta versión"
+        update_notif_time = pygame.time.get_ticks()
+        return
     tmp_path = None
     try:
 
