@@ -45,6 +45,97 @@ def open_data_folder():
     except Exception as e:
         print(f"[FOLDER] No se pudo abrir carpeta: {e}")
 
+
+_CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
+
+_DEFAULT_CONFIG = {
+    'first_run':  True,
+    'volume':     0.75,         
+    'resolution': '1920x1080',   
+    'language':   'es',          
+    'autoupdate': True,         
+}
+
+_RESOLUTIONS = {
+    '1920x1080': (1920, 1080),
+    '1600x900':  (1600, 900),
+    '1280x720':  (1280, 720),
+    'windowed':  (1280, 720),
+}
+_RESOLUTION_ORDER = ['1920x1080', '1600x900', '1280x720', 'windowed']
+
+def _load_config():
+    cfg = dict(_DEFAULT_CONFIG)
+    try:
+        if os.path.exists(_CONFIG_FILE):
+            with open(_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                loaded = _json_mod.load(f)
+            if isinstance(loaded, dict):
+                cfg.update({k: v for k, v in loaded.items() if k in _DEFAULT_CONFIG})
+    except Exception as e:
+        print(f"[CONFIG] No se pudo leer config.json: {e}")
+    if cfg.get('resolution') not in _RESOLUTIONS:
+        cfg['resolution'] = _DEFAULT_CONFIG['resolution']
+    try:
+        cfg['volume'] = max(0.0, min(1.0, float(cfg.get('volume', 0.75))))
+    except Exception:
+        cfg['volume'] = 0.75
+    if cfg.get('language') not in ('es', 'en'):
+        cfg['language'] = 'es'
+    return cfg
+
+def save_config():
+    try:
+        with open(_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            _json_mod.dump(CONFIG, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[CONFIG] No se pudo guardar config.json: {e}")
+
+CONFIG = _load_config()
+IS_FIRST_RUN = bool(CONFIG.get('first_run', True))
+
+_TRANSLATIONS = {
+    'settings_title':      {'es': 'Ajustes',                              'en': 'Settings'},
+    'settings_volume':     {'es': 'Volumen',                              'en': 'Volume'},
+    'settings_resolution': {'es': 'Resolución',                          'en': 'Resolution'},
+    'settings_language':   {'es': 'Idioma',                              'en': 'Language'},
+    'settings_autoupdate': {'es': 'Buscar actualizaciones al iniciar',   'en': 'Check for updates on startup'},
+    'settings_close':      {'es': 'Cerrar',                              'en': 'Close'},
+    'settings_on':         {'es': 'Activado',                            'en': 'On'},
+    'settings_off':        {'es': 'Desactivado',                         'en': 'Off'},
+    'settings_windowed':   {'es': 'Ventana',                             'en': 'Windowed'},
+    'settings_hint':       {'es': 'Los cambios de resolución se aplican al guardar y reiniciar el juego.',
+                             'en': 'Resolution changes apply after saving and restarting the game.'},
+    'settings_button':     {'es': 'Ajustes',                             'en': 'Settings'},
+    'menu_story_label':    {'es': 'Modo Historia',                       'en': 'Story Mode'},
+    'menu_story_sub':      {'es': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas',
+                             'en': 'Narrative blackjack · Barcelona 1987 · Start with 1,000 chips'},
+    'menu_bj_label':       {'es': 'BlackJack',                           'en': 'Blackjack'},
+    'menu_bj_sub':         {'es': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas',
+                             'en': 'Endless blackjack · No story · Start with 5,000 chips'},
+    'menu_poker_label':    {'es': "Texas Hold'em",                       'en': "Texas Hold'em"},
+    'menu_poker_sub':      {'es': "Poker Texas Hold'em · Ciegas, flop, turn y river · Empieza con 3.000 fichas",
+                             'en': "Texas Hold'em poker · Blinds, flop, turn & river · Start with 3,000 chips"},
+    'menu_update_label':   {'es': 'Buscar actualizaciones',              'en': 'Check for updates'},
+    'menu_update_sub':     {'es': 'Comprueba si hay una nueva versión disponible en GitHub',
+                             'en': 'Check if a new version is available on GitHub'},
+    'menu_subtitle':       {'es': 'Blackjack · Barcelona · 1987',        'en': 'Blackjack · Barcelona · 1987'},
+    'menu_hint':           {'es': 'Haz clic para seleccionar',           'en': 'Click to select'},
+    'menu_open_folder':    {'es': 'Abrir carpeta de datos del juego',    'en': 'Open game data folder'},
+    'menu_hard_reset':     {'es': 'Hard Reset · Borrar datos y reiniciar','en': 'Hard Reset · Erase data and restart'},
+    'pause_resume':        {'es': 'Continuar',                           'en': 'Resume'},
+    'pause_menu':          {'es': 'Menú principal',                      'en': 'Main menu'},
+    'update_checking':     {'es': 'Comprobando...',                      'en': 'Checking...'},
+    'update_uptodate':     {'es': 'Ya tienes la última versión',         'en': "You're already on the latest version"},
+}
+
+def TR(key):
+    """Devuelve el texto traducido según el idioma configurado."""
+    entry = _TRANSLATIONS.get(key)
+    if not entry:
+        return key
+    return entry.get(CONFIG.get('language', 'es'), entry.get('es', key))
+
 pygame.init()
 pygame.mixer.init()
 
@@ -160,6 +251,23 @@ _music_volume = 0.18
 music_muted  = False
 _music_context = None
 
+def eff_vol(base_volume):
+    """Aplica el multiplicador de volumen de ajustes y el mute al volumen base."""
+    if music_muted:
+        return 0.0
+    mult = CONFIG.get('volume', 0.75) if 'CONFIG' in globals() else 0.75
+    return max(0.0, min(1.0, base_volume * mult))
+
+def _apply_live_volume():
+    """Aplica el volumen actual a la musica que este sonando en ese momento."""
+    try:
+        if pygame.mixer.music.get_busy():
+            pygame.mixer.music.set_volume(eff_vol(_music_volume))
+        if _SFX_CHANNEL:
+            _SFX_CHANNEL.set_volume(eff_vol(_story_sfx_volume))
+    except Exception:
+        pass
+
 def _download_and_start_music():
     """Descarga la música en segundo plano y la arranca en bucle."""
     global _music_ready, _music_context
@@ -175,7 +283,7 @@ def _download_and_start_music():
             print(f"[MUSIC] Error descargando música: {e}"); return
     try:
         pygame.mixer.music.load(_MUSIC_LOCAL)
-        pygame.mixer.music.set_volume(0.0 if music_muted else _music_volume)
+        pygame.mixer.music.set_volume(eff_vol(_music_volume))
         pygame.mixer.music.play(-1)
         _music_ready = True
         _music_context = 'menu'
@@ -190,9 +298,9 @@ def toggle_mute():
         if _SFX_CHANNEL:
             _SFX_CHANNEL.set_volume(0.0)
     else:
-        pygame.mixer.music.set_volume(_music_volume)
+        pygame.mixer.music.set_volume(eff_vol(_music_volume))
         if _SFX_CHANNEL:
-            _SFX_CHANNEL.set_volume(_story_sfx_volume)
+            _SFX_CHANNEL.set_volume(eff_vol(_story_sfx_volume))
 
 
 _STORY_MUSIC_FILES = {
@@ -255,9 +363,9 @@ def _play_story_track(key, volume=0.15, loop=True, fade_out_ms=1800):
             if not music_muted:
                 steps = 25
                 for i in range(steps):
-                    pygame.mixer.music.set_volume(volume * (i + 1) / steps)
+                    pygame.mixer.music.set_volume(eff_vol(volume) * (i + 1) / steps)
                     time.sleep(0.04)
-                pygame.mixer.music.set_volume(volume)
+                pygame.mixer.music.set_volume(eff_vol(volume))
         except Exception as e:
             print(f"[STORYMUSIC] Error reproduciendo '{key}': {e}")
 
@@ -283,7 +391,7 @@ def _play_story_sfx(key, volume=0.22):
                 print(f"[STORYSFX] Error cargando '{key}': {e}")
                 return
         snd = _story_sfx_cache[key]
-        snd.set_volume(0.0 if music_muted else volume)
+        snd.set_volume(eff_vol(volume))
         channel = pygame.mixer.find_channel(True)
         if channel:
             channel.play(snd)
@@ -477,12 +585,16 @@ def draw_story_image(key, surf):
     surf.blit(cached[0], (cached[1], cached[2]))
 
 
-ANCHO, ALTO = 1920, 1080
+ANCHO, ALTO = _RESOLUTIONS.get(CONFIG.get('resolution', '1920x1080'), (1920, 1080))
+IS_WINDOWED = (CONFIG.get('resolution') == 'windowed')
+if IS_WINDOWED:
+    ANCHO, ALTO = 1280, 720
 
 _dinfo = pygame.display.Info()
 SCREEN_W = _dinfo.current_w
 SCREEN_H = _dinfo.current_h
-VENTANA_REAL = pygame.display.set_mode((ANCHO, ALTO), pygame.FULLSCREEN | pygame.SCALED)
+_display_flags = pygame.SCALED if IS_WINDOWED else (pygame.FULLSCREEN | pygame.SCALED)
+VENTANA_REAL = pygame.display.set_mode((ANCHO, ALTO), _display_flags)
 pygame.display.set_caption("Blackjack – El Farol Rojo")
 
 VENTANA = pygame.Surface((ANCHO, ALTO))
@@ -4045,12 +4157,15 @@ def _render_poker_online_game(now):
             he_ol_call_btn_ret, he_ol_raise_btn_ret, he_ol_rebuy_btn)
 
 
-MENU_OPTIONS = [
-    {'label': 'Modo Historia',           'sub': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas'},
-    {'label': 'BlackJack',               'sub': 'Blackjack infinito · Sin historia · Empieza con 5.000 fichas'},
-    {'label': 'Texas Hold\'em',          'sub': 'Poker Texas Hold\'em · Ciegas, flop, turn y river · Empieza con 3.000 fichas'},
-    {'label': 'Buscar actualizaciones',  'sub': 'Comprueba si hay una nueva versión disponible en GitHub'},
-]
+def _menu_options():
+    return [
+        {'label': TR('menu_story_label'), 'sub': TR('menu_story_sub')},
+        {'label': TR('menu_bj_label'),    'sub': TR('menu_bj_sub')},
+        {'label': TR('menu_poker_label'), 'sub': TR('menu_poker_sub')},
+        {'label': TR('menu_update_label'),'sub': TR('menu_update_sub')},
+    ]
+
+MENU_OPTIONS = _menu_options()
 
 FUENTE_MENU_TITLE = pygame.font.SysFont("arial", 92, bold=True)
 FUENTE_MENU_OPT   = pygame.font.SysFont("arial", 44, bold=True)
@@ -4141,6 +4256,236 @@ _menu_btn_scales = [1.0 for _ in MENU_OPTIONS]
 main_menu_button_rects = []
 _hard_reset_confirm = False
 
+settings_open      = False
+_settings_anim     = 0.0     
+_settings_gear_scale = 1.0
+_settings_dragging_volume = False
+_settings_pending_resolution = CONFIG.get('resolution', '1920x1080')
+_settings_restart_hint = False
+
+_GEAR_BTN_RECT = pygame.Rect(24, 24, 56, 56)
+
+def open_settings():
+    global settings_open, _settings_pending_resolution, _settings_restart_hint
+    settings_open = True
+    _settings_pending_resolution = CONFIG.get('resolution', '1920x1080')
+    _settings_restart_hint = False
+
+def close_settings(save=True):
+    global settings_open, _settings_dragging_volume
+    if save:
+        save_config()
+    settings_open = False
+    _settings_dragging_volume = False
+
+def _draw_gear_icon(surf, cx, cy, radius, color):
+    """Dibuja un icono de engranaje sencillo mediante primitivas de pygame."""
+    import math as _m
+    teeth = 8
+    for i in range(teeth):
+        ang = (2 * _m.pi / teeth) * i
+        x1 = cx + _m.cos(ang) * (radius * 0.62)
+        y1 = cy + _m.sin(ang) * (radius * 0.62)
+        x2 = cx + _m.cos(ang) * (radius * 1.05)
+        y2 = cy + _m.sin(ang) * (radius * 1.05)
+        pygame.draw.line(surf, color, (x1, y1), (x2, y2), max(3, radius // 5))
+    pygame.draw.circle(surf, color, (int(cx), int(cy)), int(radius * 0.62), max(2, radius // 6))
+    pygame.draw.circle(surf, color, (int(cx), int(cy)), int(radius * 0.24))
+
+def draw_settings_gear_button(surf, now, mouse_pos):
+    """Dibuja el botón de engranaje con una pequeña animación de hover."""
+    global _settings_gear_scale
+    hovered = _GEAR_BTN_RECT.collidepoint(mouse_pos) and not settings_open and not _hard_reset_confirm
+    target = 1.18 if hovered else 1.0
+    _settings_gear_scale += (target - _settings_gear_scale) * 0.2
+    r = int(28 * _settings_gear_scale)
+    cx, cy = _GEAR_BTN_RECT.center
+    bg_col = (55, 95, 68) if hovered else (22, 36, 26)
+    border_col = DORADO if hovered else (70, 110, 80)
+    pygame.draw.circle(surf, bg_col, (cx, cy), r + 10)
+    pygame.draw.circle(surf, border_col, (cx, cy), r + 10, 2)
+    gear_col = (220, 255, 225) if hovered else BLANCO
+    _draw_gear_icon(surf, cx, cy, r * 0.55, gear_col)
+    return hovered
+
+_SETTINGS_PANEL_W = 640
+_SETTINGS_PANEL_H = 560
+
+def _settings_panel_rect(anim):
+    """El panel entra deslizándose y con fade, controlado por 'anim' (0-1)."""
+    ease = 1 - (1 - anim) ** 3   
+    w, h = _SETTINGS_PANEL_W, _SETTINGS_PANEL_H
+    x = (ANCHO - w) // 2
+    y_target = (ALTO - h) // 2
+    y_start = y_target - 40
+    y = int(y_start + (y_target - y_start) * ease)
+    return pygame.Rect(x, y, w, h), ease
+
+def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
+    """Dibuja (y anima la apertura/cierre de) el panel de ajustes."""
+    global _settings_anim, settings_open
+
+    target_anim = 1.0 if settings_open else 0.0
+    _settings_anim += (target_anim - _settings_anim) * 0.22
+    if not settings_open and _settings_anim < 0.01:
+        _settings_anim = 0.0
+        return {}
+    if settings_open and _settings_anim > 0.995:
+        _settings_anim = 1.0
+
+    anim = _settings_anim
+    ov = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+    ov.fill((0, 0, 0, int(180 * anim)))
+    surf.blit(ov, (0, 0))
+
+    rect, ease = _settings_panel_rect(anim)
+    panel = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+    panel.fill((20, 22, 18, int(245 * ease)))
+    surf.blit(panel, rect.topleft)
+    pygame.draw.rect(surf, DORADO, rect, 2, border_radius=16)
+
+    hit = {}
+    if ease < 0.35:
+        return hit  
+
+    font_title = pygame.font.SysFont("arial", 40, bold=True)
+    font_label = pygame.font.SysFont("arial", 24, bold=True)
+    font_small = pygame.font.SysFont("arial", 19)
+
+    pad = 40
+    y = rect.y + 32
+    title_s = font_title.render(TR('settings_title'), True, DORADO)
+    surf.blit(title_s, (rect.x + pad, y))
+
+    close_r = pygame.Rect(rect.right - 60, rect.y + 24, 36, 36)
+    close_hov = close_r.collidepoint(mouse_pos)
+    pygame.draw.rect(surf, (90, 30, 30) if close_hov else (50, 20, 20), close_r, border_radius=8)
+    pygame.draw.rect(surf, (220, 90, 90), close_r, 1, border_radius=8)
+    x_s = font_label.render("X", True, BLANCO)
+    surf.blit(x_s, (close_r.centerx - x_s.get_width() // 2, close_r.centery - x_s.get_height() // 2))
+    hit['close'] = close_r
+
+    y += 70
+
+    vol_label = font_label.render(f"{TR('settings_volume')}: {int(CONFIG['volume']*100)}%", True, BLANCO)
+    surf.blit(vol_label, (rect.x + pad, y))
+    y += 36
+    slider_w = rect.width - pad * 2
+    slider_r = pygame.Rect(rect.x + pad, y, slider_w, 10)
+    pygame.draw.rect(surf, (60, 60, 60), slider_r, border_radius=5)
+    fill_w = max(0, min(slider_w, int(slider_w * CONFIG['volume'])))
+    pygame.draw.rect(surf, DORADO, (slider_r.x, slider_r.y, fill_w, slider_r.height), border_radius=5)
+    knob_x = slider_r.x + fill_w
+    pygame.draw.circle(surf, BLANCO, (knob_x, slider_r.centery), 10)
+    pygame.draw.circle(surf, DORADO, (knob_x, slider_r.centery), 10, 2)
+    hit['volume_slider'] = slider_r
+    y += 44
+
+    res_label = font_label.render(TR('settings_resolution'), True, BLANCO)
+    surf.blit(res_label, (rect.x + pad, y))
+    y += 34
+    res_rects = []
+    bx = rect.x + pad
+    res_labels = {
+        '1920x1080': '1920×1080',
+        '1600x900':  '1600×900',
+        '1280x720':  '1280×720',
+        'windowed':  TR('settings_windowed'),
+    }
+    for res_key in _RESOLUTION_ORDER:
+        lbl = res_labels[res_key]
+        w_btn = font_small.size(lbl)[0] + 28
+        r_btn = pygame.Rect(bx, y, w_btn, 34)
+        selected = (_settings_pending_resolution == res_key)
+        hov = r_btn.collidepoint(mouse_pos)
+        bgc = (60, 100, 70) if selected else ((45, 45, 50) if hov else (32, 32, 36))
+        pygame.draw.rect(surf, bgc, r_btn, border_radius=8)
+        pygame.draw.rect(surf, DORADO if selected else (90, 90, 95), r_btn, 1, border_radius=8)
+        lbl_s = font_small.render(lbl, True, BLANCO)
+        surf.blit(lbl_s, (r_btn.centerx - lbl_s.get_width() // 2, r_btn.centery - lbl_s.get_height() // 2))
+        res_rects.append((res_key, r_btn))
+        bx += w_btn + 10
+    hit['resolution_buttons'] = res_rects
+    y += 50
+    if _settings_restart_hint:
+        hint_s = font_small.render(TR('settings_hint'), True, (230, 190, 120))
+        surf.blit(hint_s, (rect.x + pad, y))
+    y += 28
+
+    lang_label = font_label.render(TR('settings_language'), True, BLANCO)
+    surf.blit(lang_label, (rect.x + pad, y))
+    y += 34
+    lang_rects = []
+    bx = rect.x + pad
+    for lang_key, lbl in (('es', 'Español'), ('en', 'English')):
+        w_btn = font_small.size(lbl)[0] + 28
+        r_btn = pygame.Rect(bx, y, w_btn, 34)
+        selected = (CONFIG.get('language') == lang_key)
+        hov = r_btn.collidepoint(mouse_pos)
+        bgc = (60, 100, 70) if selected else ((45, 45, 50) if hov else (32, 32, 36))
+        pygame.draw.rect(surf, bgc, r_btn, border_radius=8)
+        pygame.draw.rect(surf, DORADO if selected else (90, 90, 95), r_btn, 1, border_radius=8)
+        lbl_s = font_small.render(lbl, True, BLANCO)
+        surf.blit(lbl_s, (r_btn.centerx - lbl_s.get_width() // 2, r_btn.centery - lbl_s.get_height() // 2))
+        lang_rects.append((lang_key, r_btn))
+        bx += w_btn + 10
+    hit['language_buttons'] = lang_rects
+    y += 56
+
+    auto_label = font_label.render(TR('settings_autoupdate'), True, BLANCO)
+    surf.blit(auto_label, (rect.x + pad, y))
+    toggle_r = pygame.Rect(rect.right - pad - 90, y - 6, 90, 34)
+    on = bool(CONFIG.get('autoupdate', True))
+    pygame.draw.rect(surf, (50, 110, 60) if on else (70, 40, 40), toggle_r, border_radius=17)
+    knob_cx = toggle_r.right - 20 if on else toggle_r.left + 20
+    pygame.draw.circle(surf, BLANCO, (knob_cx, toggle_r.centery), 13)
+    onoff_s = font_small.render(TR('settings_on') if on else TR('settings_off'), True, (200, 255, 200) if on else (255, 200, 200))
+    surf.blit(onoff_s, (rect.x + pad, y + 26))
+    hit['autoupdate_toggle'] = toggle_r
+    y += 70
+
+    hint2 = font_small.render(TR('settings_hint'), True, (150, 150, 150))
+    surf.blit(hint2, (rect.x + pad, rect.bottom - 40))
+
+    return hit
+
+def handle_settings_click(pos):
+    """Procesa un clic dentro del panel de ajustes. Devuelve True si se consumió el clic."""
+    global settings_open, _settings_pending_resolution, _settings_restart_hint
+    hit = getattr(render_settings_panel, '_last_hit', None)
+    if not hit:
+        return False
+    if 'close' in hit and hit['close'].collidepoint(pos):
+        close_settings(save=True)
+        return True
+    if 'resolution_buttons' in hit:
+        for res_key, r_btn in hit['resolution_buttons']:
+            if r_btn.collidepoint(pos):
+                _settings_pending_resolution = res_key
+                CONFIG['resolution'] = res_key
+                _settings_restart_hint = True
+                save_config()
+                return True
+    if 'language_buttons' in hit:
+        for lang_key, r_btn in hit['language_buttons']:
+            if r_btn.collidepoint(pos):
+                CONFIG['language'] = lang_key
+                save_config()
+                _refresh_language_texts()
+                return True
+    if 'autoupdate_toggle' in hit and hit['autoupdate_toggle'].collidepoint(pos):
+        CONFIG['autoupdate'] = not bool(CONFIG.get('autoupdate', True))
+        save_config()
+        return True
+    if 'volume_slider' in hit and hit['volume_slider'].collidepoint(pos):
+        return True 
+    return False
+
+def _refresh_language_texts():
+    """Reconstruye textos dependientes del idioma (menú principal, etc.)."""
+    global MENU_OPTIONS
+    MENU_OPTIONS[:] = _menu_options()
+
 def _do_hard_reset():
     """Borra la carpeta de datos de ElFarolRojo y reinicia el juego desde cero."""
     try:
@@ -4167,7 +4512,7 @@ def _ensure_main_menu_music():
         if _music_context != 'menu' or not pygame.mixer.music.get_busy():
             if os.path.exists(_MUSIC_LOCAL):
                 pygame.mixer.music.load(_MUSIC_LOCAL)
-                pygame.mixer.music.set_volume(0.0 if music_muted else _music_volume)
+                pygame.mixer.music.set_volume(eff_vol(_music_volume))
                 pygame.mixer.music.play(-1)
                 _music_context = 'menu'
             else:
@@ -4187,17 +4532,18 @@ def _render_main_menu(now):
     t_x = (ANCHO - t_surf.get_width()) // 2
     VENTANA.blit(t_surf, (t_x, 120))
 
-    sub_surf = FUENTE_SUBTITLE.render("Blackjack · Barcelona · 1987", True, (160, 140, 90))
+    sub_surf = FUENTE_SUBTITLE.render(TR('menu_subtitle'), True, (160, 140, 90))
     VENTANA.blit(sub_surf, ((ANCHO - sub_surf.get_width()) // 2, 230))
 
     pygame.draw.line(VENTANA, DORADO, (ANCHO//2 - 340, 310), (ANCHO//2 + 340, 310), 1)
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
+    draw_settings_gear_button(VENTANA, now, mouse_pos)
     main_menu_hovered = -1
     main_menu_button_rects = []
     btn_start_y = _MENU_BTN_START_Y
 
-    menu_locked = _hard_reset_confirm
+    menu_locked = _hard_reset_confirm or settings_open
 
     for i, opt in enumerate(MENU_OPTIONS):
         base_rect = _main_menu_rect(i)
@@ -4240,7 +4586,7 @@ def _render_main_menu(now):
         sub_s = FUENTE_MENU_SUB.render(opt['sub'], True, sub_col)
         VENTANA.blit(sub_s, (draw_x + 38, lbl_y + lbl_s.get_height() + 4))
 
-    hint = FUENTE_INSTR.render("Haz clic para seleccionar", True, (90, 80, 60) if not menu_locked else (70, 70, 75))
+    hint = FUENTE_INSTR.render(TR('menu_hint'), True, (90, 80, 60) if not menu_locked else (70, 70, 75))
     VENTANA.blit(hint, ((ANCHO - hint.get_width()) // 2, btn_start_y + len(MENU_OPTIONS) * (_MENU_BTN_H + _MENU_BTN_GAP) - 4))
 
     folder_btn_w = 470
@@ -4263,7 +4609,7 @@ def _render_main_menu(now):
         icon_surf,
         (max(1, int(icon_surf.get_width() * 0.60)), max(1, int(icon_surf.get_height() * 0.60)))
     )
-    text_surf = folder_text_font.render("Abrir carpeta de datos del juego", True, icon_col)
+    text_surf = folder_text_font.render(TR('menu_open_folder'), True, icon_col)
     ix = folder_btn_x + 18
     iy = folder_btn_y + (folder_btn_h - icon_surf.get_height()) // 2 - 1
     tx = ix + icon_surf.get_width() + 12
@@ -4291,7 +4637,7 @@ def _render_main_menu(now):
         reset_icon,
         (max(1, int(reset_icon.get_width() * 0.58)), max(1, int(reset_icon.get_height() * 0.58)))
     )
-    reset_text  = reset_text_font.render("Hard Reset · Borrar datos y reiniciar", True, icon_col_r)
+    reset_text  = reset_text_font.render(TR('menu_hard_reset'), True, icon_col_r)
     rix = reset_btn_x + 18
     riy = reset_btn_y + (reset_btn_h - reset_icon.get_height()) // 2 - 1
     rtx = rix + reset_icon.get_width() + 12
@@ -4372,6 +4718,10 @@ def _render_main_menu(now):
         ov.fill((0, 0, 0, alpha_fade))
         VENTANA.blit(ov, (0, 0))
 
+    mouse_pressed = pygame.mouse.get_pressed()[0]
+    hit = render_settings_panel(VENTANA, now, mouse_pos, mouse_pressed)
+    render_settings_panel._last_hit = hit
+
 
 _pause_started_at = 0
 main_menu_button_rects = [_main_menu_rect(i) for i in range(len(MENU_OPTIONS))]
@@ -4415,8 +4765,8 @@ def _render_pause_menu(now):
     BY1 = BY0 + BTN_H + GAP       
 
     pause_opts = [
-        ("Continuar", BY0, False),
-        ("Menú Principal", BY1, True),
+        (TR('pause_resume'), BY0, False),
+        (TR('pause_menu'), BY1, True),
     ]
     for label, by, goes_menu in pause_opts:
         rect = pygame.Rect(BX, by, BTN_W, BTN_H)
@@ -4765,6 +5115,16 @@ loading_screen()
 splash_screen()
 _menu_fade_start = pygame.time.get_ticks()
 
+if CONFIG.get('autoupdate', True):
+    update_status = 'checking'; update_msg = TR('update_checking')
+    update_notif_time = pygame.time.get_ticks()
+    threading.Thread(target=_check_for_updates, daemon=True).start()
+
+if IS_FIRST_RUN:
+    open_settings()
+    CONFIG['first_run'] = False
+    save_config()
+
 
 while True:
     RELOJ.tick(60)
@@ -4784,6 +5144,36 @@ while True:
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
             if MUTE_BTN.collidepoint(to_logical(evento.pos)):
                 toggle_mute()
+
+        if settings_open:
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                close_settings(save=True)
+                continue
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                lpos = to_logical(evento.pos)
+                hit = getattr(render_settings_panel, '_last_hit', None) or {}
+                if hit.get('volume_slider') and hit['volume_slider'].collidepoint(lpos):
+                    _settings_dragging_volume = True
+                    slider = hit['volume_slider']
+                    CONFIG['volume'] = max(0.0, min(1.0, (lpos[0] - slider.x) / slider.width))
+                    _apply_live_volume()
+                else:
+                    handle_settings_click(lpos)
+                continue
+            if evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
+                if _settings_dragging_volume:
+                    _settings_dragging_volume = False
+                    save_config()
+                continue
+            if evento.type == pygame.MOUSEMOTION and _settings_dragging_volume:
+                hit = getattr(render_settings_panel, '_last_hit', None) or {}
+                slider = hit.get('volume_slider')
+                if slider:
+                    lpos = to_logical(evento.pos)
+                    CONFIG['volume'] = max(0.0, min(1.0, (lpos[0] - slider.x) / slider.width))
+                    _apply_live_volume()
+                continue
+            continue
 
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
             if paused:
@@ -4833,6 +5223,10 @@ while True:
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 lpos = to_logical(evento.pos)
 
+                if _GEAR_BTN_RECT.collidepoint(lpos):
+                    open_settings()
+                    continue
+
                 if _hard_reset_confirm:
                     confirm_r2 = getattr(_render_main_menu, '_confirm_rect', None)
                     cancel_r2  = getattr(_render_main_menu, '_cancel_rect',  None)
@@ -4850,7 +5244,7 @@ while True:
                         elif i == 2: app_state = 'poker_mode_select'
                         elif i == 3:
                             if update_status != 'checking':
-                                update_status = 'checking'; update_msg = "Comprobando..."
+                                update_status = 'checking'; update_msg = TR('update_checking')
                                 update_notif_time = pygame.time.get_ticks()
                                 threading.Thread(target=_check_for_updates, daemon=True).start()
                 folder_r = getattr(_render_main_menu, '_folder_rect', None)
@@ -5087,7 +5481,7 @@ while True:
                 reiniciar_partida(); continue
             if DOTS_BTN.collidepoint(lpos):
                 if update_status != 'checking':
-                    update_status = 'checking'; update_msg = "Comprobando..."
+                    update_status = 'checking'; update_msg = TR('update_checking')
                     update_notif_time = pygame.time.get_ticks()
                     threading.Thread(target=_check_for_updates, daemon=True).start()
 
