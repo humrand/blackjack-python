@@ -54,3 +54,5 @@ O:
 ```cmd
 py El_farol_rojo.py
 ```
+
+o simplemente descarga [El .exe](https://github.com/humrand/blackjack-python/releases/tag/1.5.4).
