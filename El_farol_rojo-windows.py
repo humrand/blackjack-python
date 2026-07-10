@@ -12,11 +12,6 @@ import socket as _socket_mod
 import json as _json_mod
 import collections as _collections_mod
 
-# --- Detección de ejecutable compilado (PyInstaller) -----------------------
-# Cuando el juego se compila con PyInstaller, sys.frozen = True y __file__
-# apunta a una carpeta temporal de extracción (_MEIPASS), NO al ejecutable
-# real. Hay que usar sys.executable en ese caso para saber dónde está
-# realmente el binario (necesario para el auto-actualizador y el reinicio).
 _IS_FROZEN = bool(getattr(sys, 'frozen', False))
 if _IS_FROZEN:
     _SCRIPT_PATH = os.path.abspath(sys.executable)
@@ -59,14 +54,6 @@ GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
 _COMMIT_SHA_FILE = os.path.join(_get_data_dir(), '.last_commit_sha')
 
-# --- Actualizador para el ejecutable compilado (.exe / binario Linux) ------
-# El modo "source" (arriba) descarga el .py y compara por SHA de commit.
-# Eso no sirve para un ejecutable: hay que descargar el BINARIO compilado.
-# Para que esto funcione, cada nueva versión debe publicarse como un
-# "Release" en GitHub (github.com/humrand/blackjack-python/releases) con
-# un asset adjunto llamado exactamente igual a _RELEASE_ASSET_NAME_LINUX
-# (o _RELEASE_ASSET_NAME_WINDOWS si algún día se compila un .exe real en
-# Windows). El "tag" del release debe ser la versión, ej: "1.5.5".
 GITHUB_RELEASES_API      = "https://api.github.com/repos/humrand/blackjack-python/releases/latest"
 _RELEASE_ASSET_NAME_LINUX   = "ElFarolRojo-linux"
 _RELEASE_ASSET_NAME_WINDOWS = "ElFarolRojo-windows.exe"
@@ -2283,7 +2270,6 @@ def _check_for_updates_frozen():
             except Exception:
                 pass
 
-        # Ya se sabe que esta versión de release ya fue instalada.
         if latest_tag == saved_tag or latest_tag == VERSION:
             update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
             update_notif_time = pygame.time.get_ticks(); return
@@ -2315,9 +2301,7 @@ def _check_for_updates_frozen():
 
         try:
             os.chmod(tmp_path, 0o755)
-            # Reemplazo atómico del binario actual. En Linux esto es seguro
-            # incluso con el proceso en ejecución: el proceso actual sigue
-            # usando el inodo viejo hasta que se reinicie.
+ 
             os.replace(tmp_path, _SCRIPT_PATH)
             tmp_path = None
             try:
