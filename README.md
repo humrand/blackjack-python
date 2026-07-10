@@ -16,9 +16,9 @@ windows
 
 2 formas
 
-1: descarga [El .exe](https://github.com/humrand/blackjack-python/releases/tag/1.5.4).
+Forma 1: descarga [El .exe](https://github.com/humrand/blackjack-python/releases/tag/1.5.4).
 
-2:
+Forma 2:
 
 1. Descarga e instala Python desde:
 
