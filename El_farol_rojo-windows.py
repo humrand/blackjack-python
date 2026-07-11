@@ -139,7 +139,7 @@ def open_data_folder():
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "1.5.4"
+VERSION = "1.6.6"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
