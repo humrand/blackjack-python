@@ -33,27 +33,15 @@ def _get_data_dir():
 DATA_DIR = _get_data_dir()
 os.chdir(DATA_DIR)  
 
-def open_data_folder():
-    """Abre la carpeta de datos en el explorador del sistema."""
-    try:
-        if sys.platform == 'darwin':
-            subprocess.Popen(['open', DATA_DIR])
-        elif sys.platform == 'win32':
-            subprocess.Popen(['explorer', DATA_DIR])
-        else:
-            subprocess.Popen(['xdg-open', DATA_DIR])
-    except Exception as e:
-        print(f"[FOLDER] No se pudo abrir carpeta: {e}")
-
 
 _CONFIG_FILE = os.path.join(DATA_DIR, 'config.json')
 
 _DEFAULT_CONFIG = {
     'first_run':  True,
-    'volume':     0.75,         
-    'resolution': '1920x1080',   
-    'language':   'es',          
-    'autoupdate': True,         
+    'volume':     0.75,
+    'resolution': '1920x1080',
+    'language':   'es',
+    'autoupdate': True,
 }
 
 _RESOLUTIONS = {
@@ -97,14 +85,14 @@ IS_FIRST_RUN = bool(CONFIG.get('first_run', True))
 _TRANSLATIONS = {
     'settings_title':      {'es': 'Ajustes',                              'en': 'Settings'},
     'settings_volume':     {'es': 'Volumen',                              'en': 'Volume'},
-    'settings_resolution': {'es': 'Resolución',                          'en': 'Resolution'},
+    'settings_resolution': {'es': 'Resolucion',                          'en': 'Resolution'},
     'settings_language':   {'es': 'Idioma',                              'en': 'Language'},
     'settings_autoupdate': {'es': 'Buscar actualizaciones al iniciar',   'en': 'Check for updates on startup'},
     'settings_close':      {'es': 'Cerrar',                              'en': 'Close'},
     'settings_on':         {'es': 'Activado',                            'en': 'On'},
     'settings_off':        {'es': 'Desactivado',                         'en': 'Off'},
     'settings_windowed':   {'es': 'Ventana',                             'en': 'Windowed'},
-    'settings_hint':       {'es': 'Los cambios de resolución se aplican al guardar y reiniciar el juego.',
+    'settings_hint':       {'es': 'Los cambios de resolucion se aplican al guardar y reiniciar el juego.',
                              'en': 'Resolution changes apply after saving and restarting the game.'},
     'settings_button':     {'es': 'Ajustes',                             'en': 'Settings'},
     'menu_story_label':    {'es': 'Modo Historia',                       'en': 'Story Mode'},
@@ -117,29 +105,41 @@ _TRANSLATIONS = {
     'menu_poker_sub':      {'es': "Poker Texas Hold'em · Ciegas, flop, turn y river · Empieza con 3.000 fichas",
                              'en': "Texas Hold'em poker · Blinds, flop, turn & river · Start with 3,000 chips"},
     'menu_update_label':   {'es': 'Buscar actualizaciones',              'en': 'Check for updates'},
-    'menu_update_sub':     {'es': 'Comprueba si hay una nueva versión disponible en GitHub',
+    'menu_update_sub':     {'es': 'Comprueba si hay una nueva version disponible en GitHub',
                              'en': 'Check if a new version is available on GitHub'},
     'menu_subtitle':       {'es': 'Blackjack · Barcelona · 1987',        'en': 'Blackjack · Barcelona · 1987'},
     'menu_hint':           {'es': 'Haz clic para seleccionar',           'en': 'Click to select'},
     'menu_open_folder':    {'es': 'Abrir carpeta de datos del juego',    'en': 'Open game data folder'},
     'menu_hard_reset':     {'es': 'Hard Reset · Borrar datos y reiniciar','en': 'Hard Reset · Erase data and restart'},
     'pause_resume':        {'es': 'Continuar',                           'en': 'Resume'},
-    'pause_menu':          {'es': 'Menú principal',                      'en': 'Main menu'},
+    'pause_menu':          {'es': 'Menu principal',                      'en': 'Main menu'},
     'update_checking':     {'es': 'Comprobando...',                      'en': 'Checking...'},
-    'update_uptodate':     {'es': 'Ya tienes la última versión',         'en': "You're already on the latest version"},
+    'update_uptodate':     {'es': 'Ya tienes la ultima version',         'en': "You're already on the latest version"},
 }
 
 def TR(key):
-    """Devuelve el texto traducido según el idioma configurado."""
     entry = _TRANSLATIONS.get(key)
     if not entry:
         return key
     return entry.get(CONFIG.get('language', 'es'), entry.get('es', key))
 
+
+def open_data_folder():
+    """Abre la carpeta de datos en el explorador del sistema."""
+    try:
+        if sys.platform == 'darwin':
+            subprocess.Popen(['open', DATA_DIR])
+        elif sys.platform == 'win32':
+            subprocess.Popen(['explorer', DATA_DIR])
+        else:
+            subprocess.Popen(['xdg-open', DATA_DIR])
+    except Exception as e:
+        print(f"[FOLDER] No se pudo abrir carpeta: {e}")
+
 pygame.init()
 pygame.mixer.init()
 
-VERSION = "1.6.5"
+VERSION = "1.5.4"
 GITHUB_RAW_URL  = "https://raw.githubusercontent.com/humrand/blackjack-python/main/El_farol_rojo.py"
 GITHUB_API_URL  = "https://api.github.com/repos/humrand/blackjack-python/commits?path=El_farol_rojo.py&per_page=1"
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/humrand/blackjack-python/{sha}/El_farol_rojo.py"
@@ -2350,6 +2350,43 @@ def _release_asset_name():
     return _RELEASE_ASSET_NAME_LINUX
 
 
+_pending_external_restart = False
+
+def _schedule_windows_update_swap(new_path, target_path):
+    """Programa (Windows) un script .bat desasociado que espera a que este
+    proceso termine, sustituye el .exe antiguo por el nuevo y lo relanza.
+    Necesario porque Windows no permite sobrescribir un .exe en ejecucion."""
+    global _pending_external_restart
+    try:
+        pid = os.getpid()
+        bat_fd, bat_path = tempfile.mkstemp(suffix=".bat", prefix="efr_update_")
+        script = (
+            "@echo off\r\n"
+            ":wait\r\n"
+            f"tasklist /FI \"PID eq {pid}\" 2>NUL | find \"{pid}\" >NUL\r\n"
+            "if not errorlevel 1 (\r\n"
+            "    timeout /t 1 /nobreak >nul\r\n"
+            "    goto wait\r\n"
+            ")\r\n"
+            f"del /f /q \"{target_path}\"\r\n"
+            f"move /y \"{new_path}\" \"{target_path}\"\r\n"
+            f"start \"\" \"{target_path}\"\r\n"
+            "del \"%~f0\"\r\n"
+        )
+        with os.fdopen(bat_fd, "w") as f:
+            f.write(script)
+        DETACHED_PROCESS = 0x00000008
+        CREATE_NEW_PROCESS_GROUP = 0x00000200
+        subprocess.Popen(
+            ["cmd", "/c", bat_path],
+            creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
+            close_fds=True,
+        )
+        _pending_external_restart = True
+    except Exception as e:
+        print(f"[UPDATE] No se pudo programar el swap en Windows: {e}")
+
+
 def _check_for_updates_frozen():
     """Auto-actualizador para cuando el juego corre como ejecutable compilado
     (PyInstaller). En vez de descargar el .py, descarga el binario publicado
@@ -2413,14 +2450,26 @@ def _check_for_updates_frozen():
 
         try:
             os.chmod(tmp_path, 0o755)
- 
-            os.replace(tmp_path, _SCRIPT_PATH)
-            tmp_path = None
-            try:
-                with open(_LAST_VERSION_FILE, 'w') as f: f.write(latest_tag)
-            except Exception: pass
-            update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
-            update_restart_time = pygame.time.get_ticks()
+
+            if sys.platform == 'win32':
+
+                new_path = _SCRIPT_PATH + ".new"
+                shutil.move(tmp_path, new_path)
+                tmp_path = None
+                _schedule_windows_update_swap(new_path, _SCRIPT_PATH)
+                try:
+                    with open(_LAST_VERSION_FILE, 'w') as f: f.write(latest_tag)
+                except Exception: pass
+                update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
+                update_restart_time = pygame.time.get_ticks()
+            else:
+                os.replace(tmp_path, _SCRIPT_PATH)
+                tmp_path = None
+                try:
+                    with open(_LAST_VERSION_FILE, 'w') as f: f.write(latest_tag)
+                except Exception: pass
+                update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
+                update_restart_time = pygame.time.get_ticks()
         except Exception as e:
             update_status = "error"
             update_msg = f"No se pudo reemplazar binario: {str(e)[:35]}"
@@ -4281,6 +4330,7 @@ def close_settings(save=True):
 def _draw_gear_icon(surf, cx, cy, radius, color):
     """Dibuja un icono de engranaje sencillo mediante primitivas de pygame."""
     import math as _m
+    radius = int(radius)
     teeth = 8
     for i in range(teeth):
         ang = (2 * _m.pi / teeth) * i
@@ -4288,12 +4338,12 @@ def _draw_gear_icon(surf, cx, cy, radius, color):
         y1 = cy + _m.sin(ang) * (radius * 0.62)
         x2 = cx + _m.cos(ang) * (radius * 1.05)
         y2 = cy + _m.sin(ang) * (radius * 1.05)
-        pygame.draw.line(surf, color, (x1, y1), (x2, y2), max(3, radius // 5))
+        pygame.draw.line(surf, color, (int(x1), int(y1)), (int(x2), int(y2)), max(3, radius // 5))
     pygame.draw.circle(surf, color, (int(cx), int(cy)), int(radius * 0.62), max(2, radius // 6))
     pygame.draw.circle(surf, color, (int(cx), int(cy)), int(radius * 0.24))
 
 def draw_settings_gear_button(surf, now, mouse_pos):
-    """Dibuja el botón de engranaje con una pequeña animación de hover."""
+    """Dibuja el boton de engranaje con una pequena animacion de hover."""
     global _settings_gear_scale
     hovered = _GEAR_BTN_RECT.collidepoint(mouse_pos) and not settings_open and not _hard_reset_confirm
     target = 1.18 if hovered else 1.0
@@ -4312,8 +4362,8 @@ _SETTINGS_PANEL_W = 640
 _SETTINGS_PANEL_H = 560
 
 def _settings_panel_rect(anim):
-    """El panel entra deslizándose y con fade, controlado por 'anim' (0-1)."""
-    ease = 1 - (1 - anim) ** 3   
+    """El panel entra deslizandose y con fade, controlado por 'anim' (0-1)."""
+    ease = 1 - (1 - anim) ** 3  
     w, h = _SETTINGS_PANEL_W, _SETTINGS_PANEL_H
     x = (ANCHO - w) // 2
     y_target = (ALTO - h) // 2
@@ -4346,7 +4396,7 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
 
     hit = {}
     if ease < 0.35:
-        return hit  
+        return hit 
 
     font_title = pygame.font.SysFont("arial", 40, bold=True)
     font_label = pygame.font.SysFont("arial", 24, bold=True)
@@ -4417,7 +4467,7 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
     y += 34
     lang_rects = []
     bx = rect.x + pad
-    for lang_key, lbl in (('es', 'Español'), ('en', 'English')):
+    for lang_key, lbl in (('es', 'Espanol'), ('en', 'English')):
         w_btn = font_small.size(lbl)[0] + 28
         r_btn = pygame.Rect(bx, y, w_btn, 34)
         selected = (CONFIG.get('language') == lang_key)
@@ -4450,7 +4500,7 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
     return hit
 
 def handle_settings_click(pos):
-    """Procesa un clic dentro del panel de ajustes. Devuelve True si se consumió el clic."""
+    """Procesa un clic dentro del panel de ajustes. Devuelve True si se consumio el clic."""
     global settings_open, _settings_pending_resolution, _settings_restart_hint
     hit = getattr(render_settings_panel, '_last_hit', None)
     if not hit:
@@ -4478,11 +4528,11 @@ def handle_settings_click(pos):
         save_config()
         return True
     if 'volume_slider' in hit and hit['volume_slider'].collidepoint(pos):
-        return True 
+        return True
     return False
 
 def _refresh_language_texts():
-    """Reconstruye textos dependientes del idioma (menú principal, etc.)."""
+    """Reconstruye textos dependientes del idioma (menu principal, etc.)."""
     global MENU_OPTIONS
     MENU_OPTIONS[:] = _menu_options()
 
@@ -5132,7 +5182,11 @@ while True:
 
     if update_status == 'restarting' and update_restart_time != 0:
         if now >= update_restart_time + 2000:
-            pygame.quit(); _restart_process()
+            pygame.quit()
+            if _pending_external_restart:
+                sys.exit()   
+            else:
+                _restart_process()
 
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
