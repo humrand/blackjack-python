@@ -115,6 +115,159 @@ _TRANSLATIONS = {
     'pause_menu':          {'es': 'Menu principal',                      'en': 'Main menu'},
     'update_checking':     {'es': 'Comprobando...',                      'en': 'Checking...'},
     'update_uptodate':     {'es': 'Ya tienes la ultima version',         'en': "You're already on the latest version"},
+    'update_no_github':     {'es': 'Sin respuesta de GitHub API',        'en': 'No response from GitHub API'},
+    'update_no_hash':       {'es': 'No se pudo calcular hash remoto',    'en': "Couldn't calculate remote hash"},
+    'update_syntax_err':    {'es': 'Actualiz. con error sintaxis: línea {line}', 'en': 'Update has a syntax error: line {line}'},
+    'update_verify_fail':   {'es': 'No se pudo verificar actualiz.: {err}', 'en': "Couldn't verify update: {err}"},
+    'update_restarting':    {'es': '¡Actualizado! Reiniciando...',       'en': 'Updated! Restarting...'},
+    'update_write_fail':    {'es': 'No se pudo escribir: {err}',         'en': "Couldn't write file: {err}"},
+    'update_error':         {'es': 'Error: {err}',                      'en': 'Error: {err}'},
+    'update_no_release':    {'es': 'Sin datos de release en GitHub',     'en': 'No release data on GitHub'},
+    'update_no_binary':     {'es': 'Release {tag} sin binario para esta plataforma', 'en': 'Release {tag} has no binary for this platform'},
+    'update_invalid_bin':   {'es': 'Binario descargado inválido',        'en': 'Downloaded binary is invalid'},
+    'update_replace_fail':  {'es': 'No se pudo reemplazar binario: {err}', 'en': "Couldn't replace binary: {err}"},
+
+    'game_title':          {'es': 'El Farol Rojo',                       'en': 'El Farol Rojo'},
+    'barcelona_1987':       {'es': 'Barcelona  ·  1987',                 'en': 'Barcelona  ·  1987'},
+    'made_by':              {'es': 'hecho por Humrandbm y Dreame282',    'en': 'made by Humrandbm and Dreame282'},
+    'reiniciar_btn':         {'es': 'R: Reiniciar',                      'en': 'R: Restart'},
+    'esc_menu_principal':    {'es': 'ESC: Menú principal',               'en': 'ESC: Main menu'},
+    'esc_menu':              {'es': 'ESC: Menú',                         'en': 'ESC: Menu'},
+    'bj_infinito_stats':     {'es': "♠ BlackJack Infinito  |  Ganadas: {won}  Perdidas: {lost}",
+                               'en': "♠ Endless BlackJack  |  Won: {won}  Lost: {lost}"},
+    'updated_restarting':    {'es': '¡Actualizado! Reiniciando en {secs}s...', 'en': 'Updated! Restarting in {secs}s...'},
+
+    'pause_title':           {'es': 'PAUSA',                             'en': 'PAUSED'},
+    'pause_hint':             {'es': 'ESC para reanudar  ·  haz clic para elegir', 'en': 'ESC to resume  ·  click to choose'},
+
+    'story_continue':         {'es': '[ ESPACIO  o  clic  para continuar ]', 'en': '[ SPACE  or  click  to continue ]'},
+    'story_choice_header':    {'es': '¿Qué dices?',                       'en': 'What do you say?'},
+    'story_choice_hint':      {'es': '[ haz clic para elegir ]',          'en': '[ click to choose ]'},
+
+    'erase_title':            {'es': '⚠  ¿Borrar todos los datos?',       'en': '⚠  Erase all data?'},
+    'erase_line1':             {'es': 'Se borrarán guardados, imágenes y música descargada.', 'en': 'Saved data, images and downloaded music will be deleted.'},
+    'erase_line2':             {'es': 'El juego se reiniciará automáticamente.', 'en': 'The game will restart automatically.'},
+    'erase_confirm':           {'es': 'Borrar y reiniciar',               'en': 'Erase and restart'},
+    'erase_cancel':            {'es': 'Cancelar',                         'en': 'Cancel'},
+
+    'dl_error_title':          {'es': 'Error de descarga',                'en': 'Download error'},
+    'dl_error_line':           {'es': 'No se pudo descargar: {name}',     'en': "Couldn't download: {name}"},
+    'dl_error_hint':           {'es': 'Comprueba tu conexión a internet e inténtalo de nuevo.', 'en': 'Check your internet connection and try again.'},
+    'dl_retry':                {'es': 'Reintentar',                       'en': 'Retry'},
+    'dl_continue_risky':       {'es': 'Continuar  (puede arruinar la experiencia)', 'en': 'Continue  (may ruin the experience)'},
+    'dl_close_game':           {'es': 'Cerrar juego',                     'en': 'Close game'},
+    'dl_downloading':          {'es': 'Descargando paquetes necesarios de internet...', 'en': 'Downloading required packages from the internet...'},
+    'dl_progress':             {'es': '[{i}/{total}]  {name}',            'en': '[{i}/{total}]  {name}'},
+    'dl_ready':                {'es': '¡Listo!',                          'en': 'Ready!'},
+
+    'bj_banca':                {'es': 'Banca: {texto}',                   'en': 'Dealer: {texto}'},
+    'bj_mano1':                {'es': 'Mano 1: {v}',                      'en': 'Hand 1: {v}'},
+    'bj_mano2':                {'es': 'Mano 2: {v}',                      'en': 'Hand 2: {v}'},
+    'bj_jugador':              {'es': 'Jugador: {v}',                     'en': 'Player: {v}'},
+    'bj_type_bet':             {'es': 'Escribe tu apuesta y pulsa ENTER', 'en': 'Type your bet and press ENTER'},
+    'bj_controls':             {'es': 'ESPACIO: Pedir  ENTER: Plantarse  D: Doblar  P: Dividir  I: Seguro',
+                                 'en': 'SPACE: Hit  ENTER: Stand  D: Double  P: Split  I: Insurance'},
+    'bj_next_round':           {'es': 'S = Siguiente ronda',              'en': 'S = Next round'},
+    'bj_insurance_take':       {'es': 'I: Tomar seguro  |  ',             'en': 'I: Take insurance  |  '},
+    'bj_dificil':              {'es': 'Difícil',                          'en': 'Hard'},
+    'bj_muy_dificil':          {'es': 'Muy Difícil',                      'en': 'Very Hard'},
+    'bj_chips':                {'es': '💰 Fichas: {v}',                   'en': '💰 Chips: {v}'},
+    'bj_bet':                  {'es': '🎰 Apuesta: {v}',                  'en': '🎰 Bet: {v}'},
+    'bj_max_dif':              {'es': 'Máx: {max}  ·  Dificultad: {diff}', 'en': 'Max: {max}  ·  Difficulty: {diff}'},
+    'bj_max_meta_dif':         {'es': 'Máx: {max}  ·  Meta: {meta}  ·  Dificultad: {diff}', 'en': 'Max: {max}  ·  Goal: {meta}  ·  Difficulty: {diff}'},
+    'bj_no_chips_victor':      {'es': 'Sin fichas... Víctor sonríe.',      'en': 'Out of chips... Víctor smiles.'},
+    'bj_enter_restart':        {'es': 'ENTER o R: volver a empezar con 1000 fichas', 'en': 'ENTER or R: start over with 1,000 chips'},
+    'bj_blackjack':            {'es': 'BLACKJACK!',                       'en': 'BLACKJACK!'},
+    'bj_has_ganado':           {'es': 'HAS GANADO',                       'en': 'YOU WIN'},
+    'bj_empate':               {'es': 'EMPATE',                           'en': 'PUSH'},
+    'bj_has_perdido':          {'es': 'HAS PERDIDO',                      'en': 'YOU LOSE'},
+    'bj_hand_bust':            {'es': 'MANO {n} BUST',                    'en': 'HAND {n} BUST'},
+    'bj_bet_empty':            {'es': 'Escribe una apuesta',              'en': 'Enter a bet'},
+    'bj_bet_invalid':          {'es': 'Apuesta inválida',                 'en': 'Invalid bet'},
+    'bj_bet_max':              {'es': 'Apuesta máx. {max}',               'en': 'Max bet {max}'},
+    'bj_not_enough_money':     {'es': 'No tienes suficiente dinero',      'en': "You don't have enough money"},
+    'bj_no_chips':             {'es': 'Sin fichas — pulsa R para reiniciar', 'en': 'Out of chips — press R to restart'},
+    'bj_waiting':              {'es': 'Esperando...',                     'en': 'Waiting...'},
+
+    'he_title':                {'es': "♠  TEXAS HOLD'EM  ♠",              'en': "♠  TEXAS HOLD'EM  ♠"},
+    'he_community':            {'es': 'CARTAS COMUNITARIAS',              'en': 'COMMUNITY CARDS'},
+    'he_your_hand':            {'es': 'Tu mano: {v}',                     'en': 'Your hand: {v}'},
+    'he_pot':                  {'es': 'BOTE: {v} fichas',                 'en': 'POT: {v} chips'},
+    'he_chips':                {'es': 'Fichas: {v}',                      'en': 'Chips: {v}'},
+    'he_deal_hint':            {'es': 'ENTER para repartir · Todos postean la ciega · Máx {max}', 'en': 'ENTER to deal · Everyone posts the blind · Max {max}'},
+    'he_turn_of':              {'es': '▶  Le toca a  {name}',             'en': "▶  It's  {name}'s  turn"},
+    'he_last_action':          {'es': '✓  {action}',                      'en': '✓  {action}'},
+    'he_raise_label':          {'es': 'Sube (+fichas):',                  'en': 'Raise (+chips):'},
+    'he_raise_btn':            {'es': 'SUBIR',                            'en': 'RAISE'},
+    'he_confirm_cancel':       {'es': 'ENTER para confirmar · ESC para cancelar', 'en': 'ENTER to confirm · ESC to cancel'},
+    'he_fold':                 {'es': 'F: Retirarse',                     'en': 'F: Fold'},
+    'he_check':                {'es': 'C: Check',                         'en': 'C: Check'},
+    'he_call':                 {'es': 'C: Igualar ({amt}) — ¡alguien subió!', 'en': 'C: Call ({amt}) — someone raised!'},
+    'he_controls':             {'es': 'F=Retirarse  C=Check/Igualar  Click SUBIR para apostar más', 'en': 'F=Fold  C=Check/Call  Click RAISE to bet more'},
+    'he_next_hand':            {'es': 'ENTER / S para siguiente mano',    'en': 'ENTER / S for next hand'},
+    'he_stats':                {'es': 'G:{won} P:{lost} E:{tied}',        'en': 'W:{won} L:{lost} T:{tied}'},
+    'he_no_chips':             {'es': 'Sin fichas — pulsa R para reiniciar', 'en': 'Out of chips — press R to restart'},
+    'he_blind_insufficient':   {'es': 'Fichas insuficientes para la ciega', 'en': 'Not enough chips for the blind'},
+    'he_blind_invalid':        {'es': 'Ciega inválida',                   'en': 'Invalid blind'},
+    'he_amount_invalid':       {'es': 'Cantidad inválida',                'en': 'Invalid amount'},
+    'he_number_invalid':       {'es': 'Número inválido',                  'en': 'Invalid number'},
+    'he_max_blind':            {'es': 'Máx. {max}',                       'en': 'Max. {max}'},
+    'he_you_folded':           {'es': 'Te has retirado. Pierdes la ciega.', 'en': 'You folded. You lose the blind.'},
+    'he_tie':                  {'es': 'Empate — {pn}',                    'en': 'Tie — {pn}'},
+    'he_you_won':              {'es': '¡Ganaste! {pn}  (+{pot} fichas)',  'en': 'You won! {pn}  (+{pot} chips)'},
+    'he_they_won':             {'es': '{winners} gana. Tu mano: {pn}',    'en': '{winners} wins. Your hand: {pn}'},
+    'he_all_folded':           {'es': '¡Todos se retiraron! Ganas el bote (+{pot} fichas)', 'en': 'Everyone folded! You win the pot (+{pot} chips)'},
+
+    'hand_high_card':          {'es': 'Carta Alta',                       'en': 'High Card'},
+    'hand_pair':                {'es': 'Pareja',                          'en': 'Pair'},
+    'hand_two_pair':            {'es': 'Doble Pareja',                    'en': 'Two Pair'},
+    'hand_trips':               {'es': 'Trío',                            'en': 'Three of a Kind'},
+    'hand_straight':            {'es': 'Escalera',                        'en': 'Straight'},
+    'hand_flush':                {'es': 'Color',                          'en': 'Flush'},
+    'hand_full_house':           {'es': 'Full House',                     'en': 'Full House'},
+    'hand_quads':                {'es': 'Póker (4 iguales)',              'en': 'Four of a Kind'},
+    'hand_straight_flush':       {'es': 'Escalera de Color',              'en': 'Straight Flush'},
+    'hand_royal_flush':          {'es': 'Escalera Real',                  'en': 'Royal Flush'},
+
+    'he_ai_call':                {'es': 'iguala',                          'en': 'calls'},
+    'he_ai_folds':               {'es': 'se retira',                      'en': 'folds'},
+    'he_ai_folds_broke':         {'es': 'se retira (sin fichas)',         'en': 'folds (out of chips)'},
+    'he_ai_already_folded':      {'es': 'ya retirado',                    'en': 'already folded'},
+    'he_ai_bluff_raise':         {'es': 'farolea y sube {amt}',           'en': 'bluffs and raises {amt}'},
+    'he_ai_raise':                {'es': 'sube {amt}',                    'en': 'raises {amt}'},
+    'he_ai_raise_amt':            {'es': 'SUBE {amt}',                    'en': 'RAISES {amt}'},
+
+    'he_you_label':             {'es': 'TÚ',                               'en': 'YOU'},
+
+    'poker_how':                  {'es': '¿Cómo quieres jugar?',           'en': 'How do you want to play?'},
+    'poker_online_title':          {'es': "🌐  Jugar Online",              'en': '🌐  Play Online'},
+    'poker_online_sub':            {'es': 'Conecta a una partida con jugadores reales vía red', 'en': 'Connect to a game with real players over the network'},
+    'poker_offline_title':         {'es': '🤖  Jugar Offline',             'en': '🤖  Play Offline'},
+    'poker_offline_sub':           {'es': 'Partida local contra bots · Sin conexión necesaria', 'en': 'Local game against bots · No connection needed'},
+    'poker_connect_title':          {'es': 'Conectar al servidor',         'en': 'Connect to server'},
+    'poker_server_ip':              {'es': 'IP del servidor',              'en': 'Server IP'},
+    'poker_your_name':               {'es': 'Tu nombre',                   'en': 'Your name'},
+    'poker_connect_fail_timeout':    {'es': 'No se pudo conectar: tiempo de espera agotado', 'en': "Couldn't connect: timed out"},
+    'poker_connect_fail':            {'es': 'No se pudo conectar: {e}',    'en': "Couldn't connect: {e}"},
+    'poker_disconnected':            {'es': 'Desconectado del servidor.',  'en': 'Disconnected from server.'},
+    'poker_unknown_error':           {'es': 'Error desconocido',           'en': 'Unknown error'},
+    'poker_waiting_players':         {'es': 'Esperando jugadores...',      'en': 'Waiting for players...'},
+    'poker_waiting_room':            {'es': 'Sala de espera',              'en': 'Waiting room'},
+    'poker_waiting_players_dots':    {'es': 'Esperando jugadores{dots}',   'en': 'Waiting for players{dots}'},
+    'poker_connected_count':         {'es': 'Conectados: {n}  ·  Se necesitan mínimo {min}', 'en': 'Connected: {n}  ·  Minimum needed: {min}'},
+    'poker_reload_free':             {'es': 'RECARGAR GRATIS',             'en': 'FREE RELOAD'},
+    'poker_waiting_hand':            {'es': 'Esperando mano',              'en': 'Waiting for hand'},
+    'poker_waiting_turn':            {'es': 'Esperando turno...',          'en': "Waiting for your turn..."},
+    'poker_you_won_hand':            {'es': '¡GANASTE! — {hand}  (+{pot})', 'en': 'YOU WON! — {hand}  (+{pot})'},
+    'poker_they_won_hand':           {'es': '{winner} GANA — {hand}',      'en': '{winner} WINS — {hand}'},
+    'poker_waiting_next_hand':       {'es': 'Esperando siguiente mano...', 'en': 'Waiting for next hand...'},
+    'poker_no_chips_reload':         {'es': 'Sin fichas — recarga gratis para seguir jugando', 'en': 'Out of chips — free reload to keep playing'},
+    'poker_esc_disconnect':          {'es': 'ESC: desconectar y volver',   'en': 'ESC: disconnect and go back'},
+    'poker_esc_back':                {'es': 'ESC: volver',                 'en': 'ESC: back'},
+    'poker_esc_back_main':           {'es': 'ESC: volver al menú principal', 'en': 'ESC: back to main menu'},
+    'poker_port':                    {'es': 'Puerto',                      'en': 'Port'},
+    'poker_connecting':              {'es': 'Conectando...',               'en': 'Connecting...'},
+    'poker_connect_btn':             {'es': 'Conectar',                    'en': 'Connect'},
 }
 
 def TR(key):
@@ -122,6 +275,476 @@ def TR(key):
     if not entry:
         return key
     return entry.get(CONFIG.get('language', 'es'), entry.get('es', key))
+
+def TRF(key, **kwargs):
+    """TR() con formateo de variables: TRF('bj_chips', v=100)."""
+    try:
+        return TR(key).format(**kwargs)
+    except Exception:
+        return TR(key)
+
+STORY_TR = {
+    'Barcelona. 1987.': 'Barcelona. 1987.',
+    'El Barrio Gótico lleva siglos guardando secretos. Esta noche guardará uno más.':
+        'The Gothic Quarter has kept secrets for centuries. Tonight it will keep one more.',
+    'Al final del Carrer del Bisbe, en un portal sin número, existe un lugar que no aparece en ningún mapa.':
+        'At the end of Carrer del Bisbe, behind a doorway with no number, there is a place that appears on no map.',
+    '"El Farol Rojo". Un casino clandestino que opera desde hace años con total impunidad.':
+        '"El Farol Rojo." An underground casino that has operated for years with total impunity.',
+    'Su propietario, Víctor Carvalho, no ha perdido una partida de blackjack en tres años. Nadie sabe cómo lo hace.':
+        'Its owner, Víctor Carvalho, hasn\'t lost a game of blackjack in three years. No one knows how he does it.',
+    'Tú llegas con mil fichas, una teoría y una promesa que te hiciste a ti mismo.':
+        'You arrive with a thousand chips, a theory, and a promise you made to yourself.',
+    'Esta noche, alguien va a perder.': 'Tonight, someone is going to lose.',
+
+    '¿A dónde crees que vas, amigo?': 'Where do you think you\'re going, friend?',
+    'Primera vez que te veo por aquí.': 'First time I\'ve seen you around here.',
+    'Primera vez que vengo. Dicen que aquí sirven las mejores cartas de Barcelona.':
+        'First time I\'ve come. They say the best cards in Barcelona are dealt here.',
+    '(Sonríe) Y el peor whisky. Te lo advierto. ¿Qué te pongo?':
+        '(Smiles) And the worst whisky. Fair warning. What can I get you?',
+    'Vaya, vaya... carne fresca. Hacía tiempo que no veía una cara nueva.':
+        'Well, well... fresh meat. It\'s been a while since I saw a new face.',
+    'Siéntate. ¿Cuánto dinero traes?': 'Sit down. How much money are you carrying?',
+    'Mil fichas.': 'A thousand chips.',
+    '(Ríe suavemente.) Suficiente para entretenernos unas horas. Quizás.':
+        '(Chuckles softly.) Enough to entertain us for a few hours. Maybe.',
+    'Las reglas son simples: gana el que llega a 21 sin pasarse. Yo soy la banca.':
+        'The rules are simple: whoever gets to 21 without going over wins. I am the house.',
+    'Y en este establecimiento... la banca siempre gana. Siempre.':
+        'And in this establishment... the house always wins. Always.',
+    '¡Que empiece el juego!': 'Let the game begin!',
+
+    '"Vengo a jugar."': '"I\'m here to play."',
+    'Vengo a jugar.': 'I\'m here to play.',
+    '"Tengo una cita con Víctor."': '"I have an appointment with Víctor."',
+    'Tengo una cita con Víctor. Dice que me esperaba.': 'I have an appointment with Víctor. He said he was expecting me.',
+    '"He oído que aquí hay acción de verdad."': '"I heard there\'s real action in here."',
+    'He oído que aquí hay acción de verdad. Vine a comprobarlo.': 'I heard there\'s real action in here. I came to see for myself.',
+    '"Un amigo me recomendó este lugar. Dice que no hay otro igual."':
+        '"A friend recommended this place. Said there\'s nowhere else like it."',
+    'Un amigo mío me recomendó este lugar. Dice que no hay otro igual en toda Barcelona.':
+        'A friend of mine recommended this place. He says there\'s nowhere else like it in all of Barcelona.',
+    '"Mil fichas. ¿Suficiente?"': '"A thousand chips. Enough?"',
+    'Tengo mil fichas y no tengo prisa. ¿Suficiente?': 'I\'ve got a thousand chips and no hurry. Enough?',
+    '"Las suficientes para limpiar la mesa de Víctor."': '"Enough to clean out Víctor\'s table."',
+    'Las suficientes para limpiar la mesa de Víctor. Y sobrar.': 'Enough to clean out Víctor\'s table. With plenty to spare.',
+    '"Las justas. Pero sé lo que hago."': '"Just enough. But I know what I\'m doing."',
+    'Las justas. Pero sé exactamente lo que hago.': 'Just enough. But I know exactly what I\'m doing.',
+    '"Hay una primera vez para todo."': '"There\'s a first time for everything."',
+    'Hay una primera vez para todo.': 'There\'s a first time for everything.',
+    '"Esta noche las cosas cambian."': '"Tonight things change."',
+    'Esta noche las cosas van a cambiar, amigo.': 'Tonight things are going to change, my friend.',
+    '(Entras sin decir nada.)': '(You walk in without a word.)',
+    '...': '...',
+    '"¿Y tú, amigo? ¿Cuánto llevas aquí?"': '"And you, friend? How long have you been here?"',
+    '¿Y tú? ¿Cuánto tiempo llevas cuidando esta puerta?': 'And you? How long have you been guarding this door?',
+    '"Nada. Estoy aquí por Víctor."': '"Nothing. I\'m here for Víctor."',
+    'Nada por ahora. Estoy aquí por Víctor.': 'Nothing for now. I\'m here for Víctor.',
+    '"Ponme lo que tú tomarías."': '"Give me whatever you\'d have."',
+    'Ponme lo que tú tomarías. Y cuéntame algo sobre este sitio.': 'Give me whatever you\'d have. And tell me something about this place.',
+    '"El whisky más caro. Lo celebro por adelantado."': '"The most expensive whisky. I\'m celebrating in advance."',
+    'El whisky más caro que tengas. Esta noche lo celebro por adelantado.':
+        'The most expensive whisky you\'ve got. Tonight I\'m celebrating in advance.',
+    '"¿Qué recomiendas tú para una noche larga?"': '"What do you recommend for a long night?"',
+    '¿Qué recomiendas tú para una noche larga, Rosa?': 'What do you recommend for a long night, Rosa?',
+    '"¿Y si pierde? ¿Qué pasa entonces?"': '"And if he loses? What happens then?"',
+    '¿Y si pierde? ¿Qué pasa?': 'And if he loses? What happens?',
+    '"¿Le has visto hacer trampa alguna vez?"': '"Have you ever seen him cheat?"',
+    '¿Tú le has visto hacer trampa alguna vez?': 'Have you ever seen him cheat?',
+    '"¿Puedo pedirte algo... más personal?"': '"Can I ask you something... more personal?"',
+    '¿Puedo pedirte algo más personal, Rosa?': 'Can I ask you something more personal, Rosa?',
+    '"¿Por qué sigues trabajando para Víctor?"': '"Why do you keep working for Víctor?"',
+    '¿Por qué sigues trabajando para alguien como Víctor?': 'Why do you keep working for someone like Víctor?',
+    '"Gracias por el consejo, Rosa. Esta noche me traerá suerte."': '"Thanks for the advice, Rosa. It\'ll bring me luck tonight."',
+    'Gracias por los consejos, Rosa. Esta noche me traerán suerte.': 'Thanks for the advice, Rosa. It\'ll bring me luck tonight.',
+    '"Oye, ¿me acompañas tú a la mesa de suerte?"': '"Hey, why don\'t you come sit with me at the table for luck?"',
+    'Oye, ¿y si me acompañas a la mesa esta noche? Serías mi amuleto de la suerte.':
+        'Hey, what if you sat with me at the table tonight? You\'d be my good-luck charm.',
+    '[Comportamiento inapropiado con Rosa — Final Malo]': '[Inappropriate behavior toward Rosa — Bad Ending]',
+    '"Si llego a 10.000… me dices cómo haces trampa."': '"If I reach 10,000... you tell me how you cheat."',
+    'De acuerdo. Pero tengo una condición.': 'Fine. But I have one condition.',
+    '"Si llego a 25.000… que toda la sala lo sepa."': '"If I reach 25,000... let the whole room know it."',
+    'Si llego a veinticinco mil fichas... quiero que esta sala sepa que la banca puede perder.':
+        'If I reach twenty-five thousand chips... I want this whole room to know the house can lose.',
+    '"Si llego a 50.000… este casino es mío."': '"If I reach 50,000... this casino is mine."',
+    'Si llego a cincuenta mil fichas... este casino pasa a ser mío. En espíritu.':
+        'If I reach fifty thousand chips... this casino becomes mine. In spirit.',
+    '"Sin condiciones. Solo voy a ganar. 100.000."': '"No conditions. I\'m just here to win. 100,000."',
+    'Sin condiciones, Víctor. Cien mil fichas. Solo vengo a ganar.': 'No conditions, Víctor. One hundred thousand chips. I\'m only here to win.',
+
+    '+50 fichas — el portero queda impresionado': '+50 chips — the doorman is impressed',
+    '+75 fichas — el portero te tiene simpatía': '+75 chips — the doorman has taken a liking to you',
+    '+100 fichas — Rosa confía en ti': '+100 chips — Rosa trusts you',
+    '−50 fichas — ese whisky era caro de verdad': '−50 chips — that whisky was genuinely expensive',
+    '+80 fichas — el consejo de Rosa tiene precio': '+80 chips — Rosa\'s advice comes at a price',
+    '+150 fichas — Rosa tiene fe en ti': '+150 chips — Rosa believes in you',
+    '+60 fichas — Rosa deposita su esperanza en ti': '+60 chips — Rosa is putting her hope in you',
+
+    'Aquí no entra cualquiera. Este no es un sitio para turistas.':
+        'Not just anyone gets in here. This isn\'t a place for tourists.',
+    '(Frunce el ceño.) ¿Con el jefe? Nadie tiene "citas" con Víctor...':
+        '(Frowns.) With the boss? Nobody has "appointments" with Víctor...',
+    '(Tras una pausa.) Pero algo en tu cara dice que no mientes. Venga.':
+        '(After a pause.) But something about your face says you\'re not lying. Go on in.',
+    '(Resopla.) Todo el mundo "ha oído". Lo que no todo el mundo tiene es pasta para respaldarlo.':
+        '(Snorts.) Everybody\'s "heard." What not everybody has is the cash to back it up.',
+    '(Entrecierra los ojos.) ¿Qué amigo?': '(Narrows his eyes.) What friend?',
+    'El tipo no da su nombre. Solo su palabra.': 'The guy doesn\'t give his name. Just his word.',
+    '(Bufido.) Típico. Bueno... si alguien te mandó, algo sabes. Adelante.':
+        '(Snorts.) Typical. Well... if someone sent you, you must know something. Go ahead.',
+    '(Te mira de arriba abajo durante un momento largo.)': '(He looks you up and down for a long moment.)',
+    '...Pasa. Pero sabe que nadie ha salido de aquí ganando. Nadie.':
+        '...Go in. But know that no one has ever walked out of here a winner. No one.',
+    '(Casi sonríe.) Otro que viene con ganas. Venga, pasa antes de que me arrepienta.':
+        '(Almost smiles.) Another one full of ambition. Go on, get in before I change my mind.',
+    'Que conste: nadie ha salido de aquí ganando. Nadie.': 'For the record: no one has ever walked out of here a winner. No one.',
+    '(Una pausa. Te estudia de arriba abajo.)': '(A pause. He studies you head to toe.)',
+    'Esa mirada... he visto esa mirada antes. Dos veces. Uno salió rico. El otro no salió.':
+        'That look... I\'ve seen that look before. Twice. One left rich. The other never left.',
+    'A ver en cuál de los dos te conviertes tú. Adelante.': 'Let\'s see which one you turn out to be. Go on in.',
+    '(Te mira sorprendido. Nadie le pregunta eso.)': '(He looks at you, surprised. No one ever asks him that.)',
+    'Seis años. Seis años viendo entrar a gente con sueños y salir con deudas.':
+        'Six years. Six years watching people walk in with dreams and walk out with debts.',
+    '(En voz baja.) Tú... ten cuidado, ¿eh? Víctor no es lo que parece.':
+        '(Quietly.) You... be careful, all right? Víctor isn\'t what he seems.',
+
+    '(La sonrisa desaparece.) Cuidado con él. Lleva tres años sin perder. Dicen que ve las cartas antes de que salgan.':
+        '(The smile fades.) Careful with him. He hasn\'t lost in three years. They say he sees the cards before they\'re dealt.',
+    '(Sonríe con melancolía.) Un Laphroaig, entonces. Y sobre este sitio... todo lo que ves tiene dueño. Incluidas las cartas.':
+        '(Smiles wistfully.) A Laphroaig, then. And about this place... everything you see has an owner. Including the cards.',
+    'Un consejo gratis: cuando Víctor se toque el nudo de la corbata, tiene buena mano. Guárdatelo.':
+        'Free advice: when Víctor touches the knot of his tie, he\'s got a good hand. Keep that in mind.',
+    '(Rosa te pasa discretamente un billete doblado. +100 fichas para la partida.)':
+        '(Rosa discreetly slips you a folded bill. +100 chips for the game.)',
+    '(Arquea una ceja.) Confiado. Me gusta. Aunque aquí los que llegan muy seguros... suelen salir más callados.':
+        '(Raises an eyebrow.) Confident. I like that. Though around here, the ones who arrive so sure of themselves... tend to leave a lot quieter.',
+    '(El whisky de malta llega rápido. Vacías la copa de un trago. −50 fichas de tu bolsillo.)':
+        '(The single malt arrives quickly. You down the glass in one go. −50 chips from your pocket.)',
+    '(Se apoya en la barra con una sonrisa cómplice.) Para una noche larga...':
+        '(Leans on the bar with a knowing smile.) For a long night...',
+    'Agua con gas. La cabeza despejada vale más que cualquier carta.':
+        'Sparkling water. A clear head is worth more than any card.',
+    '(Rosa añade con discreción un par de fichas al montón.) Un extra, de mi parte.':
+        '(Rosa discreetly adds a couple of chips to the pile.) A little extra, on the house.',
+    'Eso... nadie lo sabe. Nunca ha pasado. Nadie ha llegado tan lejos.':
+        'That... nobody knows. It\'s never happened. No one has ever gotten that far.',
+    'Pues esta noche vamos a descubrirlo.': 'Well, tonight we\'re going to find out.',
+    '(En voz baja) Ten cuidado. En serio.': '(Quietly) Be careful. I mean it.',
+    '(Pausa. Baja la voz.) No exactamente... pero hay momentos en que las cartas parecen obedecerle. Como si las conociera de antes.':
+        '(Pause. Lowers her voice.) Not exactly... but there are moments when the cards seem to obey him. As if he already knew them.',
+    'Nada demostrable. Nunca nada demostrable. Ten cuidado, ¿de acuerdo?':
+        'Nothing provable. Never anything provable. Just be careful, okay?',
+    '(Te mira un instante demasiado largo. Después apoya los codos en la barra y baja la voz.)':
+        '(She looks at you a moment too long. Then she leans her elbows on the bar and lowers her voice.)',
+    'La puerta azul al fondo. Cinco minutos. Nadie mira hacia allí a esta hora.':
+        'The blue door at the back. Five minutes. Nobody looks that way at this hour.',
+    'Lo que ocurrió al fondo del pasillo, entre cajas de Laphroaig y la penumbra azul, queda ahí.':
+        'What happened at the end of that hallway, among crates of Laphroaig and the blue half-light, stays there.',
+    'Cinco minutos que se notaron más que cinco horas.': 'Five minutes that felt like five hours.',
+    'De vuelta en la barra, Rosa sirve una copa sin mirarte. Pero sonríe.':
+        'Back at the bar, Rosa pours a drink without looking at you. But she\'s smiling.',
+    '(En voz muy baja, arreglándose el cabello.) Gana esta noche, ¿de acuerdo?':
+        '(Very quietly, fixing her hair.) Win tonight, all right?',
+    'Ahora tengo más motivos para hacerlo.': 'Now I have even more reason to.',
+    '(Una sonrisa que intenta esconder, sin éxito.) Anda ya...':
+        '(A smile she tries and fails to hide.) Oh, get out of here...',
+    'Su perfume te acompañará el resto de la noche. +150 fichas — Rosa tiene fe en ti.':
+        'Her perfume will stay with you the rest of the night. +150 chips — Rosa believes in you.',
+    '(Una pausa larga. Limpia el vaso sin mirarte.)': '(A long pause. She wipes the glass without looking at you.)',
+    'Porque las deudas no se pagan solas. Y porque... todavía no ha llegado nadie que lo saque de ahí.':
+        'Because debts don\'t pay themselves. And because... nobody\'s come along yet who can get him out of this.',
+    '(Te mira fijamente.) Quizás esta noche cambia eso.': '(Looks straight at you.) Maybe tonight that changes.',
+    '(Algo en su voz suena a esperanza. +60 fichas — un pequeño empujón de su parte.)':
+        '(Something in her voice sounds like hope. +60 chips — a small push from her.)',
+    '(Asiente con una sonrisa tranquila.) Eso espero. Ya sé dónde encontrarte si ganas.':
+        '(Nods with a calm smile.) I hope so. I know where to find you if you win.',
+    '(Sonríe con paciencia.) Tengo trabajo. Y tú tienes una partida que ganar. Anda.':
+        '(Smiles patiently.) I\'ve got work to do. And you\'ve got a game to win. Go on.',
+    'Algo en tu actitud cruza una línea que no debería haberse cruzado.':
+        'Something in your attitude crosses a line that should never have been crossed.',
+    '(Te mira fijamente. Después levanta la mano hacia el fondo de la sala.) Marcos.':
+        '(She stares at you. Then raises her hand toward the back of the room.) Marcos.',
+    'El hombre más grande que has visto en tu vida emerge de las sombras.':
+        'The biggest man you\'ve ever seen steps out of the shadows.',
+    '¿Algún problema, Rosa?': 'Any trouble, Rosa?',
+    '(Sin apartar los ojos de ti.) Este señor ya se iba.': '(Without taking her eyes off you.) This gentleman was just leaving.',
+
+    '(Arquea una ceja.) ¿Condición? Eso es... inusual.': '(Raises an eyebrow.) A condition? That\'s... unusual.',
+    'Si llego a diez mil fichas... me dices cómo lo haces. Cómo haces trampa.':
+        'If I reach ten thousand chips... you tell me how you do it. How you cheat.',
+    '(Pausa larga. Te mira fijamente. Luego sonríe.) ...Trato hecho, forastero. Suerte.':
+        '(Long pause. He stares at you. Then smiles.) ...Deal, stranger. Good luck.',
+    'La vas a necesitar.': 'You\'re going to need it.',
+    '[ MODO NORMAL — Meta: 10.000 fichas. La banca no se rinde fácil, pero tampoco es invencible. ]':
+        '[ NORMAL MODE — Goal: 10,000 chips. The house doesn\'t give up easily, but it isn\'t invincible either. ]',
+    '(Una sonrisa fría, casi apreciativa.) Ambicioso. Me gustan los ambiciosos.':
+        '(A cold, almost appreciative smile.) Ambitious. I like ambitious people.',
+    'Suelen quedarse sin nada antes del amanecer. Pero... de acuerdo. Trato hecho.':
+        'They usually end up with nothing by dawn. But... fine. Deal.',
+    'Veamos de qué pasta estás hecho, forastero.': 'Let\'s see what you\'re made of, stranger.',
+    '[ MODO DIFÍCIL — Meta: 25.000 fichas. Víctor ordena a sus crupiers que jueguen más agresivo. ]':
+        '[ HARD MODE — Goal: 25,000 chips. Víctor orders his dealers to play more aggressively. ]',
+    '(Una carcajada seca.) ¡Cincuenta mil! Hace años que nadie me desafía así.':
+        '(A dry laugh.) Fifty thousand! It\'s been years since anyone challenged me like that.',
+    '(Se inclina hacia adelante.) Acepto. Pero cuando pierdas... y perderás... sal por esa puerta y no vuelvas.':
+        '(Leans forward.) I accept. But when you lose... and you will lose... walk out that door and don\'t come back.',
+    '[ MODO MUY DIFÍCIL — Meta: 50.000 fichas. La banca juega sin misericordia. ]':
+        '[ VERY HARD MODE — Goal: 50,000 chips. The house plays without mercy. ]',
+    '(Se recuesta en la silla. Un silencio largo y tenso.)': '(He leans back in his chair. A long, tense silence.)',
+    'Cien mil. Nadie... absolutamente nadie ha pronunciado esa cifra aquí.':
+        'One hundred thousand. Nobody... absolutely nobody has ever said that number in here.',
+    '(La sonrisa se congela.) Muy bien. Sin condiciones. Pero a este nivel... la banca no tiene piedad.':
+        '(His smile freezes.) Very well. No conditions. But at this level... the house shows no mercy.',
+    '[ MODO EXTREMO — Meta: 100.000 fichas. La banca juega sin compasión. Buena suerte. ]':
+        '[ EXTREME MODE — Goal: 100,000 chips. The house plays without compassion. Good luck. ]',
+
+    'A mitad de la calle oyes pasos rápidos detrás de ti.': 'Halfway down the street you hear quick footsteps behind you.',
+    '(Sin aliento.) ¡Espera!': '(Breathless.) Wait!',
+    'Rosa lleva el abrigo a medio poner y una botella de champán robada al bar bajo el brazo.':
+        'Rosa has her coat half on and a bottle of champagne swiped from the bar tucked under her arm.',
+    '¿No deberías estar trabajando?': 'Shouldn\'t you be working?',
+    '(Sonriendo.) Esta noche no. Esta noche yo también me voy.': '(Smiling.) Not tonight. Tonight I\'m getting out too.',
+    'Le das la mano sin decir nada. Ella no la suelta.': 'You take her hand without a word. She doesn\'t let go.',
+    'Sabía que lo conseguirías. Lo sabía desde el principio.': 'I knew you\'d pull it off. I knew it from the start.',
+    'No me lo creía ni yo.': 'Even I didn\'t believe it.',
+    '(Levanta la botella.) ¿Celebramos?': '(Raises the bottle.) Shall we celebrate?',
+    'El corcho sale disparado y rebota contra los adoquines mojados. Rosa ríe — alto, sin disimulo, como si la ciudad entera necesitara saberlo.':
+        'The cork shoots off and bounces on the wet cobblestones. Rosa laughs — loud, unashamed, as if the whole city needed to know.',
+    'Es la primera vez en mucho tiempo que oyes reír así a alguien.':
+        'It\'s the first time in a long while you\'ve heard anyone laugh like that.',
+    'Los dos caminan hacia el mar. El champán se enfría con la brisa. El neón de El Farol Rojo se apaga para siempre detrás.':
+        'The two of you walk toward the sea. The champagne cools in the breeze. Behind you, the neon sign of El Farol Rojo goes dark forever.',
+    '─────────  FIN  ─────────': '─────────  THE END  ─────────',
+
+    'Diez mil fichas. La mesa entera se queda en silencio.': 'Ten thousand chips. The whole table falls silent.',
+    '¿Cómo?': 'What?',
+    'Ya sabes lo que acordamos, Víctor.': 'You know what we agreed, Víctor.',
+    '(Una pausa larga. Sus ojos te estudian.) ...Bien.': '(A long pause. His eyes study you.) ...Fine.',
+    '(En voz baja, casi solo para ti.) El segundo crupier de la derecha. Lleva cuatro años marcando las cartas con la uña.':
+        '(Quietly, almost just for you.) The second dealer on the right. He\'s been marking the cards with his fingernail for four years.',
+    'Nunca esperé tener que decirlo. Nunca.': 'I never expected to have to say it. Never.',
+    'Lo sé. Gracias por cumplir tu palabra.': 'I know. Thank you for keeping your word.',
+    'Al salir, el susurro ya recorre la sala.': 'As you leave, the whisper is already spreading through the room.',
+    'El hombre que hizo hablar a Víctor Carvalho.': 'The man who made Víctor Carvalho talk.',
+    'Rosa te espera junto a la barra con una sonrisa que no intenta esconder.':
+        'Rosa is waiting by the bar with a smile she doesn\'t bother to hide.',
+    '(En voz baja.) ¿Te lo dijo?': '(Quietly.) Did he tell you?',
+    'Me lo dijo.': 'He told me.',
+    '(Larga pausa.) Bien. Ya era hora.': '(Long pause.) Good. About time.',
+    'Dos grandes se levantan, pero Víctor los detiene con un gesto. Esta vez, la puerta es tuya.':
+        'Two big men stand up, but Víctor stops them with a gesture. This time, the door is yours.',
+    '(Abre la puerta sin decir nada.)': '(He opens the door without a word.)',
+    '(Te guiña un ojo desde el otro lado de la sala.)': '(She winks at you from across the room.)',
+    'El aire de la madrugada huele a lluvia limpia. A libertad.': 'The early-morning air smells of clean rain. Of freedom.',
+    'Caminas despacio por los adoquines mojados.': 'You walk slowly over the wet cobblestones.',
+    'Detrás de ti, el neón de "El Farol Rojo" parpadea dos veces y se apaga.':
+        'Behind you, the neon sign of "El Farol Rojo" flickers twice and goes dark.',
+    'Lo lograste en modo Normal. Víctor nunca imaginó que alguien le haría hablar.':
+        'You did it on Normal mode. Víctor never imagined anyone could make him talk.',
+    'La ciudad empieza a despertar. Huele a café y a pan recién hecho.':
+        'The city is starting to wake up. It smells of coffee and fresh bread.',
+
+    'Veinticinco mil fichas. La sala entera lo vio.': 'Twenty-five thousand chips. The whole room saw it.',
+    'El murmullo empieza en las mesas de los laterales y viaja hasta el fondo.':
+        'The murmur starts at the side tables and travels all the way to the back.',
+    '(Se pone de pie lentamente.) ¡Trampa! ¡Este hombre ha hecho trampa!':
+        '(Slowly stands up.) Cheat! This man is cheating!',
+    'Las cartas no mienten, Víctor. Toda la sala lo vio.': 'The cards don\'t lie, Víctor. The whole room saw it.',
+    'Un crupier anciano al fondo suelta las cartas sobre la mesa y mueve la cabeza.':
+        'An old dealer at the back sets down his cards and shakes his head.',
+    'Él también lo sabe. Todos lo saben.': 'He knows it too. Everyone knows it.',
+    '(Su voz pierde fuerza.) ...Garduño. Enrique.': '(His voice loses its force.) ...Garduño. Enrique.',
+    'Los dos hombres se levantan, pero el ambiente ya se giró.': 'The two men stand up, but the mood in the room has already turned.',
+    'Tres jugadores de las otras mesas se ponen de pie entre tú y ellos.':
+        'Three players from the other tables stand up between you and them.',
+    'Nadie dice nada. No hace falta.': 'Nobody says anything. They don\'t need to.',
+    '¡Ay, Dios mío, qué torpe!': 'Oh my God, how clumsy of me!',
+    'Rosa vuelca la barra entera. Cristales, botellas, caos total.': 'Rosa knocks over the entire bar. Glass, bottles, total chaos.',
+    'En medio del tumulto, tú caminas tranquilamente hacia la puerta.':
+        'In the middle of the uproar, you calmly walk toward the door.',
+    '(Te sostiene la puerta abierta. Con respeto.)': '(He holds the door open for you. With respect.)',
+    '(Te guiña un ojo desde el otro lado del caos.)': '(She winks at you from across the chaos.)',
+    'El aire de la madrugada tiene sabor a victoria.': 'The early-morning air tastes of victory.',
+    'No solo la tuya. La de todos los que perdieron antes que tú.': 'Not just yours. The victory of everyone who lost before you.',
+    'Detrás de ti, el neón de "El Farol Rojo" parpadea y se apaga.':
+        'Behind you, the neon sign of "El Farol Rojo" flickers and goes dark.',
+    'Lo lograste en modo Difícil. La banca jugó sin piedad y aun así no fue suficiente.':
+        'You did it on Hard mode. The house played without mercy, and it still wasn\'t enough.',
+    'Veinticinco mil fichas. Una hazaña que el Barrio Gótico no olvidará.':
+        'Twenty-five thousand chips. A feat the Gothic Quarter will not forget.',
+
+    'Cincuenta mil fichas. Nadie en esta sala creyó que fuera posible.':
+        'Fifty thousand chips. No one in this room believed it was possible.',
+    'Ni siquiera tú, en el fondo.': 'Not even you, deep down.',
+    '(Volcando la silla.) ¡Imposible! ¡Imposible, digo!': '(Knocking over his chair.) Impossible! I say impossible!',
+    'Este casino es mío. En espíritu. Y tú lo sabes.': 'This casino is mine. In spirit. And you know it.',
+    '(Mira hacia la puerta trasera. Calcula.)': '(Glances at the back door. Calculating.)',
+    'Pero los crupiers se pusieron de pie. Rosa bloqueó la barra. Hasta Marcos, el portero, dio un paso al lado.':
+        'But the dealers stood up. Rosa blocked the bar. Even Marcos, the doorman, stepped aside.',
+    '(En voz muy baja, solo para ti.) ...¿Cómo lo hiciste?': '(Very quietly, just for you.) ...How did you do it?',
+    'La sala entera te abre paso. No como a un ganador. Como a alguien que tiene razón.':
+        'The whole room clears a path for you. Not like a winner. Like someone who was right.',
+    '(Con voz firme.) Esta noche, el Farol Rojo tiene un nuevo campeón.':
+        '(In a firm voice.) Tonight, El Farol Rojo has a new champion.',
+    'Aplausos. Lentos al principio. Luego toda la sala.': 'Applause. Slow at first. Then the whole room.',
+    'Víctor observa desde el fondo, solo, con las manos vacías.': 'Víctor watches from the back, alone, empty-handed.',
+    'Cincuenta años de impunidad terminaron esta noche.': 'Fifty years of impunity ended tonight.',
+    '(Te abre la puerta principal con las dos manos.)': '(He opens the main door for you with both hands.)',
+    '(Te guiña un ojo. Hay algo diferente en su cara — parece libre.)':
+        '(She winks at you. There\'s something different about her face — she looks free.)',
+    'La madrugada de Barcelona te recibe como a un fantasma victorioso.':
+        'The Barcelona dawn welcomes you like a triumphant ghost.',
+    'Detrás de ti, "El Farol Rojo" parpadea y se apaga para siempre.':
+        'Behind you, "El Farol Rojo" flickers and goes dark forever.',
+    'Lo lograste en modo Muy Difícil. Cincuenta mil fichas. Una hazaña que nadie olvidará.':
+        'You did it on Very Hard mode. Fifty thousand chips. A feat no one will forget.',
+    'El Barrio Gótico guarda secretos. Esta noche guarda uno más: el tuyo.':
+        'The Gothic Quarter keeps secrets. Tonight it keeps one more: yours.',
+
+    'Cien mil fichas.': 'One hundred thousand chips.',
+    'El número imposible. El que nadie se atrevió a perseguir en tres años.':
+        'The impossible number. The one no one dared chase in three years.',
+    'El aire se detuvo. La música se detuvo. Todo se detuvo.': 'The air stopped. The music stopped. Everything stopped.',
+    '(En pie. La cara descompuesta.) No... no puede ser...': '(Standing. His face falls apart.) No... it can\'t be...',
+    'Ya lo es, Víctor. Ya lo es.': 'It already is, Víctor. It already is.',
+    '(Las manos le tiemblan. Por primera vez en su vida, tiemblan.)':
+        '(His hands are shaking. For the first time in his life, they\'re shaking.)',
+    'Nadie en la sala se mueve. El hombre que nunca perdió acaba de perderlo todo.':
+        'No one in the room moves. The man who never lost has just lost everything.',
+    '(En un susurro.) ...¿Quién eres tú?': '(In a whisper.) ...Who are you?',
+    'Los dos matones no se mueven. Nadie se mueve.': 'The two thugs don\'t move. No one moves.',
+    'Hay cosas que el dinero no puede detener, y esta noche todo el mundo lo siente.':
+        'There are things money can\'t stop, and tonight everyone feels it.',
+    '(Deja caer el vaso que estaba limpiando. Se acerca despacio.)':
+        '(Drops the glass she was cleaning. Walks over slowly.)',
+    'Tres años trabajando para ese hombre. Tres años esperando esto.':
+        'Three years working for that man. Three years waiting for this.',
+    'Rosa vuelca la barra entera. Un diluvio de cristal y whisky caro.':
+        'Rosa knocks over the entire bar. A flood of glass and expensive whisky.',
+    'En el caos absoluto, tú caminas hacia la puerta con calma de cirujano.':
+        'In the total chaos, you walk to the door with a surgeon\'s calm.',
+    '(Se hace a un lado. Asiente una sola vez.)': '(Steps aside. Nods once.)',
+    '(Te guiña un ojo desde el otro lado del infierno.)': '(She winks at you from across the wreckage.)',
+    'Afuera, la ciudad respira.': 'Outside, the city breathes.',
+    'Cien mil fichas. El número que nadie pronunció jamás en El Farol Rojo.':
+        'One hundred thousand chips. The number no one ever spoke inside El Farol Rojo.',
+    'Hasta esta noche.': 'Until tonight.',
+    'Detrás de ti, el neón parpadea tres veces y se apaga para siempre. Ya no volverá a encenderse.':
+        'Behind you, the neon sign flickers three times and goes dark forever. It will never light up again.',
+    'Lo lograste en modo EXTREMO. Cien mil fichas. Ni Víctor mismo se lo creerá jamás.':
+        'You did it on EXTREME mode. One hundred thousand chips. Even Víctor himself will never quite believe it.',
+    'Hay cosas que no se explican. Tú eres una de ellas.': 'Some things can\'t be explained. You are one of them.',
+
+    'Marcos no te da tiempo a reaccionar. Dos manos del tamaño de jamones te agarran por los hombros.':
+        'Marcos doesn\'t give you time to react. Two ham-sized hands grab you by the shoulders.',
+    'Fin de la noche, amigo.': 'Night\'s over, friend.',
+    '¡Espera, espera! Solo estaba...': 'Wait, wait! I was just...',
+    'Ya lo he visto. Y ella también lo ha visto. Vamos.': 'I already saw it. And so did she. Let\'s go.',
+    'Cruzas la sala entera escoltado. Cada par de ojos se vuelve hacia ti. El silencio es peor que cualquier insulto.':
+        'You\'re marched across the entire room. Every pair of eyes turns toward you. The silence is worse than any insult.',
+    '(Desde la barra, sin mirarte.) Buenas noches.': '(From the bar, without looking at you.) Good night.',
+    'No hay emoción en su voz. Solo distancia.': 'There\'s no emotion in her voice. Only distance.',
+    'La puerta se cierra detrás de ti con un golpe seco.': 'The door slams shut behind you with a dull thud.',
+    'El Barrio Gótico te devuelve el frío de siempre. La lluvia. Los adoquines mojados.':
+        'The Gothic Quarter greets you with its usual cold. The rain. The wet cobblestones.',
+    'No perdiste dinero en la mesa de Víctor. Ni siquiera llegaste a sentarte.':
+        'You didn\'t lose any money at Víctor\'s table. You never even got to sit down.',
+    'Pero saliste igual de vacío.': 'But you walked out just as empty.',
+    'En algún lugar detrás de esa puerta, Rosa sigue trabajando. Sin pensar en ti.':
+        'Somewhere behind that door, Rosa keeps working. Without a thought for you.',
+    'Algunas derrotas no tienen que ver con las cartas.': 'Some defeats have nothing to do with the cards.',
+    '─────────  FINAL MALO  ─────────': '─────────  BAD ENDING  ─────────',
+
+    'Construye las escenas de derrota según la dificultad actual.':
+        'Builds the defeat scenes based on the current difficulty.',
+
+    'Y así terminó.': 'And so it ended.',
+    'Ya está. Eso es todo lo que tenías.': 'That\'s it. That was everything you had.',
+    'Ha sido... entretenido. Para mí.': 'It\'s been... entertaining. For me.',
+    '(Sin levantar la vista de las fichas.) La puerta está donde la dejaste. Buenas noches.':
+        '(Without looking up from the chips.) The door\'s right where you left it. Good night.',
+    'No había nada más que decir.': 'There was nothing more to say.',
+    'Volviste a la calle con los bolsillos vacíos y la cabeza llena de preguntas.':
+        'You went back out into the street with empty pockets and a head full of questions.',
+    'La lluvia seguía ahí. Indiferente. Como siempre.': 'The rain was still there. Indifferent. As always.',
+    'Víctor seguía dentro, invicto. De momento.': 'Víctor was still inside, undefeated. For now.',
+    'Pero el juego no había terminado. Solo esta ronda.': 'But the game wasn\'t over. Only this round.',
+    'Mañana es otro día. Y tú sabes dónde está la puerta.': 'Tomorrow is another day. And you know where the door is.',
+
+    'Las fichas desaparecieron una a una. Cada mano, una pequeña muerte.':
+        'The chips disappeared one by one. Each hand, a small death.',
+    '(Con una sonrisa lenta.) Veinticinco mil... qué ambición tan hermosa.':
+        '(With a slow smile.) Twenty-five thousand... what beautiful ambition.',
+    'Lástima que la ambición sin suerte no llegue muy lejos, ¿verdad?':
+        'Pity that ambition without luck doesn\'t get you very far, does it?',
+    'Las cartas no estuvieron de mi lado esta noche.': 'The cards weren\'t on my side tonight.',
+    'Las cartas nunca están de tu lado, forastero. Solo de la mía.': 'The cards are never on your side, stranger. Only mine.',
+    'Se recostó en la silla con la comodidad de alguien que nunca ha tenido que preocuparse.':
+        'He leaned back in his chair with the ease of someone who has never had to worry.',
+    'La noche te devuelve a los adoquines mojados del Barrio Gótico.':
+        'The night sends you back to the wet cobblestones of the Gothic Quarter.',
+    'Veinticinco mil fichas. Casi lo tocaste. Casi.': 'Twenty-five thousand chips. You almost had it. Almost.',
+    'Víctor sigue ahí dentro, intacto, con esa sonrisa que nunca se mueve del todo.':
+        'Víctor is still in there, untouched, with that smile that never quite moves.',
+    'Pero esta vez llegaste más lejos de lo que esperaba. Y lo sabe.':
+        'But this time you got further than he expected. And he knows it.',
+
+    'Cincuenta mil fichas. Nadie había llegado tan cerca. Nadie.': 'Fifty thousand chips. No one had ever come this close. No one.',
+    'Hasta hoy.': 'Until today.',
+    '(Frunciendo ligeramente el ceño.) Has aguantado más de lo esperado.': '(Frowning slightly.) You held out longer than expected.',
+    'Eso es porque sé lo que haces, Víctor.': 'That\'s because I know what you\'re doing, Víctor.',
+    '(Una pausa demasiado larga.) No sé de qué hablas. La suerte te ha abandonado. Eso es todo.':
+        '(A pause that lasts too long.) I don\'t know what you\'re talking about. Your luck ran out. That\'s all.',
+    'Pero su voz tiene una grieta que antes no estaba ahí.': 'But there\'s a crack in his voice that wasn\'t there before.',
+    'La puerta, forastero. Y esta vez... no tan tranquilo como antes.':
+        'The door, stranger. And this time... not so calm as before.',
+    'El frío de la madrugada te golpea en la cara.': 'The cold of early morning hits you in the face.',
+    'Cincuenta mil fichas. Estuviste a un suspiro de doblarle.': 'Fifty thousand chips. You were a heartbeat away from breaking him.',
+    'Y Víctor lo sabe. Por primera vez en tres años, alguien le ha puesto nervioso.':
+        'And Víctor knows it. For the first time in three years, someone has made him nervous.',
+    'El Farol Rojo nunca volverá a ser del todo lo mismo.': 'El Farol Rojo will never quite be the same again.',
+    'Ni tú tampoco.': 'And neither will you.',
+
+    'Cien mil fichas. Nadie había pronunciado esa cifra en este casino. Nadie la había perseguido.':
+        'One hundred thousand chips. No one had ever spoken that number in this casino. No one had ever chased it.',
+    '(Se pone de pie. Algo en sus ojos cambió.)': '(He stands up. Something in his eyes has changed.)',
+    'Yo... no esperaba esto. En tres años, nadie...': 'I... didn\'t expect this. In three years, no one has...',
+    'Ya lo sé, Víctor. Y tú también lo sabes.': 'I know, Víctor. And you know it too.',
+    'Un silencio largo cae sobre la sala. Todos miran.': 'A long silence falls over the room. Everyone is watching.',
+    '(En voz muy baja.) La puerta. Y... vuelve cuando quieras.': '(Very quietly.) The door. And... come back whenever you want.',
+    'Es lo más cercano a respeto que Víctor Carvalho ha mostrado jamás.':
+        'It\'s the closest thing to respect Víctor Carvalho has ever shown.',
+    'La ciudad todavía duerme. Aún no amanece.': 'The city is still asleep. Dawn hasn\'t broken yet.',
+    'Cien mil fichas. Lo perseguiste hasta el borde del abismo y casi lo empujaste.':
+        'One hundred thousand chips. You chased him to the edge of the abyss and nearly pushed him over.',
+    'Víctor sigue dentro. Pero algo se quebró esta noche en El Farol Rojo.':
+        'Víctor is still inside. But something broke tonight in El Farol Rojo.',
+    'Puedes sentirlo en el aire, como el olor a ozono antes de una tormenta.':
+        'You can feel it in the air, like the smell of ozone before a storm.',
+    'Este lugar nunca ha conocido a nadie como tú. Y ahora lo sabe.':
+        'This place has never known anyone like you. And now it knows.',
+}
+
+_SPEAKER_TR = {
+    'narrador': {'es': 'narrador', 'en': 'Narrator'},
+    'Portero':  {'es': 'Portero',  'en': 'Doorman'},
+    'Camarera': {'es': 'Camarera', 'en': 'Waitress'},
+    'Tú':       {'es': 'Tú',       'en': 'You'},
+}
+
+def S(text):
+    """Traduce una linea de dialogo/opcion del Modo Historia al idioma activo."""
+    if CONFIG.get('language', 'es') == 'en':
+        return STORY_TR.get(text, text)
+    return text
+
+def S_SPEAKER(speaker):
+    """Traduce el nombre mostrado de un personaje (mantiene la key original para logica interna)."""
+    entry = _SPEAKER_TR.get(speaker)
+    if not entry:
+        return speaker
+    return entry.get(CONFIG.get('language', 'es'), speaker)
 
 
 def open_data_folder():
@@ -1276,10 +1899,11 @@ def wrap_story(text, font, max_w):
 
 
 def draw_dialogue_box(surf, speaker, text, now):
-    if _tw['speaker'] != speaker or _tw['text'] != text:
-        _tw_set(speaker, text, now)
+    disp_text = S(text)
+    if _tw['speaker'] != speaker or _tw['text'] != disp_text:
+        _tw_set(speaker, disp_text, now)
     _tw_update(now)
-    displayed = text[:_tw['shown']]
+    displayed = disp_text[:_tw['shown']]
 
     BOX_H = 215; BOX_Y = ALTO - BOX_H; PAD = 65
     bg = pygame.Surface((ANCHO, BOX_H), pygame.SRCALPHA)
@@ -1292,7 +1916,7 @@ def draw_dialogue_box(surf, speaker, text, now):
         text_y = BOX_Y + 32
     else:
         sc2 = _SPEAKER_COLORS.get(speaker, DORADO)
-        name_s = FUENTE_NAME.render(speaker, True, sc2)
+        name_s = FUENTE_NAME.render(S_SPEAKER(speaker), True, sc2)
         surf.blit(name_s, (PAD, BOX_Y + 18))
         text_y = BOX_Y + 18 + name_s.get_height() + 6
     max_w2 = ANCHO - PAD * 2
@@ -1302,7 +1926,7 @@ def draw_dialogue_box(surf, speaker, text, now):
         ls = FUENTE_STORY.render(line, True, txt_col)
         surf.blit(ls, (PAD, text_y + i*34))
     if _tw['done'] and (now // 550) % 2 == 0:
-        cont = FUENTE_INSTR.render("[ ESPACIO  o  clic  para continuar ]", True, (125,112,88))
+        cont = FUENTE_INSTR.render(TR('story_continue'), True, (125,112,88))
         surf.blit(cont, (ANCHO - cont.get_width() - PAD, ALTO - 26))
 
 def draw_choice_box(surf, options, now):
@@ -1321,10 +1945,10 @@ def draw_choice_box(surf, options, now):
     pygame.draw.line(surf, (80, 65, 30), (PAD_X, BOX_Y + 8), (ANCHO - PAD_X, BOX_Y + 8), 1)
 
     sc = _SPEAKER_COLORS.get('Tú', (125, 225, 162))
-    header = FUENTE_NAME.render("¿Qué dices?", True, sc)
+    header = FUENTE_NAME.render(TR('story_choice_header'), True, sc)
     surf.blit(header, (PAD_X, BOX_Y + 12))
 
-    hint = FUENTE_INSTR.render("[ haz clic para elegir ]", True, (100, 90, 70))
+    hint = FUENTE_INSTR.render(TR('story_choice_hint'), True, (100, 90, 70))
     surf.blit(hint, (ANCHO - hint.get_width() - PAD_X, BOX_Y + 18))
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
@@ -1344,7 +1968,7 @@ def draw_choice_box(surf, options, now):
         pygame.draw.rect(surf, border_col, btn_rect, 1, border_radius=7)
 
         txt_col = (210, 255, 220) if hovered else BLANCO
-        txt     = FUENTE_STORY.render(opt['label'], True, txt_col)
+        txt     = FUENTE_STORY.render(S(opt['label']), True, txt_col)
         surf.blit(txt, (PAD_X + 22, btn_y + (BTN_H - txt.get_height()) // 2))
 
         btn_rects.append(btn_rect)
@@ -2274,7 +2898,7 @@ def _check_for_updates_source():
         )
         commits    = json.loads(urllib.request.urlopen(api_req, timeout=12).read())
         if not commits:
-            update_status = "error"; update_msg = "Sin respuesta de GitHub API"
+            update_status = "error"; update_msg = TR('update_no_github')
             update_notif_time = pygame.time.get_ticks(); return
         latest_sha = commits[0].get('sha', '')
 
@@ -2287,7 +2911,7 @@ def _check_for_updates_source():
                 pass
 
         if latest_sha and latest_sha == saved_sha:
-            update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
+            update_status = "up_to_date"; update_msg = TR('update_uptodate')
             update_notif_time = pygame.time.get_ticks(); return
 
         raw_url = GITHUB_RAW_BASE.format(sha=latest_sha)
@@ -2305,12 +2929,12 @@ def _check_for_updates_source():
         sha_remote = _sha256(tmp_path)
 
         if sha_remote is None:
-            update_status = "error"; update_msg = "No se pudo calcular hash remoto"
+            update_status = "error"; update_msg = TR('update_no_hash')
         elif sha_local == sha_remote:
             try:
                 with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
             except Exception: pass
-            update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
+            update_status = "up_to_date"; update_msg = TR('update_uptodate')
         else:
             try:
                 import ast as _ast
@@ -2319,23 +2943,23 @@ def _check_for_updates_source():
                 _ast.parse(_src)
             except SyntaxError as _se:
                 update_status = "error"
-                update_msg = f"Actualiz. con error sintaxis: línea {_se.lineno}"
+                update_msg = TRF('update_syntax_err', line=_se.lineno)
             except Exception as _e:
                 update_status = "error"
-                update_msg = f"No se pudo verificar actualiz.: {str(_e)[:35]}"
+                update_msg = TRF('update_verify_fail', err=str(_e)[:35])
             else:
                 try:
                     shutil.copy2(tmp_path, local_path)
                     try:
                         with open(_COMMIT_SHA_FILE, 'w') as f: f.write(latest_sha)
                     except Exception: pass
-                    update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
+                    update_status = "restarting"; update_msg = TR('update_restarting')
                     update_restart_time = pygame.time.get_ticks()
                 except Exception as e:
                     update_status = "error"
-                    update_msg = f"No se pudo escribir: {str(e)[:40]}"
+                    update_msg = TRF('update_write_fail', err=str(e)[:40])
     except Exception as e:
-        update_status = "error"; update_msg = f"Error: {str(e)[:55]}"
+        update_status = "error"; update_msg = TRF('update_error', err=str(e)[:55])
     finally:
         if tmp_path and os.path.exists(tmp_path):
             try: os.unlink(tmp_path)
@@ -2408,7 +3032,7 @@ def _check_for_updates_frozen():
         release = json.loads(urllib.request.urlopen(api_req, timeout=12).read())
         latest_tag = str(release.get('tag_name', '')).lstrip('v').strip()
         if not latest_tag:
-            update_status = "error"; update_msg = "Sin datos de release en GitHub"
+            update_status = "error"; update_msg = TR('update_no_release')
             update_notif_time = pygame.time.get_ticks(); return
 
         saved_tag = ''
@@ -2420,7 +3044,7 @@ def _check_for_updates_frozen():
                 pass
 
         if latest_tag == saved_tag or latest_tag == VERSION:
-            update_status = "up_to_date"; update_msg = "Ya tienes la última versión"
+            update_status = "up_to_date"; update_msg = TR('update_uptodate')
             update_notif_time = pygame.time.get_ticks(); return
 
         assets = release.get('assets', []) or []
@@ -2432,7 +3056,7 @@ def _check_for_updates_frozen():
                 break
         if not asset_url:
             update_status = "error"
-            update_msg = f"Release {latest_tag} sin binario para esta plataforma"
+            update_msg = TRF('update_no_binary', tag=latest_tag)
             update_notif_time = pygame.time.get_ticks(); return
 
         bin_req = urllib.request.Request(
@@ -2445,7 +3069,7 @@ def _check_for_updates_frozen():
             f.write(remote_data)
 
         if not remote_data or len(remote_data) < 1024:
-            update_status = "error"; update_msg = "Binario descargado inválido"
+            update_status = "error"; update_msg = TR('update_invalid_bin')
             update_notif_time = pygame.time.get_ticks(); return
 
         try:
@@ -2460,7 +3084,7 @@ def _check_for_updates_frozen():
                 try:
                     with open(_LAST_VERSION_FILE, 'w') as f: f.write(latest_tag)
                 except Exception: pass
-                update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
+                update_status = "restarting"; update_msg = TR('update_restarting')
                 update_restart_time = pygame.time.get_ticks()
             else:
                 os.replace(tmp_path, _SCRIPT_PATH)
@@ -2468,13 +3092,13 @@ def _check_for_updates_frozen():
                 try:
                     with open(_LAST_VERSION_FILE, 'w') as f: f.write(latest_tag)
                 except Exception: pass
-                update_status = "restarting"; update_msg = "¡Actualizado! Reiniciando..."
+                update_status = "restarting"; update_msg = TR('update_restarting')
                 update_restart_time = pygame.time.get_ticks()
         except Exception as e:
             update_status = "error"
-            update_msg = f"No se pudo reemplazar binario: {str(e)[:35]}"
+            update_msg = TRF('update_replace_fail', err=str(e)[:35])
     except Exception as e:
-        update_status = "error"; update_msg = f"Error: {str(e)[:55]}"
+        update_status = "error"; update_msg = TRF('update_error', err=str(e)[:55])
     finally:
         if tmp_path and os.path.exists(tmp_path):
             try: os.unlink(tmp_path)
@@ -2695,7 +3319,21 @@ HE_AI_POSITIONS = [
     (1634, 150),
     (1634, 540),  
 ]
-HE_AI_NAMES = ["JUGADOR 1", "JUGADOR 2", "JUGADOR 3", "JUGADOR 4"]
+HE_AI_NAMES_ES = ["JUGADOR 1", "JUGADOR 2", "JUGADOR 3", "JUGADOR 4"]
+HE_AI_NAMES_EN = ["PLAYER 1", "PLAYER 2", "PLAYER 3", "PLAYER 4"]
+
+class _HEAiNamesProxy(list):
+    """Lista que se traduce dinamicamente segun CONFIG['language'] en cada acceso."""
+    def _cur(self):
+        return HE_AI_NAMES_EN if CONFIG.get('language', 'es') == 'en' else HE_AI_NAMES_ES
+    def __getitem__(self, i):
+        return self._cur()[i]
+    def __len__(self):
+        return len(self._cur())
+    def __iter__(self):
+        return iter(self._cur())
+
+HE_AI_NAMES = _HEAiNamesProxy()
 he_ai_cards  = [[], [], [], []]   
 he_ai_money  = [3000, 3000, 3000, 3000]
 he_ai_hand_names = ["", "", "", ""]  
@@ -2797,10 +3435,10 @@ def _he_ai_pick_from_model(ai_idx):
         action = str(rule.get('action', '')).lower().strip()
         if action in ('fold', 'retire', 'se retira'):
             he_ai_folded[ai_idx] = True
-            return rule.get('text', 'se retira')
+            return rule.get('text', TR('he_ai_folds'))
         if action in ('call', 'iguala', 'check'):
             _he_ai_apply_call(ai_idx, money, call_amt)
-            return rule.get('text', 'iguala')
+            return rule.get('text', TR('he_ai_call'))
         if action in ('raise', 'sube', 'farolea y sube'):
             mult = rule.get('raise_mult', rule.get('mult', 1))
             try:
@@ -2808,7 +3446,7 @@ def _he_ai_pick_from_model(ai_idx):
             except Exception:
                 mult = 1
             amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
-            prefix = rule.get('text_prefix', 'sube')
+            prefix = rule.get('text_prefix', TR('he_ai_raise').split(' ')[0])
             return f"{prefix} {amt}".strip() if amt else None
         return None
 
@@ -2864,7 +3502,7 @@ def _he_ai_pick_from_model(ai_idx):
                 raise_p = float(node.get('raise_prob', 0.0) or 0.0)
                 if r < fold_p:
                     he_ai_folded[ai_idx] = True
-                    return node.get('fold_text', 'se retira')
+                    return node.get('fold_text', TR('he_ai_folds'))
                 if r < fold_p + raise_p:
                     mult = node.get('raise_mult', 1)
                     try:
@@ -2872,10 +3510,10 @@ def _he_ai_pick_from_model(ai_idx):
                     except Exception:
                         mult = 1
                     amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
-                    return f"{node.get('raise_text_prefix', 'sube')} {amt}".strip() if amt else None
+                    return f"{node.get('raise_text_prefix', TR('he_ai_raise').split(' ')[0])} {amt}".strip() if amt else None
                 if r < fold_p + raise_p + call_p:
                     _he_ai_apply_call(ai_idx, money, call_amt)
-                    return node.get('call_text', 'iguala')
+                    return node.get('call_text', TR('he_ai_call'))
 
             action = str(node.get('action', '')).lower().strip()
             if action:
@@ -2908,12 +3546,12 @@ def _he_ai_compute_action(ai_idx):
 
     global he_pot, he_ai_money, he_ai_folded, he_ai_raised_this_round, he_ai_raise_amount
     if he_ai_folded[ai_idx]:
-        return "ya retirado"
+        return TR('he_ai_already_folded')
     ai_hand = he_ai_cards[ai_idx] if ai_idx < len(he_ai_cards) else []
     money = he_ai_money[ai_idx]
     if money <= 0:
         he_ai_folded[ai_idx] = True
-        return "se retira (sin fichas)"
+        return TR('he_ai_folds_broke')
     if ai_hand and he_community_cards:
         ac = [(e[0],e[1],e[2],e[3]) for e in ai_hand]
         cc = [(e[0],e[1],e[2],e[3]) for e in he_community_cards]
@@ -2939,37 +3577,37 @@ def _he_ai_compute_action(ai_idx):
     if rank >= 5:
         if r < 0.80:
             amt = do_raise(3, 7)
-            return f"SUBE {amt}"
+            return TRF('he_ai_raise_amt', amt=amt)
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return "iguala"
+            return TR('he_ai_call')
     elif rank >= 3:
         if r < 0.50:
             amt = do_raise(2, 4)
-            return f"sube {amt}"
+            return TRF('he_ai_raise', amt=amt)
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return "iguala"
+            return TR('he_ai_call')
     elif rank >= 0:
         if r < 0.22:
             he_ai_folded[ai_idx] = True
-            return "se retira"
+            return TR('he_ai_folds')
         elif r < 0.38:
             amt = do_raise(1, 2)
-            return f"sube {amt}"
+            return TRF('he_ai_raise', amt=amt)
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return "iguala"
+            return TR('he_ai_call')
     else:
         if r < 0.50:
             he_ai_folded[ai_idx] = True
-            return "se retira"
+            return TR('he_ai_folds')
         elif r < 0.65:
             amt = do_raise(1, 3)
-            return f"farolea y sube {amt}"
+            return TRF('he_ai_bluff_raise', amt=amt)
         else:
             he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return "iguala"
+            return TR('he_ai_call')
 
 
 def _he_start_ai_turns(now):
@@ -3089,21 +3727,21 @@ def _he_eval_5(hand5):
     return (-1, nd)
 
 _HE_RANK_NAMES = {
-    8: 'Escalera Real', 7: 'Escalera de Color', 6: 'Póker (4 iguales)',
-    5: 'Full House', 4: 'Color', 3: 'Escalera', 2: 'Trío',
-    1: 'Doble Pareja', 0: 'Pareja', -1: 'Carta Alta'
+    8: 'hand_royal_flush', 7: 'hand_straight_flush', 6: 'hand_quads',
+    5: 'hand_full_house', 4: 'hand_flush', 3: 'hand_straight', 2: 'hand_trips',
+    1: 'hand_two_pair', 0: 'hand_pair', -1: 'hand_high_card'
 }
 
 def evaluate_holdem_hand(cards_7):
-    """Best 5-card hand from 7 cards (or fewer). Returns (score_tuple, name_str)."""
-    best = None; best_name = 'Carta Alta'
+    """Best 5-card hand from 7 cards (or fewer). Returns (score_tuple, name_key)."""
+    best = None; best_name = 'hand_high_card'
     pool = list(cards_7)
     n = len(pool)
     k = min(5, n)
     for combo in _combinations(pool, k):
         sc = _he_eval_5(combo)
         if best is None or sc > best:
-            best = sc; best_name = _HE_RANK_NAMES.get(sc[0], 'Carta Alta')
+            best = sc; best_name = _HE_RANK_NAMES.get(sc[0], 'hand_high_card')
     return best, best_name
 
 def _he_deal_card(deck, dest_x, dest_y, face_down=False):
@@ -3244,11 +3882,11 @@ def he_do_showdown(now):
     if ps == best_score and all(ps >= s for s in active_scores):
         if all(ps == s for s in active_scores):
             he_winner = 'tie'; he_player_money += he_pot // len(all_active)
-            he_mensaje = f"Empate — {pn}"
+            he_mensaje = TRF('he_tie', pn=TR(pn))
             he_stats['tied'] += 1
         else:
             he_winner = 'player'; he_player_money += he_pot
-            he_mensaje = f"¡Ganaste! {pn}  (+{he_pot} fichas)"
+            he_mensaje = TRF('he_you_won', pn=TR(pn), pot=he_pot)
             he_stats['won'] += 1
             spawn_particles(ANCHO//2, ALTO//2, DORADO, count=55)
             overlay_flash.update({'active':True,'color':(255,220,0),'alpha':200,'start':now,'duration':400})
@@ -3256,7 +3894,7 @@ def he_do_showdown(now):
         he_ai_winner = True
         he_winner = 'dealer'
         winners = [HE_AI_NAMES[i] for i in active_ai_indices if ai_scores[i] == best_score]
-        he_mensaje = f"{', '.join(winners)} gana. Tu mano: {pn}"
+        he_mensaje = TRF('he_they_won', winners=', '.join(winners), pn=TR(pn))
         he_stats['lost'] += 1
         spawn_particles(ANCHO//2, ALTO//2, ROJO, count=30)
         overlay_flash.update({'active':True,'color':(150,0,0),'alpha':180,'start':now,'duration':350})
@@ -3270,7 +3908,7 @@ def _he_all_folded_win(now):
     he_winner = 'player'
     he_player_money += he_pot
     poker_player_money = he_player_money
-    he_mensaje = f"¡Todos se retiraron! Ganas el bote (+{he_pot} fichas)"
+    he_mensaje = TRF('he_all_folded', pot=he_pot)
     he_stats['won'] += 1; he_stats['played'] += 1
     spawn_particles(ANCHO//2, ALTO//2, DORADO, count=55)
     overlay_flash.update({'active':True,'color':(255,220,0),'alpha':200,'start':now,'duration':400})
@@ -3279,7 +3917,7 @@ def _he_all_folded_win(now):
 def he_fold(now):
     global he_state, he_winner, he_mensaje, he_stats, poker_player_money
     he_winner = 'fold'; he_state = 'result'
-    he_mensaje = "Te has retirado. Pierdes la ciega."
+    he_mensaje = TR('he_you_folded')
     he_stats['played'] += 1; he_stats['lost'] += 1
     overlay_flash.update({'active':True,'color':(100,0,0),'alpha':140,'start':now,'duration':280})
 
@@ -3337,14 +3975,14 @@ def _render_poker(now):
     pygame.draw.ellipse(VENTANA, DORADO,       (180, 80, ANCHO-360, ALTO-160), 3)
     pygame.draw.ellipse(VENTANA, (8, 60, 8),   (210, 98, ANCHO-420, ALTO-196), 1)
 
-    title_s = _safe_render(FUENTE_PEQUENA, "♠  TEXAS HOLD'EM  ♠", True, DORADO, fallback_text="TEXAS HOLD'EM")
+    title_s = _safe_render(FUENTE_PEQUENA, TR('he_title'), True, DORADO, fallback_text="TEXAS HOLD'EM")
     VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, 38))
 
-    pl = FUENTE_PEQUENA.render("TÚ", True, (180, 240, 190))
+    pl = FUENTE_PEQUENA.render(TR('he_you_label'), True, (180, 240, 190))
     VENTANA.blit(pl, (ANCHO//2 - pl.get_width()//2, HE_PLAYER_Y - 30))
 
     if he_state not in ('betting',):
-        cl = _FUENTE_HE_SMALL.render("CARTAS COMUNITARIAS", True, (180, 160, 80))
+        cl = _FUENTE_HE_SMALL.render(TR('he_community'), True, (180, 160, 80))
         VENTANA.blit(cl, (ANCHO//2 - cl.get_width()//2, HE_COMMUNITY_Y - 26))
 
     if he_state not in ('betting',):
@@ -3388,7 +4026,7 @@ def _render_poker(now):
                         pygame.draw.rect(VENTANA, (60, 100, 60),
                                          (ax + ci * HE_AI_CARD_GAP, ay, CARD_W, CARD_H), 1, border_radius=8)
                 if he_state == 'result' and he_ai_hand_names[ai_i]:
-                    hn_s = _FUENTE_HE_SMALL.render(he_ai_hand_names[ai_i], True, (255, 200, 180))
+                    hn_s = _FUENTE_HE_SMALL.render(TR(he_ai_hand_names[ai_i]), True, (255, 200, 180))
                     VENTANA.blit(hn_s, (ax, ay + CARD_H + 6))
 
     for i, entry in enumerate(he_community_cards):
@@ -3405,8 +4043,8 @@ def _render_poker(now):
         cc_live = [(e[0],e[1],e[2],e[3]) for e in he_community_cards]
         _, live_name = evaluate_holdem_hand(pc_live + cc_live)
         hand_rank = {n: i for i, n in enumerate([
-            'Carta Alta','Pareja','Doble Pareja','Trío','Escalera',
-            'Color','Full House','Póker (4 iguales)','Escalera de Color','Escalera Real'
+            'hand_high_card','hand_pair','hand_two_pair','hand_trips','hand_straight',
+            'hand_flush','hand_full_house','hand_quads','hand_straight_flush','hand_royal_flush'
         ])}
         rank_val = hand_rank.get(live_name, 0)
         if rank_val >= 7:
@@ -3423,11 +4061,11 @@ def _render_poker(now):
         combo_y = HE_PLAYER_Y + CARD_H + 8
         VENTANA.blit(combo_bg, (combo_x, combo_y))
         pygame.draw.rect(VENTANA, live_col, (combo_x, combo_y, 340, 32), 1, border_radius=6)
-        combo_lbl = FUENTE_PEQUENA.render(f"Tu mano: {live_name}", True, live_col)
+        combo_lbl = FUENTE_PEQUENA.render(TRF('he_your_hand', v=TR(live_name)), True, live_col)
         VENTANA.blit(combo_lbl, (ANCHO//2 - combo_lbl.get_width()//2, combo_y + 4))
 
     if he_state not in ('betting',):
-        pot_s = FUENTE_PEQUENA.render(f"BOTE: {he_pot} fichas", True, DORADO)
+        pot_s = FUENTE_PEQUENA.render(TRF('he_pot', v=he_pot), True, DORADO)
         pot_bg = pygame.Surface((pot_s.get_width()+24, pot_s.get_height()+10), pygame.SRCALPHA)
         pot_bg.fill((0,0,0,160))
         px2 = ANCHO//2 - pot_bg.get_width()//2
@@ -3436,7 +4074,7 @@ def _render_poker(now):
         VENTANA.blit(pot_s, (px2+12, py2+5))
 
     if he_state == 'result' and he_player_hand_name:
-        phn_s = FUENTE_PEQUENA.render(f"Tu mano: {he_player_hand_name}", True, (180, 255, 180))
+        phn_s = FUENTE_PEQUENA.render(TRF('he_your_hand', v=TR(he_player_hand_name)), True, (180, 255, 180))
         VENTANA.blit(phn_s, (ANCHO//2 - phn_s.get_width()//2, HE_PLAYER_Y + CARD_H + 10))
 
     box_w = 960; pad = 16; lh = 32
@@ -3447,7 +4085,7 @@ def _render_poker(now):
     pygame.draw.rect(VENTANA, NEGRO, (bx, by, box_w, box_h), 2, border_radius=10)
 
     y_o = by + pad
-    chips_s = FUENTE_PEQUENA.render(f"Fichas: {he_player_money}", True, DORADO)
+    chips_s = FUENTE_PEQUENA.render(TRF('he_chips', v=he_player_money), True, DORADO)
     VENTANA.blit(chips_s, (bx + pad, y_o))
 
     if he_state == 'betting':
@@ -3462,7 +4100,7 @@ def _render_poker(now):
         disp = clip_text_right(he_blind_input if he_blind_input else str(he_blind), FUENTE_PEQUENA, inp_w-12)
         dt = FUENTE_PEQUENA.render(disp, True, BLANCO)
         VENTANA.blit(dt, (inp_x + 8, y_o + lh + (inp_h - dt.get_height())//2 - 4))
-        hint = FUENTE_INSTR.render("ENTER para repartir · Todos postean la ciega · Máx "+str(BET_MAX_HOLDEM), True, (160,160,160))
+        hint = FUENTE_INSTR.render(TRF('he_deal_hint', max=BET_MAX_HOLDEM), True, (160,160,160))
         VENTANA.blit(hint, (bx + (box_w - hint.get_width())//2, y_o + lh*2 + 4))
 
     elif he_state in ('dealing_preflop', 'dealing_flop'):
@@ -3478,7 +4116,7 @@ def _render_poker(now):
         if he_ai_turn_active:
             cur_name = HE_AI_NAMES[he_ai_turn_idx] if he_ai_turn_idx < len(HE_AI_NAMES) else ""
             if he_ai_turn_phase == 'announcing':
-                turn_txt = f"▶  Le toca a  {cur_name}"
+                turn_txt = TRF('he_turn_of', name=cur_name)
                 turn_col = (255, 220, 80)
             else:
                 last_action = he_ai_actions[-1] if he_ai_actions else ""
@@ -3503,7 +4141,7 @@ def _render_poker(now):
                     VENTANA.blit(log_s, (lx + 10, log_y + 3))
                     log_y += 26
         elif he_in_raise:
-            rl = FUENTE_PEQUENA.render("Sube (+fichas):", True, BLANCO)
+            rl = FUENTE_PEQUENA.render(TR('he_raise_label'), True, BLANCO)
             VENTANA.blit(rl, (bx + pad, y_o + lh*2))
             inp_x = bx + pad + rl.get_width() + 12; inp_w = 200; inp_h = 32
             inp_bg = pygame.Surface((inp_w, inp_h), pygame.SRCALPHA)
@@ -3512,7 +4150,7 @@ def _render_poker(now):
             pygame.draw.rect(VENTANA, DORADO, (inp_x, y_o + lh*2 - 2, inp_w, inp_h), 2, border_radius=6)
             dt = FUENTE_PEQUENA.render(clip_text_right(he_raise_input, FUENTE_PEQUENA, inp_w-12), True, BLANCO)
             VENTANA.blit(dt, (inp_x + 8, y_o + lh*2 + (inp_h - dt.get_height())//2 - 2))
-            cancel_s = FUENTE_INSTR.render("ENTER para confirmar · ESC para cancelar", True, (180,160,100))
+            cancel_s = FUENTE_INSTR.render(TR('he_confirm_cancel'), True, (180,160,100))
             VENTANA.blit(cancel_s, (bx + (box_w - cancel_s.get_width())//2, y_o + lh*3))
         else:
             btn_w = 230; btn_h = 38; gap = 18
@@ -3521,29 +4159,29 @@ def _render_poker(now):
             fold_r  = pygame.Rect(bx_btns,               by_btns, btn_w, btn_h)
             call_r  = pygame.Rect(bx_btns+btn_w+gap,     by_btns, btn_w, btn_h)
             he_raise_btn.update(bx_btns+2*(btn_w+gap), by_btns, btn_w, btn_h)
-            _draw_he_btn("F: Retirarse",  fold_r,  (120,30,30), (180,50,50), mouse_pos)
-            call_lbl = "C: Check" if he_street_bet == 0 else f"C: Igualar ({he_street_bet}) — ¡alguien subió!"
+            _draw_he_btn(TR('he_fold'),  fold_r,  (120,30,30), (180,50,50), mouse_pos)
+            call_lbl = TR('he_check') if he_street_bet == 0 else TRF('he_call', amt=he_street_bet)
             _draw_he_btn(call_lbl, call_r, (30,80,140), (50,120,200), mouse_pos)
-            _draw_he_btn("SUBIR",  he_raise_btn, (120,90,0), (200,150,0), mouse_pos, border=DORADO)
-            hint2 = FUENTE_INSTR.render("F=Retirarse  C=Check/Igualar  Click SUBIR para apostar más", True, (120,120,120))
+            _draw_he_btn(TR('he_raise_btn'),  he_raise_btn, (120,90,0), (200,150,0), mouse_pos, border=DORADO)
+            hint2 = FUENTE_INSTR.render(TR('he_controls'), True, (120,120,120))
             VENTANA.blit(hint2, (bx + (box_w - hint2.get_width())//2, y_o + lh))
 
     elif he_state == 'result':
         res_col = DORADO if he_winner == 'player' else (ROJO if he_winner in ('dealer','fold') else (200,200,200))
         msg_s = FUENTE_MSG.render(he_mensaje, True, res_col)
         VENTANA.blit(msg_s, (ANCHO//2 - msg_s.get_width()//2, by + (box_h - msg_s.get_height())//2 - 10))
-        hint3 = FUENTE_INSTR.render("ENTER / S para siguiente mano", True, (140,140,140))
+        hint3 = FUENTE_INSTR.render(TR('he_next_hand'), True, (140,140,140))
         VENTANA.blit(hint3, (ANCHO//2 - hint3.get_width()//2, by + box_h - hint3.get_height() - 8))
 
     st_s = _FUENTE_HE_SMALL.render(
-        f"G:{he_stats['won']} P:{he_stats['lost']} E:{he_stats['tied']}", True, (160,160,160))
+        TRF('he_stats', won=he_stats['won'], lost=he_stats['lost'], tied=he_stats['tied']), True, (160,160,160))
     VENTANA.blit(st_s, (bx + box_w - st_s.get_width() - pad, y_o))
 
-    _draw_he_btn("ESC: Menú",    he_menu_btn,      (30,70,140), (50,110,200), mouse_pos)
-    _draw_he_btn("R: Reiniciar", he_reiniciar_btn, (140,30,30), (200,55,55), mouse_pos)
+    _draw_he_btn(TR("esc_menu"),    he_menu_btn,      (30,70,140), (50,110,200), mouse_pos)
+    _draw_he_btn(TR("reiniciar_btn"), he_reiniciar_btn, (140,30,30), (200,55,55), mouse_pos)
 
     if he_player_money <= 0 and he_state == 'betting':
-        rb = FUENTE_PEQUENA.render("Sin fichas — pulsa R para reiniciar", True, ROJO)
+        rb = FUENTE_PEQUENA.render(TR('he_no_chips'), True, ROJO)
         VENTANA.blit(rb, (ANCHO//2 - rb.get_width()//2, ALTO//2))
 
 
@@ -3668,12 +4306,12 @@ def _online_connect(ip, port, name):
         _online_connect_error = ""
         app_state = 'poker_online_lobby'
     except _socket_mod.timeout:
-        _online_connect_error = "No se pudo conectar: tiempo de espera agotado"
+        _online_connect_error = TR('poker_connect_fail_timeout')
         _online_connecting = False
         try: s.close()
         except: pass
     except Exception as e:
-        _online_connect_error = f"No se pudo conectar: {e}"
+        _online_connect_error = TRF('poker_connect_fail', e=e)
         _online_connecting = False
         try: s.close()
         except: pass
@@ -3716,7 +4354,7 @@ def _online_process_messages(now):
         mtype = msg.get('type', '')
 
         if mtype == 'disconnected':
-            _online_message = "Desconectado del servidor."
+            _online_message = TR('poker_disconnected')
             app_state = 'poker_online_connect'
             _online_disconnect()
 
@@ -3797,10 +4435,10 @@ def _online_process_messages(now):
             _online_in_raise = False
 
         elif mtype == 'error':
-            _online_message = msg.get('msg', 'Error desconocido')
+            _online_message = msg.get('msg', TR('poker_unknown_error'))
 
         elif mtype == 'waiting':
-            _online_message = msg.get('msg', 'Esperando jugadores...')
+            _online_message = msg.get('msg', TR('poker_waiting_players'))
 
 
 
@@ -3825,7 +4463,7 @@ def _render_poker_mode_select(now):
 
     title = ft.render("Texas Hold'em", True, DORADO)
     VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, 180))
-    sub = fs.render("¿Cómo quieres jugar?", True, (160, 140, 90))
+    sub = fs.render(TR('poker_how'), True, (160, 140, 90))
     VENTANA.blit(sub, (ANCHO//2 - sub.get_width()//2, 260))
     pygame.draw.line(VENTANA, DORADO, (ANCHO//2-280, 300), (ANCHO//2+280, 300), 1)
 
@@ -3833,8 +4471,8 @@ def _render_poker_mode_select(now):
     BTN_W = 560; BTN_H = 110; GAP = 28
     BX = ANCHO//2 - BTN_W//2
     opts = [
-        ("🌐  Jugar Online",  "Conecta a una partida con jugadores reales vía red", 360),
-        ("🤖  Jugar Offline", "Partida local contra bots · Sin conexión necesaria",   360 + BTN_H + GAP),
+        (TR('poker_online_title'),  TR('poker_online_sub'), 360),
+        (TR('poker_offline_title'), TR('poker_offline_sub'),   360 + BTN_H + GAP),
     ]
     rects = []
     for label, hint, by in opts:
@@ -3851,7 +4489,7 @@ def _render_poker_mode_select(now):
         VENTANA.blit(hint_s, (BX + 32, by + 20 + lbl_s.get_height() + 6))
         rects.append(rect)
 
-    back_s = fs.render("ESC: volver al menú principal", True, (80, 70, 55))
+    back_s = fs.render(TR('poker_esc_back_main'), True, (80, 70, 55))
     VENTANA.blit(back_s, (ANCHO//2 - back_s.get_width()//2, 700))
     return rects 
 
@@ -3863,15 +4501,15 @@ def _render_poker_online_connect(now):
     draw_rain(VENTANA, now, alpha=45)
     ft, fb, fs = _get_online_fonts()
 
-    title = ft.render("Conectar al servidor", True, DORADO)
+    title = ft.render(TR('poker_connect_title'), True, DORADO)
     VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, 120))
     pygame.draw.line(VENTANA, DORADO, (ANCHO//2-320, 195), (ANCHO//2+320, 195), 1)
 
     mouse_pos = to_logical(pygame.mouse.get_pos())
     fields = [
-        ('ip',   "IP del servidor",  _online_ip_input,   340),
-        ('port', "Puerto",           _online_port_input, 440),
-        ('name', "Tu nombre",        _online_name_input, 540),
+        ('ip',   TR('poker_server_ip'),  _online_ip_input,   340),
+        ('port', TR('poker_port'),       _online_port_input, 440),
+        ('name', TR('poker_your_name'),  _online_name_input, 540),
     ]
     field_rects = {}
     FW = 560; FH = 48; FX = ANCHO//2 - FW//2
@@ -3898,7 +4536,7 @@ def _render_poker_online_connect(now):
     conn_bg.fill((*conn_col, 230))
     VENTANA.blit(conn_bg, (ANCHO//2 - 140, 630))
     pygame.draw.rect(VENTANA, DORADO if conn_hov else (60, 110, 70), conn_rect, 2, border_radius=10)
-    label_txt = "Conectando..." if _online_connecting else "Conectar"
+    label_txt = TR('poker_connecting') if _online_connecting else TR('poker_connect_btn')
     conn_lbl  = fb.render(label_txt, True, (220, 255, 225) if conn_hov else BLANCO)
     VENTANA.blit(conn_lbl, (conn_rect.centerx - conn_lbl.get_width()//2,
                              conn_rect.centery - conn_lbl.get_height()//2))
@@ -3907,7 +4545,7 @@ def _render_poker_online_connect(now):
         err_s = fs.render(_online_connect_error, True, (255, 100, 80))
         VENTANA.blit(err_s, (ANCHO//2 - err_s.get_width()//2, 704))
 
-    back_s = fs.render("ESC: volver", True, (80, 70, 55))
+    back_s = fs.render(TR('poker_esc_back'), True, (80, 70, 55))
     VENTANA.blit(back_s, (ANCHO//2 - back_s.get_width()//2, 740))
 
     return field_rects, conn_rect
@@ -3919,15 +4557,15 @@ def _render_poker_online_lobby(now):
     draw_rain(VENTANA, now, alpha=45)
     ft, fb, fs = _get_online_fonts()
 
-    title = ft.render("Sala de espera", True, DORADO)
+    title = ft.render(TR('poker_waiting_room'), True, DORADO)
     VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, 140))
 
     dots = '.' * ((now // 350) % 4)
-    wait_s = fb.render(f"Esperando jugadores{dots}", True, (200, 180, 90))
+    wait_s = fb.render(TRF('poker_waiting_players_dots', dots=dots), True, (200, 180, 90))
     VENTANA.blit(wait_s, (ANCHO//2 - wait_s.get_width()//2, 240))
 
     n = len(_online_lobby_players)
-    need_s = fs.render(f"Conectados: {n}  ·  Se necesitan mínimo {_online_min_players}",
+    need_s = fs.render(TRF('poker_connected_count', n=n, min=_online_min_players),
                        True, (160, 200, 160))
     VENTANA.blit(need_s, (ANCHO//2 - need_s.get_width()//2, 310))
 
@@ -3942,7 +4580,7 @@ def _render_poker_online_lobby(now):
         msg_s = fs.render(_online_message, True, (255, 200, 100))
         VENTANA.blit(msg_s, (ANCHO//2 - msg_s.get_width()//2, 650))
 
-    back_s = fs.render("ESC: desconectar y volver", True, (80, 70, 55))
+    back_s = fs.render(TR('poker_esc_disconnect'), True, (80, 70, 55))
     VENTANA.blit(back_s, (ANCHO//2 - back_s.get_width()//2, 740))
 
 
@@ -3959,13 +4597,13 @@ def _render_poker_online_game(now):
     pygame.draw.ellipse(VENTANA, DORADO,       (180, 80, ANCHO-360, ALTO-160), 3)
     pygame.draw.ellipse(VENTANA, (8, 60, 8),   (210, 98, ANCHO-420, ALTO-196), 1)
 
-    title_s = _safe_render(FUENTE_PEQUENA, "♠  TEXAS HOLD'EM  ♠", True, DORADO, fallback_text="TEXAS HOLD'EM")
+    title_s = _safe_render(FUENTE_PEQUENA, TR('he_title'), True, DORADO, fallback_text="TEXAS HOLD'EM")
     VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, 38))
 
-    pl = FUENTE_PEQUENA.render("TÚ", True, (180, 240, 190))
+    pl = FUENTE_PEQUENA.render(TR('he_you_label'), True, (180, 240, 190))
     VENTANA.blit(pl, (ANCHO//2 - pl.get_width()//2, HE_PLAYER_Y - 30))
 
-    cl = _FUENTE_HE_SMALL.render("CARTAS COMUNITARIAS", True, (180, 160, 80))
+    cl = _FUENTE_HE_SMALL.render(TR('he_community'), True, (180, 160, 80))
     VENTANA.blit(cl, (ANCHO//2 - cl.get_width()//2, HE_COMMUNITY_Y - 26))
     for i in range(5):
         sx = _he_card_x(i, 5); sy = HE_COMMUNITY_Y
@@ -4039,8 +4677,8 @@ def _render_poker_online_game(now):
         cc_live = [(c.valor, c.palo, c.valor_num, c.color) for c in _online_community]
         _, live_name = evaluate_holdem_hand(pc_live + cc_live)
         hand_rank = {n: i for i, n in enumerate([
-            'Carta Alta','Pareja','Doble Pareja','Trío','Escalera',
-            'Color','Full House','Póker (4 iguales)','Escalera de Color','Escalera Real'
+            'hand_high_card','hand_pair','hand_two_pair','hand_trips','hand_straight',
+            'hand_flush','hand_full_house','hand_quads','hand_straight_flush','hand_royal_flush'
         ])}
         rank_val = hand_rank.get(live_name, 0)
         if rank_val >= 7:   live_col = (255, 220, 0)
@@ -4053,10 +4691,10 @@ def _render_poker_online_game(now):
         combo_y = HE_PLAYER_Y + CARD_H + 8
         VENTANA.blit(combo_bg, (combo_x, combo_y))
         pygame.draw.rect(VENTANA, live_col, (combo_x, combo_y, 340, 32), 1, border_radius=6)
-        combo_lbl = FUENTE_PEQUENA.render(f"Tu mano: {live_name}", True, live_col)
+        combo_lbl = FUENTE_PEQUENA.render(TRF('he_your_hand', v=TR(live_name)), True, live_col)
         VENTANA.blit(combo_lbl, (ANCHO//2 - combo_lbl.get_width()//2, combo_y + 4))
 
-    pot_s = FUENTE_PEQUENA.render(f"BOTE: {_online_pot} fichas", True, DORADO)
+    pot_s = FUENTE_PEQUENA.render(TRF('he_pot', v=_online_pot), True, DORADO)
     pot_bg = pygame.Surface((pot_s.get_width()+24, pot_s.get_height()+10), pygame.SRCALPHA)
     pot_bg.fill((0, 0, 0, 160))
     px2 = ANCHO//2 - pot_bg.get_width()//2
@@ -4067,7 +4705,7 @@ def _render_poker_online_game(now):
     if _online_result and _online_hand:
         ol_r_hand = _online_result.get('hand_name', '')
         phn_col = (180, 255, 180) if _online_result.get('winner') == _online_name_input else (255, 180, 180)
-        phn_s = FUENTE_PEQUENA.render(f"Tu mano: {ol_r_hand}", True, phn_col)
+        phn_s = FUENTE_PEQUENA.render(TRF('he_your_hand', v=ol_r_hand), True, phn_col)
         VENTANA.blit(phn_s, (ANCHO//2 - phn_s.get_width()//2, HE_PLAYER_Y + CARD_H + 10))
 
     if _online_action_log and not _online_result:
@@ -4101,14 +4739,14 @@ def _render_poker_online_game(now):
     pygame.draw.rect(VENTANA, NEGRO, (bx, by, box_w, box_h), 2, border_radius=10)
 
     y_o = by + pad
-    chips_s = FUENTE_PEQUENA.render(f"Fichas: {_online_my_money}", True, DORADO)
+    chips_s = FUENTE_PEQUENA.render(TRF('he_chips', v=_online_my_money), True, DORADO)
     VENTANA.blit(chips_s, (bx + pad, y_o))
 
     he_ol_menu_btn = he_menu_btn
     he_ol_rebuy_btn = pygame.Rect(ANCHO-324, ALTO-44, 152, 34)
-    _draw_he_btn("ESC: Menú",    he_ol_menu_btn,   (30,70,140), (50,110,200), mouse_pos)
+    _draw_he_btn(TR("esc_menu"),    he_ol_menu_btn,   (30,70,140), (50,110,200), mouse_pos)
     if _online_my_money <= 0:
-        _draw_he_btn("RECARGAR GRATIS", he_ol_rebuy_btn, (22,120,60), (35,170,80), mouse_pos)
+        _draw_he_btn(TR('poker_reload_free'), he_ol_rebuy_btn, (22,120,60), (35,170,80), mouse_pos)
     else:
         he_ol_rebuy_btn = pygame.Rect(0,0,0,0)
 
@@ -4117,7 +4755,7 @@ def _render_poker_online_game(now):
 
     if not is_in_game and not is_result:
         dots = '.' * ((now // 300) % 4)
-        deal_s = FUENTE_PEQUENA.render("Esperando mano" + dots, True, (220, 200, 120))
+        deal_s = FUENTE_PEQUENA.render(TR('poker_waiting_hand') + dots, True, (220, 200, 120))
         VENTANA.blit(deal_s, (bx + (box_w - deal_s.get_width()) // 2, y_o + lh))
 
     elif is_in_game and not is_result:
@@ -4136,11 +4774,11 @@ def _render_poker_online_game(now):
             he_ol_call_btn  = pygame.Rect(bx_btns+btn_w+gap,   by_btns, btn_w, btn_h)
             he_ol_raise_btn = pygame.Rect(bx_btns+2*(btn_w+gap), by_btns, btn_w, btn_h)
 
-            _draw_he_btn("F: Retirarse",  he_ol_fold_btn,  (120,30,30),  (180,50,50),  mouse_pos)
-            call_lbl = "C: Check" if _online_to_call == 0 else f"C: Igualar ({_online_to_call})"
+            _draw_he_btn(TR('he_fold'),  he_ol_fold_btn,  (120,30,30),  (180,50,50),  mouse_pos)
+            call_lbl = TR('he_check') if _online_to_call == 0 else TRF('he_call', amt=_online_to_call).split(" —")[0]
             _draw_he_btn(call_lbl, he_ol_call_btn, (30,80,140), (50,120,200), mouse_pos)
-            _draw_he_btn("SUBIR", he_ol_raise_btn, (120,90,0), (200,150,0), mouse_pos, border=DORADO)
-            hint2 = FUENTE_INSTR.render("F=Retirarse  C=Check/Igualar  Click SUBIR para apostar más",
+            _draw_he_btn(TR('he_raise_btn'), he_ol_raise_btn, (120,90,0), (200,150,0), mouse_pos, border=DORADO)
+            hint2 = FUENTE_INSTR.render(TR('he_controls'),
                                         True, (120,120,120))
             VENTANA.blit(hint2, (bx + (box_w - hint2.get_width())//2, y_o + lh))
 
@@ -4153,7 +4791,7 @@ def _render_poker_online_game(now):
             he_ol_raise_btn_ret = pygame.Rect(0,0,0,0)
 
         if _online_my_turn and _online_in_raise:
-            rl = FUENTE_PEQUENA.render("Sube (+fichas):", True, BLANCO)
+            rl = FUENTE_PEQUENA.render(TR('he_raise_label'), True, BLANCO)
             VENTANA.blit(rl, (bx + pad, y_o + lh*2))
             inp_x = bx + pad + rl.get_width() + 12; inp_w = 200; inp_h = 32
             inp_bg = pygame.Surface((inp_w, inp_h), pygame.SRCALPHA)
@@ -4164,10 +4802,10 @@ def _render_poker_online_game(now):
                                     FUENTE_PEQUENA, inp_w-12)
             dt2 = FUENTE_PEQUENA.render(disp2, True, BLANCO)
             VENTANA.blit(dt2, (inp_x+8, y_o + lh*2 + (inp_h-dt2.get_height())//2 - 2))
-            cancel_s = FUENTE_INSTR.render("ENTER para confirmar · ESC para cancelar", True, (180,160,100))
+            cancel_s = FUENTE_INSTR.render(TR('he_confirm_cancel'), True, (180,160,100))
             VENTANA.blit(cancel_s, (bx + (box_w - cancel_s.get_width())//2, y_o + lh*3))
         elif not _online_my_turn:
-            wait_s = FUENTE_PEQUENA.render("Esperando turno...", True, (160, 160, 160))
+            wait_s = FUENTE_PEQUENA.render(TR('poker_waiting_turn'), True, (160, 160, 160))
             VENTANA.blit(wait_s, (bx + pad, y_o + lh))
 
     elif is_result:
@@ -4177,12 +4815,12 @@ def _render_poker_online_game(now):
         is_me   = (winner == _online_name_input)
         res_col = DORADO if is_me else ROJO
         if is_me:
-            mensaje = f"¡GANASTE! — {hand_nm}  (+{pot_won})"
+            mensaje = TRF('poker_you_won_hand', hand=hand_nm, pot=pot_won)
         else:
-            mensaje = f"{winner} GANA — {hand_nm}"
+            mensaje = TRF('poker_they_won_hand', winner=winner, hand=hand_nm)
         msg_s = FUENTE_MSG.render(mensaje, True, res_col)
         VENTANA.blit(msg_s, (ANCHO//2 - msg_s.get_width()//2, by + (box_h - msg_s.get_height())//2 - 10))
-        hint3 = FUENTE_INSTR.render("Esperando siguiente mano...", True, (140,140,140))
+        hint3 = FUENTE_INSTR.render(TR('poker_waiting_next_hand'), True, (140,140,140))
         VENTANA.blit(hint3, (ANCHO//2 - hint3.get_width()//2, by + box_h - hint3.get_height() - 8))
         he_ol_fold_btn_ret  = pygame.Rect(0,0,0,0)
         he_ol_call_btn_ret  = pygame.Rect(0,0,0,0)
@@ -4198,7 +4836,7 @@ def _render_poker_online_game(now):
         VENTANA.blit(msg_s2, (ANCHO//2 - msg_s2.get_width()//2, ALTO//2))
 
     if _online_my_money <= 0:
-        low_s = FUENTE_INSTR.render("Sin fichas — recarga gratis para seguir jugando", True, (255, 180, 120))
+        low_s = FUENTE_INSTR.render(TR('poker_no_chips_reload'), True, (255, 180, 120))
         VENTANA.blit(low_s, (ANCHO//2 - low_s.get_width()//2, by - 28))
 
     return (he_ol_menu_btn,
@@ -4706,13 +5344,13 @@ def _render_main_menu(now):
         dlg_s.fill((18, 6, 6, 245))
         VENTANA.blit(dlg_s, (dlg_x, dlg_y))
         pygame.draw.rect(VENTANA, (210, 55, 55), (dlg_x, dlg_y, dlg_w, dlg_h), 2, border_radius=14)
-        warn_s = FUENTE_MSG.render("\u26a0  \u00bfBorrar todos los datos?", True, (255, 110, 110))
+        warn_s = FUENTE_MSG.render(TR('erase_title'), True, (255, 110, 110))
         VENTANA.blit(warn_s, (dlg_x + (dlg_w - warn_s.get_width()) // 2, dlg_y + 30))
         sub_s2 = FUENTE_MENU_SUB.render(
-            "Se borrar\u00e1n guardados, im\u00e1genes y m\u00fasica descargada.", True, (200, 155, 155))
+            TR('erase_line1'), True, (200, 155, 155))
         VENTANA.blit(sub_s2, (dlg_x + (dlg_w - sub_s2.get_width()) // 2, dlg_y + 95))
         sub_s3 = FUENTE_MENU_SUB.render(
-            "El juego se reiniciar\u00e1 autom\u00e1ticamente.", True, (170, 130, 130))
+            TR('erase_line2'), True, (170, 130, 130))
         VENTANA.blit(sub_s3, (dlg_x + (dlg_w - sub_s3.get_width()) // 2, dlg_y + 125))
         btn_y2      = dlg_y + 170
         confirm_r   = pygame.Rect(dlg_x + 70,  btn_y2, 240, 62)
@@ -4723,8 +5361,8 @@ def _render_main_menu(now):
         pygame.draw.rect(VENTANA, (230, 70, 70), confirm_r, 2, border_radius=9)
         pygame.draw.rect(VENTANA, (30, 75, 44)  if canc_hov else (16, 44, 26), cancel_r,  border_radius=9)
         pygame.draw.rect(VENTANA, (65, 170, 90), cancel_r,  2, border_radius=9)
-        conf_txt = FUENTE_MENU_SUB.render("Borrar y reiniciar", True, BLANCO)
-        canc_txt = FUENTE_MENU_SUB.render("Cancelar",           True, BLANCO)
+        conf_txt = FUENTE_MENU_SUB.render(TR('erase_confirm'), True, BLANCO)
+        canc_txt = FUENTE_MENU_SUB.render(TR('erase_cancel'),           True, BLANCO)
         VENTANA.blit(conf_txt, (confirm_r.centerx - conf_txt.get_width() // 2,
                                  confirm_r.centery - conf_txt.get_height() // 2))
         VENTANA.blit(canc_txt, (cancel_r.centerx  - canc_txt.get_width() // 2,
@@ -4746,7 +5384,7 @@ def _render_main_menu(now):
             if update_status == 'restarting':
                 notif_color = (20, 100, 200)
                 secs_left   = max(0, 2 - (now - update_restart_time) // 1000)
-                display_msg = f"¡Actualizado! Reiniciando en {secs_left}s..."
+                display_msg = TRF('updated_restarting', secs=secs_left)
             else:
                 display_msg = update_msg
                 notif_color = (30, 120, 50) if update_status == 'up_to_date' else \
@@ -4802,7 +5440,7 @@ def _render_pause_menu(now):
     pygame.draw.rect(VENTANA, DORADO, (BOX_X, BOX_Y, BOX_W, BOX_H), 2, border_radius=14)
     pygame.draw.rect(VENTANA, (80, 65, 30), (BOX_X+6, BOX_Y+6, BOX_W-12, BOX_H-12), 1, border_radius=10)
 
-    title_surf = FUENTE_GRANDE.render("PAUSA", True, DORADO)
+    title_surf = FUENTE_GRANDE.render(TR("pause_title"), True, DORADO)
     VENTANA.blit(title_surf, (ANCHO // 2 - title_surf.get_width() // 2, BOX_Y + 28))
     pygame.draw.line(VENTANA, (80, 65, 30),
                      (BOX_X + 40, BOX_Y + 28 + title_surf.get_height() + 8),
@@ -4834,7 +5472,7 @@ def _render_pause_menu(now):
         VENTANA.blit(lbl, (BX + (BTN_W - lbl.get_width()) // 2,
                             by + (BTN_H - lbl.get_height()) // 2))
 
-    hint = FUENTE_INSTR.render("ESC para reanudar  ·  haz clic para elegir", True, (90, 80, 60))
+    hint = FUENTE_INSTR.render(TR("pause_hint"), True, (90, 80, 60))
     VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, BY1 + BTN_H + 22))
 
 
@@ -4961,7 +5599,7 @@ def splash_screen():
         if FADE_IN < elapsed < FADE_IN + HOLD:
             blink = (elapsed // 500) % 2 == 0
             if blink:
-                hint = FUENTE_PEQUENA.render("hecho por Humrandbm y Dreame282", True, DORADO)
+                hint = FUENTE_PEQUENA.render(TR('made_by'), True, DORADO)
                 hint_alpha = int(200 * (elapsed - FADE_IN) / HOLD)
                 hint.set_alpha(hint_alpha)
                 VENTANA.blit(hint, (ANCHO // 2 - hint.get_width() // 2, hint_y))
@@ -5011,19 +5649,19 @@ def _loading_error_dialog(failed_name):
         pygame.draw.rect(VENTANA, (22, 12, 8),  (box_x, box_y, box_w, box_h), border_radius=14)
         pygame.draw.rect(VENTANA, (160, 40, 30),(box_x, box_y, box_w, box_h), 3, border_radius=14)
 
-        title_s = _safe_render(FUENTE_ERR_TITLE, "⚠  Error de descarga", True, (230, 80, 60), fallback_text="Error de descarga")
+        title_s = _safe_render(FUENTE_ERR_TITLE, "⚠  " + TR('dl_error_title'), True, (230, 80, 60), fallback_text=TR('dl_error_title'))
         VENTANA.blit(title_s, (ANCHO//2 - title_s.get_width()//2, box_y + 22))
 
-        sub_s = FUENTE_ERR_SUB.render(f"No se pudo descargar: {failed_name}", True, (200, 185, 170))
+        sub_s = FUENTE_ERR_SUB.render(TRF('dl_error_line', name=failed_name), True, (200, 185, 170))
         VENTANA.blit(sub_s, (ANCHO//2 - sub_s.get_width()//2, box_y + 74))
-        sub2  = FUENTE_ERR_SUB.render("Comprueba tu conexión a internet e inténtalo de nuevo.", True, (160, 150, 140))
+        sub2  = FUENTE_ERR_SUB.render(TR('dl_error_hint'), True, (160, 150, 140))
         VENTANA.blit(sub2, (ANCHO//2 - sub2.get_width()//2, box_y + 104))
 
         c_hov = BTN_CONTINUE.collidepoint(mouse_pos)
         c_col = (80, 55, 20) if c_hov else (55, 38, 12)
         pygame.draw.rect(VENTANA, c_col, BTN_CONTINUE, border_radius=10)
         pygame.draw.rect(VENTANA, DORADO, BTN_CONTINUE, 2, border_radius=10)
-        c_txt = FUENTE_BTN.render("Continuar  (puede arruinar la experiencia)", True, DORADO)
+        c_txt = FUENTE_BTN.render(TR('dl_continue_risky'), True, DORADO)
         VENTANA.blit(c_txt, (BTN_CONTINUE.centerx - c_txt.get_width()//2,
                               BTN_CONTINUE.centery - c_txt.get_height()//2))
 
@@ -5031,7 +5669,7 @@ def _loading_error_dialog(failed_name):
         r_col = (20, 70, 140) if r_hov else (14, 48, 100)
         pygame.draw.rect(VENTANA, r_col, BTN_RETRY, border_radius=10)
         pygame.draw.rect(VENTANA, (100, 160, 240), BTN_RETRY, 2, border_radius=10)
-        r_txt = FUENTE_BTN.render("Reintentar", True, (180, 220, 255))
+        r_txt = FUENTE_BTN.render(TR('dl_retry'), True, (180, 220, 255))
         VENTANA.blit(r_txt, (BTN_RETRY.centerx - r_txt.get_width()//2,
                               BTN_RETRY.centery - r_txt.get_height()//2))
 
@@ -5039,7 +5677,7 @@ def _loading_error_dialog(failed_name):
         q_col = (100, 18, 18) if q_hov else (68, 12, 12)
         pygame.draw.rect(VENTANA, q_col, BTN_QUIT, border_radius=10)
         pygame.draw.rect(VENTANA, (200, 50, 50), BTN_QUIT, 2, border_radius=10)
-        q_txt = FUENTE_BTN.render("Cerrar juego", True, (255, 140, 140))
+        q_txt = FUENTE_BTN.render(TR('dl_close_game'), True, (255, 140, 140))
         VENTANA.blit(q_txt, (BTN_QUIT.centerx - q_txt.get_width()//2,
                               BTN_QUIT.centery - q_txt.get_height()//2))
 
@@ -5101,10 +5739,10 @@ def loading_screen():
         for i, (url, local, name) in enumerate(to_download):
             VENTANA.fill((4, 2, 10))
 
-            title = FUENTE_LOAD.render("Descargando paquetes necesarios de internet...", True, DORADO)
+            title = FUENTE_LOAD.render(TR('dl_downloading'), True, DORADO)
             VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, ALTO//2 - 140))
 
-            status = FUENTE_FILE.render(f"[{i+1}/{total}]  {name}", True, (200, 210, 200))
+            status = FUENTE_FILE.render(TRF('dl_progress', i=i+1, total=total, name=name), True, (200, 210, 200))
             VENTANA.blit(status, (ANCHO//2 - status.get_width()//2, ALTO//2 - 65))
 
             bw = 700; bh = 26
@@ -5147,7 +5785,7 @@ def loading_screen():
         break          
 
     VENTANA.fill((4, 2, 10))
-    done = pygame.font.SysFont("arial", 48, bold=True).render("¡Listo!", True, (80, 220, 80))
+    done = pygame.font.SysFont("arial", 48, bold=True).render(TR('dl_ready'), True, (80, 220, 80))
     VENTANA.blit(done, (ANCHO//2 - done.get_width()//2, ALTO//2 - 30))
     bw = 700
     pygame.draw.rect(VENTANA, DORADO, (ANCHO//2 - bw//2, ALTO//2 + 30, bw, 26), border_radius=10)
@@ -5336,15 +5974,15 @@ while True:
                         try:
                             val = int(he_blind_input) if he_blind_input.strip() else he_blind
                             if val <= 0: pass
-                            elif val > BET_MAX_HOLDEM: he_mensaje = f"Máx. {BET_MAX_HOLDEM}"
-                            elif val*2 > he_player_money: he_mensaje = "Fichas insuficientes para la ciega"
+                            elif val > BET_MAX_HOLDEM: he_mensaje = TRF('he_max_blind', max=BET_MAX_HOLDEM)
+                            elif val*2 > he_player_money: he_mensaje = TR('he_blind_insufficient')
                             else:
                                 he_blind = val
                                 he_player_money -= he_blind; poker_player_money = he_player_money
                                 he_blind_input = ""
                                 he_start_hand(now)
                         except ValueError:
-                            he_mensaje = "Ciega inválida"
+                            he_mensaje = TR('he_blind_invalid')
                     elif evento.unicode and evento.unicode.isdigit():
                         if len(he_blind_input) < 6: he_blind_input += evento.unicode
                 elif he_state in ('pre_flop','flop','turn','river'):
@@ -5359,9 +5997,9 @@ while True:
                                 if amt > 0 and amt <= he_player_money:
                                     he_in_raise = False; he_player_raise(amt, now)
                                 else:
-                                    he_mensaje = "Cantidad inválida"
+                                    he_mensaje = TR('he_amount_invalid')
                             except ValueError:
-                                he_mensaje = "Número inválido"
+                                he_mensaje = TR('he_number_invalid')
                         elif evento.key == pygame.K_ESCAPE:
                             he_in_raise = False
                         elif evento.unicode and evento.unicode.isdigit():
@@ -5558,12 +6196,12 @@ while True:
                     try:
                         if current_bet_input.strip() == "":
                             if last_bet is None:
-                                mensaje = "Escribe una apuesta"; round_end_time = now
+                                mensaje = TR('bj_bet_empty'); round_end_time = now
                             else:
                                 bet_val = int(last_bet)
-                                if   bet_val <= 0:            mensaje = "Apuesta inválida"; round_end_time = now
-                                elif bet_val > BET_MAX:       mensaje = f"Apuesta máx. {BET_MAX}"; round_end_time = now
-                                elif bet_val > player_money:  mensaje = "No tienes suficiente dinero"; round_end_time = now
+                                if   bet_val <= 0:            mensaje = TR('bj_bet_invalid'); round_end_time = now
+                                elif bet_val > BET_MAX:       mensaje = TRF('bj_bet_max', max=BET_MAX); round_end_time = now
+                                elif bet_val > player_money:  mensaje = TR('bj_not_enough_money'); round_end_time = now
                                 else:
                                     current_bet = bet_val; player_money -= current_bet; bet_locked = True
                                     state = 'dealing'; dealing_step = 0; next_deal = now+300; mensaje = ""
@@ -5571,16 +6209,16 @@ while True:
                                     current_bet_input = ""
                         else:
                             bet_val = int(current_bet_input)
-                            if   bet_val <= 0:            mensaje = "Apuesta inválida"; round_end_time = now
-                            elif bet_val > BET_MAX:       mensaje = f"Apuesta máx. {BET_MAX}"; round_end_time = now
-                            elif bet_val > player_money:  mensaje = "No tienes suficiente dinero"; round_end_time = now
+                            if   bet_val <= 0:            mensaje = TR('bj_bet_invalid'); round_end_time = now
+                            elif bet_val > BET_MAX:       mensaje = TRF('bj_bet_max', max=BET_MAX); round_end_time = now
+                            elif bet_val > player_money:  mensaje = TR('bj_not_enough_money'); round_end_time = now
                             else:
                                 current_bet = bet_val; player_money -= current_bet; bet_locked = True
                                 state = 'dealing'; dealing_step = 0; next_deal = now+300; mensaje = ""
                                 placed_chip = create_placed_chip(current_bet, ANCHO//2, ALTO-120)
                                 last_bet = current_bet; current_bet_input = ""
                     except ValueError:
-                        mensaje = "Apuesta inválida"; round_end_time = now
+                        mensaje = TR('bj_bet_invalid'); round_end_time = now
                 else:
                     if evento.unicode and evento.unicode.isdigit():
                         if len(current_bet_input) < 6: current_bet_input += evento.unicode
@@ -5724,8 +6362,8 @@ while True:
     if state == 'game_over':
         VENTANA.fill((4, 2, 8))
         draw_rain(VENTANA, now, alpha=60)
-        txt1 = FUENTE_GRANDE.render("Sin fichas... Víctor sonríe.", True, (210,70,25))
-        txt2 = FUENTE.render("ENTER o R: volver a empezar con 1000 fichas", True, (180,148,90))
+        txt1 = FUENTE_GRANDE.render(TR('bj_no_chips_victor'), True, (210,70,25))
+        txt2 = FUENTE.render(TR('bj_enter_restart'), True, (180,148,90))
         VENTANA.blit(txt1, ((ANCHO - txt1.get_width())//2, ALTO//2 - 60))
         VENTANA.blit(txt2, ((ANCHO - txt2.get_width())//2, ALTO//2 + 20))
         flip_display()
@@ -5813,9 +6451,9 @@ while True:
                             results.append(rtype)
                     stats['played'] += 1
                     if any(r == 'blackjack' for r in results): mensaje = "BLACKJACK!"
-                    elif any(r == 'win' for r in results):    mensaje = "HAS GANADO"
-                    elif all(r == 'tie' for r in results):    mensaje = "EMPATE"
-                    else:                                      mensaje = "HAS PERDIDO"
+                    elif any(r == 'win' for r in results):    mensaje = "WIN"
+                    elif all(r == 'tie' for r in results):    mensaje = "TIE"
+                    else:                                      mensaje = "LOSE"
                     _apply_chip_result(results)
                     state = 'round_end'; round_end_time = now
 
@@ -5850,9 +6488,9 @@ while True:
                             results.append(rtype)
                     stats['played'] += 1
                     if any(r == 'blackjack' for r in results): mensaje = "BLACKJACK!"
-                    elif any(r == 'win' for r in results):    mensaje = "HAS GANADO"
-                    elif all(r == 'tie' for r in results):    mensaje = "EMPATE"
-                    else:                                      mensaje = "HAS PERDIDO"
+                    elif any(r == 'win' for r in results):    mensaje = "WIN"
+                    elif all(r == 'tie' for r in results):    mensaje = "TIE"
+                    else:                                      mensaje = "LOSE"
                     _apply_chip_result(results)
                     per_hand_bets = None
                     state = 'round_end'; round_end_time = now
@@ -5893,14 +6531,14 @@ while True:
         elif player_visible > 21:
             if split_active and current_hand_index < len(jugador_hands)-1:
                 overlay_flash.update({'active':True,'color':(150,0,0),'alpha':200,'start':now,'duration':300})
-                mensaje = f"MANO {current_hand_index+1} BUST"; current_hand_index += 1; last_pedir_time = now
+                mensaje = f"BUST:{current_hand_index+1}"; current_hand_index += 1; last_pedir_time = now
             elif split_active and current_hand_index == len(jugador_hands)-1:
                 overlay_flash.update({'active':True,'color':(150,0,0),'alpha':200,'start':now,'duration':300})
-                mensaje = f"MANO {current_hand_index+1} BUST"
+                mensaje = f"BUST:{current_hand_index+1}"
                 revelar_banca(now); state = 'dealer'; dealer_thinking = False
                 dealer_target = schedule_dealer_target(); next_action = now+600
             else:
-                mensaje = "HAS PERDIDO"; stats['lost'] += 1; stats['played'] += 1
+                mensaje = "LOSE"; stats['lost'] += 1; stats['played'] += 1
                 overlay_flash.update({'active':True,'color':(150,0,0),'alpha':200,'start':now,'duration':350})
                 revelar_banca(now); state = 'round_end'; round_end_time = now
                 if placed_chip:
@@ -5940,34 +6578,33 @@ while True:
 
     if any(c[4].oculta for c in banca):
         texto = " + ".join("?" if c[4].oculta else str(c[2]) for c in banca)
-        VENTANA.blit(FUENTE.render(f"Banca: {texto}", True, BLANCO), (50, DEALER_CARD_Y - 30))
+        VENTANA.blit(FUENTE.render(TRF('bj_banca', texto=texto), True, BLANCO), (50, DEALER_CARD_Y - 30))
     else:
         banca_visible = calcular_visible(banca)
-        VENTANA.blit(FUENTE.render(f"Banca: {banca_visible}", True, BLANCO), (50, DEALER_CARD_Y - 30))
+        VENTANA.blit(FUENTE.render(TRF('bj_banca', texto=banca_visible), True, BLANCO), (50, DEALER_CARD_Y - 30))
 
     if split_active and jugador_hands:
-        left = f"Mano 1: {calcular(jugador_hands[0])}"
-        right = f"Mano 2: {calcular(jugador_hands[1])}"
+        left = TRF('bj_mano1', v=calcular(jugador_hands[0]))
+        right = TRF('bj_mano2', v=calcular(jugador_hands[1]))
         surf = FUENTE.render(f"{left}    {right}", True, BLANCO)
         VENTANA.blit(surf, (50, PLAYER_CARD_Y - 30))
     else:
-        VENTANA.blit(FUENTE.render(f"Jugador: {calcular(jugador)}", True, BLANCO), (50, PLAYER_CARD_Y - 30))
+        VENTANA.blit(FUENTE.render(TRF('bj_jugador', v=calcular(jugador)), True, BLANCO), (50, PLAYER_CARD_Y - 30))
 
     if state == 'betting':
-        instrucciones = ["Escribe tu apuesta y pulsa ENTER"]
+        instrucciones = [TR('bj_type_bet')]
     elif state == 'player':
-        instrucciones = ["ESPACIO: Pedir  ENTER: Plantarse  D: Doblar  P: Dividir  I: Seguro"]
+        instrucciones = [TR('bj_controls')]
     elif state in ('dealing', 'dealer'):
-        instrucciones = ["Esperando..."]
+        instrucciones = [TR('bj_waiting')]
     else:
-        instrucciones = ["S = Siguiente ronda"]
+        instrucciones = [TR('bj_next_round')]
 
     if insurance_offered and not insurance_taken and state == 'player':
-        instrucciones = ["I: Tomar seguro  |  " + instrucciones[0]]
+        instrucciones = [TR('bj_insurance_take') + instrucciones[0]]
 
-    diff_labels = {0: 'Normal', 1: 'Difícil', 2: 'Muy Difícil', 3: 'EXTREMO'}
     diff_colors = {0: BLANCO, 1: (255, 200, 80), 2: (255, 140, 40), 3: (255, 80, 80)}
-    diff_label  = diff_labels.get(difficulty_level, 'Normal')
+    diff_label  = {0: 'Normal', 1: TR('bj_dificil'), 2: TR('bj_muy_dificil'), 3: 'EXTREMO'}.get(difficulty_level, 'Normal')
     diff_color  = diff_colors.get(difficulty_level, BLANCO)
 
     box_w   = ANCHO - 40; padding = 14; lh = 30
@@ -5985,12 +6622,12 @@ while True:
     display_text = current_bet_input if state == 'betting' else str(current_bet)
     txt_to_show  = clip_text_right(display_text, FUENTE_PEQUENA, 200)
 
-    col1 = _safe_render(FUENTE_PEQUENA, f"💰 Fichas: {player_money}", True, DORADO, fallback_text=f"Fichas: {player_money}")
-    col2 = _safe_render(FUENTE_PEQUENA, f"🎰 Apuesta: {txt_to_show}", True, BLANCO, fallback_text=f"Apuesta: {txt_to_show}")
+    col1 = _safe_render(FUENTE_PEQUENA, TRF('bj_chips', v=player_money), True, DORADO, fallback_text=TRF('he_chips', v=player_money))
+    col2 = _safe_render(FUENTE_PEQUENA, TRF('bj_bet', v=txt_to_show), True, BLANCO, fallback_text=TRF('bj_bet', v=txt_to_show).replace('🎰 ', ''))
     if app_state == 'blackjack':
-        col3_txt = f"Máx: {BET_MAX}  ·  Dificultad: {diff_label}"
+        col3_txt = TRF('bj_max_dif', max=BET_MAX, diff=diff_label)
     else:
-        col3_txt = f"Máx: {BET_MAX}  ·  Meta: {EPIC_WIN_THRESHOLD}  ·  Dificultad: {diff_label}"
+        col3_txt = TRF('bj_max_meta_dif', max=BET_MAX, meta=EPIC_WIN_THRESHOLD, diff=diff_label)
     col3 = FUENTE_PEQUENA.render(col3_txt, True, diff_color)
 
     VENTANA.blit(col1, (reglas_x + padding, y_off))
@@ -6020,12 +6657,16 @@ while True:
         y_off += lh - 4
 
     if mensaje:
-        if "BLACKJACK" in mensaje.upper():
-            surf_m = FUENTE_GRANDE.render(mensaje, True, DORADO)
-        elif "GAN" in mensaje.upper():
-            surf_m = FUENTE_MSG.render(mensaje, True, DORADO)
-        elif "EMPATE" in mensaje.upper():
-            surf_m = FUENTE_MSG.render(mensaje, True, (200, 200, 200))
+        if mensaje == "BLACKJACK!":
+            surf_m = FUENTE_GRANDE.render(TR('bj_blackjack'), True, DORADO)
+        elif mensaje == "WIN":
+            surf_m = FUENTE_MSG.render(TR('bj_has_ganado'), True, DORADO)
+        elif mensaje == "TIE":
+            surf_m = FUENTE_MSG.render(TR('bj_empate'), True, (200, 200, 200))
+        elif mensaje == "LOSE":
+            surf_m = FUENTE_MSG.render(TR('bj_has_perdido'), True, ROJO)
+        elif mensaje.startswith("BUST:"):
+            surf_m = FUENTE_MSG.render(TRF('bj_hand_bust', n=mensaje.split(":", 1)[1]), True, ROJO)
         else:
             surf_m = FUENTE_MSG.render(mensaje, True, ROJO)
         msg_x = (ANCHO - surf_m.get_width()) // 2
@@ -6139,7 +6780,7 @@ while True:
             if update_status == 'restarting':
                 notif_color = (20,100,200)
                 secs_left = max(0, 2-(now-update_restart_time)//1000)
-                display_msg = f"¡Actualizado! Reiniciando en {secs_left}s..."
+                display_msg = TRF('updated_restarting', secs=secs_left)
             else:
                 display_msg = update_msg
                 notif_color = (30,120,50) if update_status=='up_to_date' else \
@@ -6157,7 +6798,7 @@ while True:
     r_color = (140,30,30) if not r_hovered else (180,50,50)
     pygame.draw.rect(VENTANA, r_color, REINICIAR_BTN, border_radius=7)
     pygame.draw.rect(VENTANA, NEGRO, REINICIAR_BTN, 1, border_radius=7)
-    r_txt = FUENTE_PEQUENA.render("R: Reiniciar", True, BLANCO)
+    r_txt = FUENTE_PEQUENA.render(TR("reiniciar_btn"), True, BLANCO)
     VENTANA.blit(r_txt, (REINICIAR_BTN.centerx-r_txt.get_width()//2,
                           REINICIAR_BTN.centery-r_txt.get_height()//2))
 
@@ -6166,11 +6807,11 @@ while True:
         m_col = (30, 70, 140) if not m_hovered else (50, 100, 190)
         pygame.draw.rect(VENTANA, m_col, bj_menu_btn, border_radius=7)
         pygame.draw.rect(VENTANA, NEGRO, bj_menu_btn, 1, border_radius=7)
-        m_txt = FUENTE_PEQUENA.render("ESC: Menú principal", True, BLANCO)
+        m_txt = FUENTE_PEQUENA.render(TR("esc_menu_principal"), True, BLANCO)
         VENTANA.blit(m_txt, (bj_menu_btn.centerx - m_txt.get_width()//2,
                               bj_menu_btn.centery - m_txt.get_height()//2))
         inf_s = FUENTE_PEQUENA.render(
-            f"♠ BlackJack Infinito  |  Ganadas: {stats['won']}  Perdidas: {stats['lost']}",
+            TRF('bj_infinito_stats', won=stats['won'], lost=stats['lost']),
             True, DORADO)
         VENTANA.blit(inf_s, (ANCHO//2 - inf_s.get_width()//2, ALTO - 88))
 
