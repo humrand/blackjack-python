@@ -92,8 +92,9 @@ _TRANSLATIONS = {
     'settings_on':         {'es': 'Activado',                            'en': 'On'},
     'settings_off':        {'es': 'Desactivado',                         'en': 'Off'},
     'settings_windowed':   {'es': 'Ventana',                             'en': 'Windowed'},
-    'settings_hint':       {'es': 'Los cambios de resolucion se aplican al guardar y reiniciar el juego.',
-                             'en': 'Resolution changes apply after saving and restarting the game.'},
+    'settings_hint':       {'es': 'Los cambios de resolucion se aplican al instante.',
+                             'en': 'Resolution changes apply instantly.'},
+    'settings_applied':    {'es': 'Resolucion aplicada',                  'en': 'Resolution applied'},
     'settings_button':     {'es': 'Ajustes',                             'en': 'Settings'},
     'menu_story_label':    {'es': 'Modo Historia',                       'en': 'Story Mode'},
     'menu_story_sub':      {'es': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas',
@@ -4949,8 +4950,74 @@ _settings_gear_scale = 1.0
 _settings_dragging_volume = False
 _settings_pending_resolution = CONFIG.get('resolution', '1920x1080')
 _settings_restart_hint = False
+_settings_applied_at = -999999
 
 _GEAR_BTN_RECT = pygame.Rect(24, 24, 56, 56)
+
+def apply_resolution(res_key):
+    """
+    Cambia la resolucion del juego en caliente (sin reiniciar el proceso).
+
+    Recrea la ventana/superficie real con el nuevo tamano y recalcula todas
+    las constantes de layout (posiciones de mazo, botones, etc.) que se
+    calcularon una sola vez a partir de ANCHO/ALTO al arrancar el juego.
+    """
+    global ANCHO, ALTO, IS_WINDOWED, VENTANA_REAL, VENTANA
+    global DECK_POS, DEALER_POS, PLAYER_STACK_POS, BANK_POS, _CARD_X_ORIGIN, _RAIN
+    global DOTS_BTN, REINICIAR_BTN, MUTE_BTN, bj_menu_btn
+    global HE_DECK_X, HE_COMMUNITY_Y, HE_PLAYER_Y, he_menu_btn, he_reiniciar_btn
+    global _settings_applied_at
+
+    new_windowed = (res_key == 'windowed')
+    new_ancho, new_alto = _RESOLUTIONS.get(res_key, (1920, 1080))
+    if new_windowed:
+        new_ancho, new_alto = 1280, 720
+
+    if new_ancho == ANCHO and new_alto == ALTO and new_windowed == IS_WINDOWED:
+        CONFIG['resolution'] = res_key
+        save_config()
+        return
+
+    flags = pygame.SCALED if new_windowed else (pygame.FULLSCREEN | pygame.SCALED)
+    try:
+        new_ventana_real = pygame.display.set_mode((new_ancho, new_alto), flags)
+    except pygame.error as e:
+        print(f"[RESOLUTION] No se pudo cambiar de resolucion: {e}")
+        return
+
+    ANCHO, ALTO = new_ancho, new_alto
+    IS_WINDOWED = new_windowed
+    VENTANA_REAL = new_ventana_real
+    VENTANA = pygame.Surface((ANCHO, ALTO))
+
+    DECK_POS          = (ANCHO // 2, 20)
+    DEALER_POS        = (ANCHO // 2, 60)
+    PLAYER_STACK_POS  = (120, ALTO - 70)
+    BANK_POS          = (ANCHO // 2, 40)
+    _CARD_X_ORIGIN    = ANCHO // 2 - CARD_SPACING // 2 - CARD_W // 2
+
+    _RAIN[:] = [(_RRNG.randint(0, ANCHO), _RRNG.randint(0, ALTO),
+                 _RRNG.uniform(200, 460), _RRNG.randint(12, 34))
+                for _ in range(140)]
+
+    DOTS_BTN      = pygame.Rect(ANCHO-46,  8,   38,  28)
+    REINICIAR_BTN = pygame.Rect(ANCHO-140, ALTO-44, 130, 34)
+    MUTE_BTN      = pygame.Rect(ANCHO-90,  8,   38,  28)
+    bj_menu_btn   = pygame.Rect(ANCHO - 160, ALTO - 44, 148, 34)
+
+    HE_DECK_X        = ANCHO // 2
+    HE_COMMUNITY_Y   = ALTO // 2 - 72
+    HE_PLAYER_Y      = ALTO - 230
+    he_menu_btn      = pygame.Rect(ANCHO-164, ALTO-44, 152, 34)
+    he_reiniciar_btn = pygame.Rect(ANCHO-324, ALTO-44, 152, 34)
+
+    main_menu_button_rects[:] = [_main_menu_rect(i) for i in range(len(MENU_OPTIONS))]
+
+    _story_scaled_cache.clear()
+
+    CONFIG['resolution'] = res_key
+    save_config()
+    _settings_applied_at = pygame.time.get_ticks()
 
 def open_settings():
     global settings_open, _settings_pending_resolution, _settings_restart_hint
@@ -5095,9 +5162,14 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
         bx += w_btn + 10
     hit['resolution_buttons'] = res_rects
     y += 50
-    if _settings_restart_hint:
-        hint_s = font_small.render(TR('settings_hint'), True, (230, 190, 120))
-        surf.blit(hint_s, (rect.x + pad, y))
+    _since_applied = now - _settings_applied_at
+    if _settings_restart_hint and 0 <= _since_applied < 1800:
+        fade = 1.0 - max(0.0, (_since_applied - 1200) / 600) if _since_applied > 1200 else 1.0
+        alpha = max(0, min(255, int(255 * fade)))
+        applied_s = _safe_render(font_small, f"{TR('settings_applied')} ✓", True, (150, 230, 150),
+                                  fallback_text=TR('settings_applied'))
+        applied_s.set_alpha(alpha)
+        surf.blit(applied_s, (rect.x + pad, y))
     y += 28
 
     lang_label = font_label.render(TR('settings_language'), True, BLANCO)
@@ -5150,9 +5222,8 @@ def handle_settings_click(pos):
         for res_key, r_btn in hit['resolution_buttons']:
             if r_btn.collidepoint(pos):
                 _settings_pending_resolution = res_key
-                CONFIG['resolution'] = res_key
+                apply_resolution(res_key)
                 _settings_restart_hint = True
-                save_config()
                 return True
     if 'language_buttons' in hit:
         for lang_key, r_btn in hit['language_buttons']:
