@@ -42,15 +42,22 @@ _DEFAULT_CONFIG = {
     'resolution': '1920x1080',
     'language':   'es',
     'autoupdate': True,
+    'vsync':      True,
+    'show_fps':   False,
+    'fps_limit':  60,
 }
 
+_FPS_LIMIT_OPTIONS = [15, 30, 60, 120, 240, 0]   
+
 _RESOLUTIONS = {
+    '3840x2160': (3840, 2160),
+    '2560x1440': (2560, 1440),
     '1920x1080': (1920, 1080),
     '1600x900':  (1600, 900),
     '1280x720':  (1280, 720),
     'windowed':  (1280, 720),
 }
-_RESOLUTION_ORDER = ['1920x1080', '1600x900', '1280x720', 'windowed']
+_RESOLUTION_ORDER = ['3840x2160', '2560x1440', '1920x1080', '1600x900', '1280x720', 'windowed']
 
 def _load_config():
     cfg = dict(_DEFAULT_CONFIG)
@@ -70,6 +77,13 @@ def _load_config():
         cfg['volume'] = 0.75
     if cfg.get('language') not in ('es', 'en'):
         cfg['language'] = 'es'
+    cfg['vsync'] = bool(cfg.get('vsync', True))
+    cfg['show_fps'] = bool(cfg.get('show_fps', False))
+    try:
+        fl = int(cfg.get('fps_limit', 60))
+    except (TypeError, ValueError):
+        fl = 60
+    cfg['fps_limit'] = fl if fl in _FPS_LIMIT_OPTIONS else 60
     return cfg
 
 def save_config():
@@ -88,13 +102,18 @@ _TRANSLATIONS = {
     'settings_resolution': {'es': 'Resolucion',                          'en': 'Resolution'},
     'settings_language':   {'es': 'Idioma',                              'en': 'Language'},
     'settings_autoupdate': {'es': 'Buscar actualizaciones al iniciar',   'en': 'Check for updates on startup'},
+    'settings_vsync':      {'es': 'Sincronizacion vertical (VSync)',     'en': 'Vertical Sync (VSync)'},
     'settings_close':      {'es': 'Cerrar',                              'en': 'Close'},
     'settings_on':         {'es': 'Activado',                            'en': 'On'},
     'settings_off':        {'es': 'Desactivado',                         'en': 'Off'},
     'settings_windowed':   {'es': 'Ventana',                             'en': 'Windowed'},
-    'settings_hint':       {'es': 'Los cambios de resolucion se aplican al instante.',
-                             'en': 'Resolution changes apply instantly.'},
-    'settings_applied':    {'es': 'Resolucion aplicada',                  'en': 'Resolution applied'},
+    'settings_hint':       {'es': 'Elige resolucion y pulsa Aplicar para cambiarla al instante. VSync tambien se aplica al instante.',
+                             'en': 'Pick a resolution and press Apply to change it instantly. VSync also applies instantly.'},
+    'settings_applied':    {'es': 'Cambios aplicados',                   'en': 'Changes applied'},
+    'settings_apply':          {'es': 'Aplicar',                         'en': 'Apply'},
+    'settings_fps_counter':    {'es': 'Contador de FPS',                 'en': 'FPS counter'},
+    'settings_fps_limit':      {'es': 'FPS máximos',                     'en': 'Max FPS'},
+    'settings_fps_infinite':   {'es': 'Infinito',                        'en': 'Unlimited'},
     'settings_button':     {'es': 'Ajustes',                             'en': 'Settings'},
     'menu_story_label':    {'es': 'Modo Historia',                       'en': 'Story Mode'},
     'menu_story_sub':      {'es': 'Blackjack narrativo · Barcelona 1987 · Empieza con 1.000 fichas',
@@ -160,6 +179,8 @@ _TRANSLATIONS = {
     'dl_downloading':          {'es': 'Descargando paquetes necesarios de internet...', 'en': 'Downloading required packages from the internet...'},
     'dl_progress':             {'es': '[{i}/{total}]  {name}',            'en': '[{i}/{total}]  {name}'},
     'dl_ready':                {'es': '¡Listo!',                          'en': 'Ready!'},
+    'dl_precompiling':         {'es': 'Preparando gráficos y sonido para que no haya tirones...',
+                                 'en': 'Preparing graphics and sound to avoid in-game stutter...'},
 
     'bj_banca':                {'es': 'Banca: {texto}',                   'en': 'Dealer: {texto}'},
     'bj_mano1':                {'es': 'Mano 1: {v}',                      'en': 'Hand 1: {v}'},
@@ -231,6 +252,8 @@ _TRANSLATIONS = {
     'hand_royal_flush':          {'es': 'Escalera Real',                  'en': 'Royal Flush'},
 
     'he_ai_call':                {'es': 'iguala',                          'en': 'calls'},
+    'he_ai_call_amt':            {'es': 'iguala {amt}',                    'en': 'calls {amt}'},
+    'he_ai_check':               {'es': 'pasa',                            'en': 'checks'},
     'he_ai_folds':               {'es': 'se retira',                      'en': 'folds'},
     'he_ai_folds_broke':         {'es': 'se retira (sin fichas)',         'en': 'folds (out of chips)'},
     'he_ai_already_folded':      {'es': 'ya retirado',                    'en': 'already folded'},
@@ -1218,7 +1241,16 @@ _dinfo = pygame.display.Info()
 SCREEN_W = _dinfo.current_w
 SCREEN_H = _dinfo.current_h
 _display_flags = pygame.SCALED if IS_WINDOWED else (pygame.FULLSCREEN | pygame.SCALED)
-VENTANA_REAL = pygame.display.set_mode((ANCHO, ALTO), _display_flags)
+
+def _create_display(ancho, alto, flags, vsync_on):
+    """Crea la ventana real intentando aplicar VSync; si el driver no lo soporta, reintenta sin el."""
+    try:
+        return pygame.display.set_mode((ancho, alto), flags, vsync=1 if vsync_on else 0)
+    except (TypeError, pygame.error) as e:
+        print(f"[VSYNC] No se pudo crear ventana con vsync={vsync_on}: {e}")
+        return pygame.display.set_mode((ancho, alto), flags)
+
+VENTANA_REAL = _create_display(ANCHO, ALTO, _display_flags, CONFIG.get('vsync', True))
 pygame.display.set_caption("Blackjack – El Farol Rojo")
 
 VENTANA = pygame.Surface((ANCHO, ALTO))
@@ -1518,8 +1550,18 @@ class Carta:
             scaled = self._scaled_face('back' if self.oculta else 'front', surf_to_blit)
             nw, nh = scaled.get_size()
             bx = rx-(nw-self.w)//2; by = ry-(nh-self.h)//2
+            shadow_key = (nw, nh)
+            shadow = self._shadow_cache.get(shadow_key) if hasattr(self, '_shadow_cache') else None
+            if shadow is None:
+                shadow = pygame.Surface((nw + 10, nh + 10), pygame.SRCALPHA)
+                pygame.draw.rect(shadow, (0, 0, 0, 90), (5, 5, nw, nh), border_radius=12)
+                if not hasattr(self, '_shadow_cache'):
+                    self._shadow_cache = {}
+                self._shadow_cache[shadow_key] = shadow
+            VENTANA.blit(shadow, (bx - 1, by + 5))
             if self.hover_glow > 0.02:
-                alpha = int(self.hover_glow * 180)
+                pulse = 0.75 + 0.25 * math.sin(now / 220.0)
+                alpha = int(self.hover_glow * 180 * pulse)
                 glow_w = nw + 8; glow_h = nh + 8
                 glow_surf = pygame.Surface((glow_w, glow_h), pygame.SRCALPHA)
                 pygame.draw.rect(glow_surf, (*DORADO, alpha), (0,0,glow_w,glow_h), border_radius=14)
@@ -3410,13 +3452,15 @@ def _he_ai_apply_call(ai_idx, money, call_amt):
     return paid
 
 def _he_ai_apply_raise(ai_idx, money, amount):
-    global he_pot, he_ai_money, he_ai_raised_this_round, he_ai_raise_amount
+    global he_pot, he_ai_money, he_ai_raised_this_round, he_ai_raise_amount, he_street_bet
     amt = min(amount, money)
     if amt > 0:
         he_pot += amt
         he_ai_money[ai_idx] -= amt
         he_ai_raised_this_round = True
         he_ai_raise_amount = max(he_ai_raise_amount, amt)
+
+        he_street_bet = max(he_street_bet, amt)
     return amt
 
 def _he_ai_pick_from_model(ai_idx):
@@ -3428,7 +3472,8 @@ def _he_ai_pick_from_model(ai_idx):
     stage = _he_ai_current_stage()
     rank = _he_ai_strength_rank(ai_idx)
     money = he_ai_money[ai_idx] if ai_idx < len(he_ai_money) else 0
-    call_amt = min(he_blind, money)
+
+    call_amt = min(he_street_bet, money)
 
     def _apply_rule(rule):
         if not isinstance(rule, dict):
@@ -3439,14 +3484,16 @@ def _he_ai_pick_from_model(ai_idx):
             return rule.get('text', TR('he_ai_folds'))
         if action in ('call', 'iguala', 'check'):
             _he_ai_apply_call(ai_idx, money, call_amt)
-            return rule.get('text', TR('he_ai_call'))
+            default_txt = TR('he_ai_check') if call_amt == 0 else TRF('he_ai_call_amt', amt=call_amt)
+            return rule.get('text', default_txt)
         if action in ('raise', 'sube', 'farolea y sube'):
             mult = rule.get('raise_mult', rule.get('mult', 1))
             try:
                 mult = max(1, int(mult))
             except Exception:
                 mult = 1
-            amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
+
+            amt = _he_ai_apply_raise(ai_idx, money, call_amt + he_blind * mult)
             prefix = rule.get('text_prefix', TR('he_ai_raise').split(' ')[0])
             return f"{prefix} {amt}".strip() if amt else None
         return None
@@ -3510,11 +3557,12 @@ def _he_ai_pick_from_model(ai_idx):
                         mult = max(1, int(mult))
                     except Exception:
                         mult = 1
-                    amt = _he_ai_apply_raise(ai_idx, money, he_blind * mult)
+                    amt = _he_ai_apply_raise(ai_idx, money, call_amt + he_blind * mult)
                     return f"{node.get('raise_text_prefix', TR('he_ai_raise').split(' ')[0])} {amt}".strip() if amt else None
                 if r < fold_p + raise_p + call_p:
                     _he_ai_apply_call(ai_idx, money, call_amt)
-                    return node.get('call_text', TR('he_ai_call'))
+                    default_txt = TR('he_ai_check') if call_amt == 0 else TRF('he_ai_call_amt', amt=call_amt)
+                    return node.get('call_text', default_txt)
 
             action = str(node.get('action', '')).lower().strip()
             if action:
@@ -3546,8 +3594,6 @@ def _he_ai_compute_action(ai_idx):
         return model_action
 
     global he_pot, he_ai_money, he_ai_folded, he_ai_raised_this_round, he_ai_raise_amount
-    if he_ai_folded[ai_idx]:
-        return TR('he_ai_already_folded')
     ai_hand = he_ai_cards[ai_idx] if ai_idx < len(he_ai_cards) else []
     money = he_ai_money[ai_idx]
     if money <= 0:
@@ -3565,50 +3611,55 @@ def _he_ai_compute_action(ai_idx):
     else:
         rank = -1
     r = random_module.random()
-    call_amt = min(he_blind, money)
+
+    call_amt = min(he_street_bet, money)
+    can_fold = call_amt > 0   
 
     def do_raise(mult_lo, mult_hi):
-        global he_pot, he_ai_raised_this_round, he_ai_raise_amount
-        amt = min(he_blind * random_module.randint(mult_lo, mult_hi), money)
+        global he_pot, he_ai_raised_this_round, he_ai_raise_amount, he_street_bet
+        increment = he_blind * random_module.randint(mult_lo, mult_hi)
+        amt = min(call_amt + increment, money)
         he_pot += amt; he_ai_money[ai_idx] -= amt
         he_ai_raised_this_round = True
         he_ai_raise_amount = max(he_ai_raise_amount, amt)
+        he_street_bet = max(he_street_bet, amt)
         return amt
+
+    def apply_call():
+        global he_pot
+        he_pot += call_amt
+        he_ai_money[ai_idx] -= call_amt
+        return TR('he_ai_check') if call_amt == 0 else TRF('he_ai_call_amt', amt=call_amt)
 
     if rank >= 5:
         if r < 0.80:
             amt = do_raise(3, 7)
             return TRF('he_ai_raise_amt', amt=amt)
-        else:
-            he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return TR('he_ai_call')
+        return apply_call()
     elif rank >= 3:
         if r < 0.50:
             amt = do_raise(2, 4)
             return TRF('he_ai_raise', amt=amt)
-        else:
-            he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return TR('he_ai_call')
+        return apply_call()
     elif rank >= 0:
-        if r < 0.22:
+        if can_fold and r < 0.22:
             he_ai_folded[ai_idx] = True
             return TR('he_ai_folds')
-        elif r < 0.38:
+        raise_p = 0.16 if can_fold else 0.30
+        if r < (0.22 if can_fold else 0.0) + raise_p:
             amt = do_raise(1, 2)
             return TRF('he_ai_raise', amt=amt)
-        else:
-            he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return TR('he_ai_call')
+        return apply_call()
     else:
-        if r < 0.50:
+        if can_fold and r < 0.50:
             he_ai_folded[ai_idx] = True
             return TR('he_ai_folds')
-        elif r < 0.65:
+        bluff_p = 0.15 if can_fold else 0.30
+        if r < (0.50 if can_fold else 0.0) + bluff_p:
             amt = do_raise(1, 3)
-            return TRF('he_ai_bluff_raise', amt=amt)
-        else:
-            he_pot += call_amt; he_ai_money[ai_idx] -= call_amt
-            return TR('he_ai_call')
+            return TRF('he_ai_raise', amt=amt)
+        return apply_call()
+
 
 
 def _he_start_ai_turns(now):
@@ -3617,6 +3668,8 @@ def _he_start_ai_turns(now):
     global he_ai_actions, he_ai_raised_this_round, he_ai_raise_amount
     he_ai_turn_active       = True
     he_ai_turn_idx          = 0
+    while he_ai_turn_idx < len(HE_AI_NAMES) and he_ai_folded[he_ai_turn_idx]:
+        he_ai_turn_idx += 1
     he_ai_turn_phase        = 'announcing'
     he_ai_turn_timer        = now
     he_ai_actions           = []
@@ -3624,10 +3677,35 @@ def _he_start_ai_turns(now):
     he_ai_raise_amount      = 0
 
 
+def _he_advance_ai_turn_index():
+    """Avanza al siguiente jugador, saltando en silencio a los que ya se retiraron."""
+    global he_ai_turn_idx
+    he_ai_turn_idx += 1
+    while he_ai_turn_idx < len(HE_AI_NAMES) and he_ai_folded[he_ai_turn_idx]:
+        he_ai_turn_idx += 1
+
+
+def _he_finish_ai_turns(now):
+    global he_ai_turn_active, he_street_bet
+    he_ai_turn_active = False
+    if all(he_ai_folded):
+        _he_all_folded_win(now)
+    elif he_ai_raised_this_round:
+        he_street_bet = he_ai_raise_amount
+    else:
+        he_street_bet = 0
+        _advance_street(now)
+
+
 def _he_update_ai_turns(now):
     """Called every frame when he_ai_turn_active is True. Drives the AI turn sequence."""
     global he_ai_turn_active, he_ai_turn_idx, he_ai_turn_phase, he_ai_turn_timer
     global he_ai_actions, he_street_bet
+
+    if he_ai_turn_idx >= len(HE_AI_NAMES):
+        _he_finish_ai_turns(now)
+        return
+
     elapsed = now - he_ai_turn_timer
     if he_ai_turn_phase == 'announcing':
         if elapsed >= _HE_ANNOUNCE_MS:
@@ -3637,15 +3715,9 @@ def _he_update_ai_turns(now):
             he_ai_turn_timer = now
     elif he_ai_turn_phase == 'deciding':
         if elapsed >= _HE_DECIDE_MS:
-            he_ai_turn_idx += 1
+            _he_advance_ai_turn_index()
             if he_ai_turn_idx >= len(HE_AI_NAMES):
-                he_ai_turn_active = False
-                if all(he_ai_folded):
-                    _he_all_folded_win(now)
-                elif he_ai_raised_this_round:
-                    he_street_bet = he_ai_raise_amount
-                else:
-                    _advance_street(now)
+                _he_finish_ai_turns(now)
             else:
                 he_ai_turn_phase = 'announcing'
                 he_ai_turn_timer = now
@@ -3941,7 +4013,8 @@ def he_player_raise(amount, now):
     amount = max(1, min(amount, he_player_money))
     he_player_money -= amount; he_pot += amount * 5  
     poker_player_money = he_player_money
-    he_street_bet = 0
+
+    he_street_bet = amount
     _he_start_ai_turns(now)
 
 def _advance_street(now):
@@ -3959,6 +4032,22 @@ def _draw_he_btn(label, rect, col_normal, col_hover, mouse_pos, border=NEGRO):
     ts = FUENTE_PEQUENA.render(label, True, BLANCO)
     VENTANA.blit(ts, (rect.centerx - ts.get_width()//2, rect.centery - ts.get_height()//2))
     return hov
+
+def _draw_he_hand_indicator(hand_name, color):
+    """Dibuja el cartel 'Tu mano: X' encima de las cartas del jugador.
+    Se coloca por ENCIMA de las cartas (no debajo, donde vive la caja de
+    acciones/registro de la IA) y se llama al final del dibujado del modo
+    poker para que siempre quede visible, nunca tapado."""
+    box_w = 340; box_h = 32
+    ind_x = ANCHO // 2 - box_w // 2
+    ind_y = HE_PLAYER_Y - box_h - 10
+    ind_bg = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+    ind_bg.fill((0, 0, 0, 200))
+    VENTANA.blit(ind_bg, (ind_x, ind_y))
+    pygame.draw.rect(VENTANA, color, (ind_x, ind_y, box_w, box_h), 1, border_radius=6)
+    lbl = FUENTE_PEQUENA.render(TRF('he_your_hand', v=hand_name), True, color)
+    VENTANA.blit(lbl, (ANCHO // 2 - lbl.get_width() // 2, ind_y + 4))
+
 
 def _render_poker(now):
     global he_blind_input, he_raise_input, he_in_raise, he_state
@@ -4039,32 +4128,6 @@ def _render_poker(now):
         c.target_scale = 1.12 if pygame.Rect(int(c.x), int(c.y), CARD_W, CARD_H).collidepoint(mouse_pos) else 1.0
         c.actualizar(now); c.dibujar(now)
 
-    if he_state not in ('betting',) and he_player_cards and he_community_cards:
-        pc_live = [(e[0],e[1],e[2],e[3]) for e in he_player_cards]
-        cc_live = [(e[0],e[1],e[2],e[3]) for e in he_community_cards]
-        _, live_name = evaluate_holdem_hand(pc_live + cc_live)
-        hand_rank = {n: i for i, n in enumerate([
-            'hand_high_card','hand_pair','hand_two_pair','hand_trips','hand_straight',
-            'hand_flush','hand_full_house','hand_quads','hand_straight_flush','hand_royal_flush'
-        ])}
-        rank_val = hand_rank.get(live_name, 0)
-        if rank_val >= 7:
-            live_col = (255, 220, 0)
-        elif rank_val >= 4:
-            live_col = (120, 255, 120)
-        elif rank_val >= 2:
-            live_col = (180, 220, 255)
-        else:
-            live_col = (200, 200, 200)
-        combo_bg = pygame.Surface((340, 32), pygame.SRCALPHA)
-        combo_bg.fill((0, 0, 0, 170))
-        combo_x = ANCHO // 2 - 170
-        combo_y = HE_PLAYER_Y + CARD_H + 8
-        VENTANA.blit(combo_bg, (combo_x, combo_y))
-        pygame.draw.rect(VENTANA, live_col, (combo_x, combo_y, 340, 32), 1, border_radius=6)
-        combo_lbl = FUENTE_PEQUENA.render(TRF('he_your_hand', v=TR(live_name)), True, live_col)
-        VENTANA.blit(combo_lbl, (ANCHO//2 - combo_lbl.get_width()//2, combo_y + 4))
-
     if he_state not in ('betting',):
         pot_s = FUENTE_PEQUENA.render(TRF('he_pot', v=he_pot), True, DORADO)
         pot_bg = pygame.Surface((pot_s.get_width()+24, pot_s.get_height()+10), pygame.SRCALPHA)
@@ -4073,10 +4136,6 @@ def _render_poker(now):
         py2 = HE_COMMUNITY_Y + CARD_H + 14
         VENTANA.blit(pot_bg, (px2, py2))
         VENTANA.blit(pot_s, (px2+12, py2+5))
-
-    if he_state == 'result' and he_player_hand_name:
-        phn_s = FUENTE_PEQUENA.render(TRF('he_your_hand', v=TR(he_player_hand_name)), True, (180, 255, 180))
-        VENTANA.blit(phn_s, (ANCHO//2 - phn_s.get_width()//2, HE_PLAYER_Y + CARD_H + 10))
 
     box_w = 960; pad = 16; lh = 32
     box_h = 130; bx = (ANCHO - box_w) // 2; by = ALTO - box_h - 14
@@ -4184,6 +4243,27 @@ def _render_poker(now):
     if he_player_money <= 0 and he_state == 'betting':
         rb = FUENTE_PEQUENA.render(TR('he_no_chips'), True, ROJO)
         VENTANA.blit(rb, (ANCHO//2 - rb.get_width()//2, ALTO//2))
+
+    if he_state == 'result' and he_player_hand_name:
+        _draw_he_hand_indicator(TR(he_player_hand_name), (180, 255, 180))
+    elif he_state not in ('betting',) and he_player_cards and he_community_cards:
+        pc_live = [(e[0],e[1],e[2],e[3]) for e in he_player_cards]
+        cc_live = [(e[0],e[1],e[2],e[3]) for e in he_community_cards]
+        _, live_name = evaluate_holdem_hand(pc_live + cc_live)
+        hand_rank = {n: i for i, n in enumerate([
+            'hand_high_card','hand_pair','hand_two_pair','hand_trips','hand_straight',
+            'hand_flush','hand_full_house','hand_quads','hand_straight_flush','hand_royal_flush'
+        ])}
+        rank_val = hand_rank.get(live_name, 0)
+        if rank_val >= 7:
+            live_col = (255, 220, 0)
+        elif rank_val >= 4:
+            live_col = (120, 255, 120)
+        elif rank_val >= 2:
+            live_col = (180, 220, 255)
+        else:
+            live_col = (200, 200, 200)
+        _draw_he_hand_indicator(TR(live_name), live_col)
 
 
 def _start_poker_mode():
@@ -4976,14 +5056,17 @@ def apply_resolution(res_key):
     if new_ancho == ANCHO and new_alto == ALTO and new_windowed == IS_WINDOWED:
         CONFIG['resolution'] = res_key
         save_config()
-        return
+        return True
 
     flags = pygame.SCALED if new_windowed else (pygame.FULLSCREEN | pygame.SCALED)
     try:
-        new_ventana_real = pygame.display.set_mode((new_ancho, new_alto), flags)
+        new_ventana_real = _create_display(new_ancho, new_alto, flags, CONFIG.get('vsync', True))
     except pygame.error as e:
         print(f"[RESOLUTION] No se pudo cambiar de resolucion: {e}")
-        return
+        return False
+
+    pygame.event.pump()
+    pygame.event.get([pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.MOUSEMOTION])
 
     ANCHO, ALTO = new_ancho, new_alto
     IS_WINDOWED = new_windowed
@@ -5016,6 +5099,26 @@ def apply_resolution(res_key):
     _story_scaled_cache.clear()
 
     CONFIG['resolution'] = res_key
+    save_config()
+    _settings_applied_at = pygame.time.get_ticks()
+    return True
+
+def apply_vsync(enabled):
+    """
+    Activa/desactiva VSync en caliente, recreando la superficie real de la
+    ventana con el mismo tamano y modo (ventana/pantalla completa) que ya
+    estaba en uso, sin reiniciar el proceso.
+    """
+    global VENTANA_REAL, _settings_applied_at
+    enabled = bool(enabled)
+    flags = pygame.SCALED if IS_WINDOWED else (pygame.FULLSCREEN | pygame.SCALED)
+    try:
+        new_ventana_real = _create_display(ANCHO, ALTO, flags, enabled)
+    except pygame.error as e:
+        print(f"[VSYNC] No se pudo cambiar VSync: {e}")
+        return
+    VENTANA_REAL = new_ventana_real
+    CONFIG['vsync'] = enabled
     save_config()
     _settings_applied_at = pygame.time.get_ticks()
 
@@ -5064,7 +5167,7 @@ def draw_settings_gear_button(surf, now, mouse_pos):
     return hovered
 
 _SETTINGS_PANEL_W = 640
-_SETTINGS_PANEL_H = 560
+_SETTINGS_PANEL_H = 680
 
 def _settings_panel_rect(anim):
     """El panel entra deslizandose y con fade, controlado por 'anim' (0-1)."""
@@ -5140,8 +5243,12 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
     surf.blit(res_label, (rect.x + pad, y))
     y += 34
     res_rects = []
-    bx = rect.x + pad
+    row_start_x = rect.x + pad
+    bx = row_start_x
+    btn_h = 34
     res_labels = {
+        '3840x2160': '3840×2160 (4K)',
+        '2560x1440': '2560×1440 (2K)',
         '1920x1080': '1920×1080',
         '1600x900':  '1600×900',
         '1280x720':  '1280×720',
@@ -5150,7 +5257,10 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
     for res_key in _RESOLUTION_ORDER:
         lbl = res_labels[res_key]
         w_btn = font_small.size(lbl)[0] + 28
-        r_btn = pygame.Rect(bx, y, w_btn, 34)
+        if bx + w_btn > rect.right - pad and bx > row_start_x:
+            bx = row_start_x
+            y += btn_h + 8
+        r_btn = pygame.Rect(bx, y, w_btn, btn_h)
         selected = (_settings_pending_resolution == res_key)
         hov = r_btn.collidepoint(mouse_pos)
         bgc = (60, 100, 70) if selected else ((45, 45, 50) if hov else (32, 32, 36))
@@ -5161,16 +5271,27 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
         res_rects.append((res_key, r_btn))
         bx += w_btn + 10
     hit['resolution_buttons'] = res_rects
-    y += 50
-    _since_applied = now - _settings_applied_at
-    if _settings_restart_hint and 0 <= _since_applied < 1800:
-        fade = 1.0 - max(0.0, (_since_applied - 1200) / 600) if _since_applied > 1200 else 1.0
-        alpha = max(0, min(255, int(255 * fade)))
-        applied_s = _safe_render(font_small, f"{TR('settings_applied')} ✓", True, (150, 230, 150),
-                                  fallback_text=TR('settings_applied'))
-        applied_s.set_alpha(alpha)
-        surf.blit(applied_s, (rect.x + pad, y))
-    y += 28
+    y += btn_h + 16
+
+    pending_differs = (_settings_pending_resolution != CONFIG.get('resolution', '1920x1080'))
+    apply_w, apply_h = 150, 34
+    apply_r = pygame.Rect(rect.x + pad, y, apply_w, apply_h)
+    apply_hov = pending_differs and apply_r.collidepoint(mouse_pos)
+    if pending_differs:
+        bgc = (70, 140, 75) if apply_hov else (50, 110, 58)
+        border_c = DORADO
+        txt_c = BLANCO
+    else:
+        bgc = (32, 32, 36)
+        border_c = (70, 70, 72)
+        txt_c = (110, 110, 110)
+    pygame.draw.rect(surf, bgc, apply_r, border_radius=8)
+    pygame.draw.rect(surf, border_c, apply_r, 1, border_radius=8)
+    apply_lbl = font_small.render(TR('settings_apply'), True, txt_c)
+    surf.blit(apply_lbl, (apply_r.centerx - apply_lbl.get_width() // 2, apply_r.centery - apply_lbl.get_height() // 2))
+    if pending_differs:
+        hit['apply_resolution_btn'] = apply_r
+    y += 40
 
     lang_label = font_label.render(TR('settings_language'), True, BLANCO)
     surf.blit(lang_label, (rect.x + pad, y))
@@ -5192,17 +5313,42 @@ def render_settings_panel(surf, now, mouse_pos, mouse_pressed):
     hit['language_buttons'] = lang_rects
     y += 56
 
-    auto_label = font_label.render(TR('settings_autoupdate'), True, BLANCO)
-    surf.blit(auto_label, (rect.x + pad, y))
-    toggle_r = pygame.Rect(rect.right - pad - 90, y - 6, 90, 34)
-    on = bool(CONFIG.get('autoupdate', True))
-    pygame.draw.rect(surf, (50, 110, 60) if on else (70, 40, 40), toggle_r, border_radius=17)
-    knob_cx = toggle_r.right - 20 if on else toggle_r.left + 20
-    pygame.draw.circle(surf, BLANCO, (knob_cx, toggle_r.centery), 13)
-    onoff_s = font_small.render(TR('settings_on') if on else TR('settings_off'), True, (200, 255, 200) if on else (255, 200, 200))
-    surf.blit(onoff_s, (rect.x + pad, y + 26))
-    hit['autoupdate_toggle'] = toggle_r
-    y += 70
+    def _compact_toggle(label_key, y_pos, value, on_change_key):
+        label_s = font_label.render(TR(label_key), True, BLANCO)
+        surf.blit(label_s, (rect.x + pad, y_pos + 4))
+        tgl_r = pygame.Rect(rect.right - pad - 56, y_pos, 56, 26)
+        pygame.draw.rect(surf, (50, 110, 60) if value else (70, 40, 40), tgl_r, border_radius=13)
+        knob_cx = tgl_r.right - 13 if value else tgl_r.left + 13
+        pygame.draw.circle(surf, BLANCO, (knob_cx, tgl_r.centery), 10)
+        hit[on_change_key] = tgl_r
+
+    _compact_toggle('settings_autoupdate', y, bool(CONFIG.get('autoupdate', True)), 'autoupdate_toggle')
+    y += 40
+    _compact_toggle('settings_vsync', y, bool(CONFIG.get('vsync', True)), 'vsync_toggle')
+    y += 40
+    _compact_toggle('settings_fps_counter', y, bool(CONFIG.get('show_fps', False)), 'fps_counter_toggle')
+    y += 46
+
+    fps_label = font_label.render(TR('settings_fps_limit'), True, BLANCO)
+    surf.blit(fps_label, (rect.x + pad, y))
+    y += 34
+    fps_rects = []
+    bx = rect.x + pad
+    for fps_val in _FPS_LIMIT_OPTIONS:
+        lbl = TR('settings_fps_infinite') if fps_val == 0 else str(fps_val)
+        w_btn = font_small.size(lbl)[0] + 24
+        r_btn = pygame.Rect(bx, y, w_btn, 32)
+        selected = (int(CONFIG.get('fps_limit', 60)) == fps_val)
+        hov = r_btn.collidepoint(mouse_pos)
+        bgc = (60, 100, 70) if selected else ((45, 45, 50) if hov else (32, 32, 36))
+        pygame.draw.rect(surf, bgc, r_btn, border_radius=8)
+        pygame.draw.rect(surf, DORADO if selected else (90, 90, 95), r_btn, 1, border_radius=8)
+        lbl_s = font_small.render(lbl, True, BLANCO)
+        surf.blit(lbl_s, (r_btn.centerx - lbl_s.get_width() // 2, r_btn.centery - lbl_s.get_height() // 2))
+        fps_rects.append((fps_val, r_btn))
+        bx += w_btn + 8
+    hit['fps_limit_buttons'] = fps_rects
+    y += 40
 
     hint2 = font_small.render(TR('settings_hint'), True, (150, 150, 150))
     surf.blit(hint2, (rect.x + pad, rect.bottom - 40))
@@ -5222,9 +5368,14 @@ def handle_settings_click(pos):
         for res_key, r_btn in hit['resolution_buttons']:
             if r_btn.collidepoint(pos):
                 _settings_pending_resolution = res_key
-                apply_resolution(res_key)
-                _settings_restart_hint = True
                 return True
+    if 'apply_resolution_btn' in hit and hit['apply_resolution_btn'].collidepoint(pos):
+        prev_key = CONFIG.get('resolution', '1920x1080')
+        new_key = _settings_pending_resolution
+        if new_key != prev_key:
+            if not apply_resolution(new_key):
+                _settings_pending_resolution = prev_key
+        return True
     if 'language_buttons' in hit:
         for lang_key, r_btn in hit['language_buttons']:
             if r_btn.collidepoint(pos):
@@ -5236,6 +5387,20 @@ def handle_settings_click(pos):
         CONFIG['autoupdate'] = not bool(CONFIG.get('autoupdate', True))
         save_config()
         return True
+    if 'vsync_toggle' in hit and hit['vsync_toggle'].collidepoint(pos):
+        apply_vsync(not bool(CONFIG.get('vsync', True)))
+        _settings_restart_hint = True
+        return True
+    if 'fps_counter_toggle' in hit and hit['fps_counter_toggle'].collidepoint(pos):
+        CONFIG['show_fps'] = not bool(CONFIG.get('show_fps', False))
+        save_config()
+        return True
+    if 'fps_limit_buttons' in hit:
+        for fps_val, r_btn in hit['fps_limit_buttons']:
+            if r_btn.collidepoint(pos):
+                CONFIG['fps_limit'] = fps_val
+                save_config()
+                return True
     if 'volume_slider' in hit and hit['volume_slider'].collidepoint(pos):
         return True
     return False
@@ -5869,8 +6034,141 @@ def loading_screen():
     pygame.time.delay(700)
 
 
+def precompile_render_assets():
+    """
+    "Compilador de shaders" del juego: pygame no usa shaders de GPU reales
+    (no es un motor 3D), pero el equivalente que sí causa tirones es tener
+    que decodificar imagenes/sonidos y montar la primera superficie
+    escalada la primera vez que aparecen en pantalla. Esta fase, ejecutada
+    justo al arrancar (los archivos ya estan en disco gracias a
+    loading_screen), decodifica y escala TODO por adelantado y fuerza un
+    par de presentaciones de frame para que el driver de video prepare sus
+    buffers, de forma que en plena partida no haya ninguna carga "sobre la
+    marcha" que produzca un parón.
+    """
+    FUENTE_PRE_TITLE = pygame.font.SysFont("arial", 36, bold=True)
+    FUENTE_PRE_FILE  = pygame.font.SysFont("arial", 22)
+
+    def _progress(step_name, done, total):
+        VENTANA.fill((4, 2, 10))
+        title = FUENTE_PRE_TITLE.render(TR('dl_precompiling'), True, DORADO)
+        VENTANA.blit(title, (ANCHO//2 - title.get_width()//2, ALTO//2 - 110))
+        status = FUENTE_PRE_FILE.render(step_name, True, (200, 210, 200))
+        VENTANA.blit(status, (ANCHO//2 - status.get_width()//2, ALTO//2 - 50))
+        bw = 700; bh = 22
+        bx = ANCHO//2 - bw//2; by = ALTO//2
+        pygame.draw.rect(VENTANA, (30, 30, 30), (bx, by, bw, bh), border_radius=10)
+        frac = (done / total) if total else 1.0
+        fill_w = int(bw * frac)
+        if fill_w > 0:
+            pygame.draw.rect(VENTANA, DORADO, (bx, by, fill_w, bh), border_radius=10)
+        pygame.draw.rect(VENTANA, (80, 65, 30), (bx, by, bw, bh), 2, border_radius=10)
+        flip_display()
+        pygame.event.pump()
+
+    tasks = []
+
+    for key in list(_IMAGE_FILES.keys()):
+        tasks.append(('image', key))
+
+    for valor in _VALOR_MAP.keys():
+        for palo in _PALO_MAP.keys():
+            tasks.append(('card', (valor, palo)))
+    tasks.append(('card_back', None))
+
+    tasks.append(('dealer_avatar', None))
+
+    for key in list(_STORY_SFX_FILES.keys()):
+        tasks.append(('sfx', key))
+
+    total = len(tasks) + 1  
+    done = 0
+
+    for kind, payload in tasks:
+        if kind == 'image':
+            key = payload
+            if key not in _image_cache:
+                url_file, local_file = _IMAGE_FILES[key]
+                local_path = os.path.join('imagenes', local_file)
+                if os.path.exists(local_path):
+                    try:
+                        _image_cache[key] = pygame.image.load(local_path).convert_alpha()
+                    except Exception as e:
+                        print(f"[PRECOMPILE] Error preparando imagen '{key}': {e}")
+                        _image_cache[key] = None
+            _progress(str(key), done, total)
+
+        elif kind == 'card':
+            valor, palo = payload
+            key = f"{valor}{palo}"
+            if key not in _card_img_cache:
+                filename = _card_filename(valor, palo)
+                local_path = os.path.join('imagenes', 'cards', filename)
+                if os.path.exists(local_path):
+                    try:
+                        img = pygame.image.load(local_path).convert_alpha()
+                        _card_img_cache[key] = img
+                        pygame.transform.smoothscale(img, (CARD_W, CARD_H))
+                    except Exception as e:
+                        print(f"[PRECOMPILE] Error preparando carta '{filename}': {e}")
+                        _card_img_cache[key] = None
+            _progress(f"{valor}{palo}", done, total)
+
+        elif kind == 'card_back':
+            key = "__back__"
+            if key not in _card_img_cache:
+                local_path = os.path.join('imagenes', 'cards', 'back.png')
+                if os.path.exists(local_path):
+                    try:
+                        img = pygame.image.load(local_path).convert_alpha()
+                        _card_img_cache[key] = img
+                        pygame.transform.smoothscale(img, (CARD_W, CARD_H))
+                    except Exception as e:
+                        print(f"[PRECOMPILE] Error preparando reverso: {e}")
+                        _card_img_cache[key] = None
+            _progress("back.png", done, total)
+
+        elif kind == 'dealer_avatar':
+            local_path = os.path.join("images", "dealer.png")
+            if os.path.exists(local_path):
+                try:
+                    img = pygame.image.load(local_path).convert_alpha()
+                    pygame.transform.smoothscale(img, (120, 120))
+                except Exception as e:
+                    print(f"[PRECOMPILE] Error preparando avatar: {e}")
+            _progress("dealer.png", done, total)
+
+        elif kind == 'sfx':
+            key = payload
+            if key not in _story_sfx_cache:
+                local_path, _url = _STORY_SFX_FILES[key]
+                if os.path.exists(local_path):
+                    try:
+                        _story_sfx_cache[key] = pygame.mixer.Sound(local_path)
+                    except Exception as e:
+                        print(f"[PRECOMPILE] Error preparando sonido '{key}': {e}")
+            _progress(key, done, total)
+
+        done += 1
+
+    _progress(TR('dl_ready'), total - 1, total)
+    warm_surf = pygame.Surface((CARD_W, CARD_H), pygame.SRCALPHA)
+    pygame.draw.rect(warm_surf, (200, 40, 40, 200), (0, 0, CARD_W, CARD_H), border_radius=12)
+    for i in range(3):
+        VENTANA.fill((4, 2, 10))
+        rotated = pygame.transform.rotate(warm_surf, i * 15)
+        scaled  = pygame.transform.smoothscale(warm_surf, (CARD_W * 2, CARD_H * 2))
+        VENTANA.blit(scaled, (ANCHO//2 - scaled.get_width()//2, ALTO//2 - scaled.get_height()//2))
+        VENTANA.blit(rotated, (20, 20))
+        flip_display()
+        pygame.event.pump()
+    done = total
+    _progress(TR('dl_ready'), done, total)
+
+
 _menu_fade_start = 0
 loading_screen()
+precompile_render_assets()
 splash_screen()
 _menu_fade_start = pygame.time.get_ticks()
 
@@ -5886,7 +6184,8 @@ if IS_FIRST_RUN:
 
 
 while True:
-    RELOJ.tick(60)
+    _fps_cap = CONFIG.get('fps_limit', 60)
+    RELOJ.tick(_fps_cap if _fps_cap else 0)
     now = pygame.time.get_ticks()
 
     if update_status == 'restarting' and update_restart_time != 0:
@@ -6888,5 +7187,10 @@ while True:
 
     if paused:
         _render_pause_menu(now)
+
+    if CONFIG.get('show_fps', False):
+        _fps_txt = f"{RELOJ.get_fps():.0f} FPS"
+        _fps_s = FUENTE_INSTR.render(_fps_txt, True, BLANCO)
+        VENTANA.blit(_fps_s, (90, 10))
 
     flip_display()
